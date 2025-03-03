@@ -1,0 +1,68 @@
+.navbar {
+  display: none;
+}
+
+.navbarMobile {
+  align-items: center;
+  /* background: linear-gradient(
+    120deg,
+    var(--palette-2),
+    var(--palette-1),
+    var(--palette-5)
+  ); */
+  /* background-color: var(--palette-1); */
+  background: linear-gradient(120deg, var(--palette-1), #162c54);
+  display: none;
+  flex-direction: column;
+  gap: 0.75rem;
+  justify-content: center;
+  left: 0;
+  opacity: 0;
+  padding-bottom: 0.75rem;
+  position: absolute;
+  top: 100%;
+  transition-behavior: allow-discrete; /* Permite animar una animación de comportamiento discreto, permite animar la propiedad display */
+  transition-property: overlay display opacity; /* overlay permite que la animación siempre se vea en el frente (como utilizando z-index) */
+  transition-duration: 0.25s;
+  width: 100%;
+}
+
+.navbarMobile.open {
+  display: flex;
+  opacity: 1;
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.menuButton {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  display: block;
+  margin: 0 0 0 auto;
+}
+
+.logout {
+  background-color: var(--button);
+  border: 0;
+  border-radius: 1.25rem;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+  margin: 0 0 0 0.75rem;
+  padding: 0.5rem 1rem;
+}
+
+@media (min-width: 1200px) {
+  .navbar {
+    align-items: center;
+    display: flex;
+    gap: 2.75rem;
+    margin: 0 0 0 auto;
+  }
+  .navbarMobile,
+  .menuButton {
+    display: none;
+  }
+}

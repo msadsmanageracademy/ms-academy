@@ -1,0 +1,35 @@
+.navLink {
+  border-radius: 1.25rem;
+  padding: 0.25rem;
+  position: relative;
+}
+
+.navLink::after {
+  background-color: var(--palette-3);
+  border-radius: 40px;
+  bottom: -5px;
+  content: "";
+  height: 3px;
+  left: 0;
+  position: absolute;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s;
+  width: 100%;
+}
+
+.navLink:hover::after {
+  transform-origin: left;
+  transform: scaleX(1);
+}
+
+.navLink.active {
+  color: var(--palette-3);
+  font-weight: 700;
+}
+
+@media (min-width: 992px) {
+  .navLink {
+    font-size: 1.25rem;
+  }
+}

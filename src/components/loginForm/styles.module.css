@@ -1,0 +1,30 @@
+.form {
+  background-color: var(--palette-1);
+  border: var(--palette-5) 1px solid;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  margin: 3rem auto;
+  max-width: 400px;
+  padding: 2.25rem 1.75rem;
+  width: 100%;
+}
+
+.form button {
+  margin: 1rem 0 0 0;
+}
+
+.form input {
+  min-height: 30px;
+  width: 100%;
+}
+
+.formCustomError {
+  color: #ff5555;
+  font-size: 0.85rem;
+}
+
+.formRow {
+  display: flex;
+  margin: 0.5rem 0;
+}
