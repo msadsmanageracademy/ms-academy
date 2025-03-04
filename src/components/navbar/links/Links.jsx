@@ -1,26 +1,23 @@
 "use client";
 
 import { Hamburger } from "@/components/icons/Hamburger";
-// import { useSession } from "@/context/SessionContext";
+import { useSession, signOut } from "next-auth/react";
 import styles from "./styles.module.css";
 import NavLink from "./navLink/NavLink";
 import { useState } from "react";
 
 const links = [
   { title: "Inicio", path: "/" },
-  { title: "Calendario", path: "/schedule" },
-  { title: "Sobre mí", path: "/about-me" },
+  { title: "Clases", path: "/classes" },
   { title: "Contacto", path: "/contact" },
 ];
 
 const Links = () => {
   const [open, setOpen] = useState(false);
 
-  // const { userSession, logout } = useSession();
+  const { data: session, status } = useSession(); // Obtener datos de la sesión
 
-  // const isAdmin = false; // TEMPORARY
-
-  const userSession = false; // TEMPORARY
+  console.log(session);
 
   return (
     <>
@@ -28,17 +25,14 @@ const Links = () => {
         {links.map((link) => (
           <NavLink key={link.path} item={link} />
         ))}
-        {userSession ? (
+        {session ? (
           <>
             <NavLink item={{ title: "Mi perfil", path: "/profile" }} />
-            <button className={styles.logout} onClick={logout}>
-              Cerrar sesión
-            </button>
           </>
         ) : (
           <>
-            <NavLink item={{ title: "Iniciar sesión", path: "/login" }} />
-            <NavLink item={{ title: "Registrarse", path: "/register" }} />
+            <NavLink item={{ title: "Iniciar sesión", path: "/auth/login" }} />
+            <NavLink item={{ title: "Registrarse", path: "/auth/register" }} />
           </>
         )}
       </div>
@@ -53,17 +47,14 @@ const Links = () => {
         {links.map((link) => (
           <NavLink key={link.path} item={link} />
         ))}
-        {userSession ? (
+        {session ? (
           <>
             <NavLink item={{ title: "Mi perfil", path: "/profile" }} />
-            <button className={styles.logout} onClick={logout}>
-              Cerrar sesión
-            </button>
           </>
         ) : (
           <>
-            <NavLink item={{ title: "Iniciar sesión", path: "/login" }} />
-            <NavLink item={{ title: "Registrarse", path: "/register" }} />
+            <NavLink item={{ title: "Iniciar sesión", path: "/auth/login" }} />
+            <NavLink item={{ title: "Registrarse", path: "/auth/register" }} />
           </>
         )}
       </div>

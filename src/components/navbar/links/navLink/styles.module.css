@@ -1,5 +1,6 @@
 .navLink {
   border-radius: 1.25rem;
+  font-size: 1rem;
   padding: 0.25rem;
   position: relative;
 }
@@ -14,7 +15,7 @@
   position: absolute;
   transform: scaleX(0);
   transform-origin: right;
-  transition: transform 0.3s;
+  transition: transform 0.15s;
   width: 100%;
 }
 
@@ -26,10 +27,4 @@
 .navLink.active {
   color: var(--palette-3);
   font-weight: 700;
-}
-
-@media (min-width: 992px) {
-  .navLink {
-    font-size: 1.25rem;
-  }
 }

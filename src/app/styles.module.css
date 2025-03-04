@@ -178,7 +178,7 @@
 .resources {
   align-items: center;
   background-image: linear-gradient(120deg, var(--palette-2), var(--palette-4));
-  color: #000;
+  color: #fff;
   display: flex;
   flex-direction: column;
   justify-content: center;

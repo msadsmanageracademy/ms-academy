@@ -1,0 +1,35 @@
+.sidebar {
+  align-items: center;
+  background: linear-gradient(120deg, var(--palette-1), #162c54);
+  color: white;
+  display: flex;
+  padding: 0 2.75rem 1rem 2.75rem;
+  width: 100%;
+}
+
+.sidebar h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-right: 1rem;
+}
+
+.sidebar ul {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar a {
+  border-radius: 5px;
+  color: white;
+  display: block;
+  font-size: 16px;
+  text-decoration: none;
+  transition: background 0.3s ease;
+}
+
+.sidebar .active {
+  color: var(--palette-3);
+}
