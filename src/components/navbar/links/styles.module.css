@@ -1,16 +1,25 @@
 .navbar {
   display: none;
+  font-size: 1rem;
+}
+
+.navbar ul {
+  display: flex;
+  gap: 1.25rem;
+  list-style: none;
+}
+
+.navbar a {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .navbarMobile {
-  align-items: center;
-  /* background: linear-gradient(120deg, var(--palette-1), #162c54); */
   background: var(--palette-5);
   display: none;
-  flex-direction: column;
-  gap: 0.75rem;
-  justify-content: center;
   left: 0;
+  justify-content: center;
   opacity: 0;
   padding-bottom: 0.75rem;
   position: absolute;
@@ -19,6 +28,20 @@
   transition-property: overlay display opacity; /* overlay permite que la animación siempre se vea en el frente (como utilizando z-index) */
   transition-duration: 0.25s;
   width: 100%;
+}
+
+.navbarMobile ul {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+}
+
+.navbarMobile li a {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
 }
 
 .navbarMobile.open {
@@ -47,7 +70,7 @@
   padding: 0.25rem;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 992px) {
   .navbar {
     align-items: center;
     display: flex;
@@ -58,4 +81,35 @@
   .menuButton {
     display: none;
   }
+}
+
+.navLink {
+  border-radius: 1.25rem;
+  font-size: 1rem;
+  padding: 0.25rem;
+  position: relative;
+}
+
+.navLink::after {
+  background-color: var(--palette-3);
+  border-radius: 40px;
+  bottom: -5px;
+  content: "";
+  height: 3px;
+  left: 0;
+  position: absolute;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.15s;
+  width: 100%;
+}
+
+.navLink:hover::after {
+  transform-origin: left;
+  transform: scaleX(1);
+}
+
+.navLink.active {
+  color: var(--palette-3);
+  font-weight: 700;
 }

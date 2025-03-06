@@ -20,6 +20,18 @@ const RegisterForm = () => {
 
   const onSubmit = async ({ first_name, last_name, email, password }) => {
     try {
+      const isFormValidated = await trigger(); // Valido según schema definido en zod
+
+      console.log(isFormValidated);
+
+      console.log(errors);
+
+      if (!isFormValidated) {
+        /* Si falla la validación, return */
+        toastError(3000, "Error en el formulario", "Intente nuevamente");
+        return;
+      }
+
       const response = await fetch("/api/auth/register", {
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -73,7 +85,7 @@ const RegisterForm = () => {
         />
       </div>
       <div className={styles.formCustomError}>{errors?.password?.message}</div>
-      <button type="submit" className="button-primary">
+      <button className="button-primary" type="submit">
         Registrarse
       </button>
     </form>

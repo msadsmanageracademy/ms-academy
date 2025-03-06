@@ -1,4 +1,4 @@
-const SettingsPage = () => {
+const EditPage = () => {
   return (
     <div>
       <div>
@@ -9,4 +9,4 @@ const SettingsPage = () => {
   );
 };
 
-export default SettingsPage;
+export default EditPage;

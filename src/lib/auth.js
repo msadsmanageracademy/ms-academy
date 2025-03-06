@@ -28,19 +28,28 @@ export const authOptions = {
         const isValid = await compare(credentials.password, user.password);
         if (!isValid) throw new Error("Contraseña incorrecta");
 
-        return { id: user._id, email: user.email, role: user.role };
+        return {
+          id: user._id,
+          first_name: user.first_name,
+          email: user.email,
+          role: user.role,
+        };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Acá decido qué guardo en el token, que luego puedo recuperar en la sesión
       if (user) {
+        token.first_name = user.first_name;
         token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
+      // Acá decido qué guardo en la sesión, proveniente del token
       if (token) {
+        session.user.first_name = token.first_name;
         session.user.role = token.role;
       }
       return session;

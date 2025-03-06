@@ -1,48 +1,103 @@
 "use client";
 
 import { Hamburger } from "@/components/icons/Hamburger";
+import { Notebook } from "@/components/icons/Notebook";
+import { Register } from "@/components/icons/Register";
+import { Letter } from "@/components/icons/Letter";
+import { Users } from "@/components/icons/Users";
+import { Login } from "@/components/icons/Login";
+import { Home } from "@/components/icons/Home";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import styles from "./styles.module.css";
-import NavLink from "./navLink/NavLink";
 import { useState } from "react";
-
-const links = [
-  { title: "Inicio", path: "/" },
-  { title: "Clases", path: "/classes" },
-  { title: "Contacto", path: "/contact" },
-];
+import Link from "next/link";
 
 const Links = () => {
   const [open, setOpen] = useState(false);
 
   const { data: session, status } = useSession(); // Obtener datos de la sesión
 
+  const pathname = usePathname();
+
   return (
     <>
       <div className={styles.navbar}>
-        {links.map((link) => (
-          <NavLink key={link.path} item={link} onClick={() => setOpen(false)} />
-        ))}
-        {session ? (
-          <>
-            <NavLink
-              item={{ title: "Mi perfil", path: "/profile" }}
+        <ul>
+          <li>
+            <Link
+              href={"/"}
+              className={`${styles.navLink} ${
+                pathname === "/" ? styles.active : ""
+              }`}
               onClick={() => setOpen(false)}
-            />
-          </>
-        ) : (
-          <>
-            <NavLink
-              item={{ title: "Iniciar sesión", path: "/auth/login" }}
+            >
+              Inicio
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={"/classes"}
+              className={`${styles.navLink} ${
+                pathname === "/classes" ? styles.active : ""
+              }`}
               onClick={() => setOpen(false)}
-            />
-            <NavLink
-              item={{ title: "Registrarse", path: "/auth/register" }}
+            >
+              Clases
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={"/contact"}
+              className={`${styles.navLink} ${
+                pathname === "/contact" ? styles.active : ""
+              }`}
               onClick={() => setOpen(false)}
-            />
-          </>
-        )}
+            >
+              Contacto
+            </Link>
+          </li>
+          {session ? (
+            <li>
+              <Link
+                href={"/profile"}
+                className={`${styles.navLink} ${
+                  pathname.startsWith("/profile") ? styles.active : ""
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                Mi perfil
+              </Link>
+            </li>
+          ) : (
+            <>
+              <li>
+                <Link
+                  href={"/auth/login"}
+                  className={`${styles.navLink} ${
+                    pathname === "/auth/login" ? styles.active : ""
+                  }`}
+                  onClick={() => setOpen(false)}
+                >
+                  Iniciar sesión
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={"/auth/register"}
+                  className={`${styles.navLink} ${
+                    pathname === "/auth/register" ? styles.active : ""
+                  }`}
+                  onClick={() => setOpen(false)}
+                >
+                  Registrarse
+                </Link>
+              </li>
+            </>
+          )}
+        </ul>
       </div>
+
       <button
         className={styles.menuButton}
         onClick={() => setOpen((prev) => !prev)}
@@ -55,28 +110,100 @@ const Links = () => {
         id="navbarMobile"
         className={`${styles.navbarMobile} ${open ? styles.open : ""}`}
       >
-        {links.map((link) => (
-          <NavLink key={link.path} item={link} onClick={() => setOpen(false)} />
-        ))}
-        {session ? (
-          <>
-            <NavLink
-              item={{ title: "Mi perfil", path: "/profile" }}
+        <ul>
+          <li>
+            <Link
+              href={"/"}
+              className={`${styles.navLink} ${
+                pathname === "/" ? styles.active : ""
+              }`}
               onClick={() => setOpen(false)}
-            />
-          </>
-        ) : (
-          <>
-            <NavLink
-              item={{ title: "Iniciar sesión", path: "/auth/login" }}
+            >
+              <Home size={28} stroke={pathname === "/" ? "#f4a462" : "#fff"} />
+              Inicio
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={"/classes"}
+              className={`${styles.navLink} ${
+                pathname === "/classes" ? styles.active : ""
+              }`}
               onClick={() => setOpen(false)}
-            />
-            <NavLink
-              item={{ title: "Registrarse", path: "/auth/register" }}
+            >
+              <Notebook
+                size={28}
+                stroke={pathname === "/classes" ? "#f4a462" : "#fff"}
+              />
+              Clases
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={"/contact"}
+              className={`${styles.navLink} ${
+                pathname === "/contact" ? styles.active : ""
+              }`}
               onClick={() => setOpen(false)}
-            />
-          </>
-        )}
+            >
+              <Letter
+                size={28}
+                stroke={pathname === "/contact" ? "#f4a462" : "#fff"}
+              />
+              Contacto
+            </Link>
+          </li>
+          {session ? (
+            <li>
+              <Link
+                href={"/profile"}
+                className={`${styles.navLink} ${
+                  pathname.startsWith("/profile") ? styles.active : ""
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                <Users
+                  size={28}
+                  stroke={pathname.startsWith("/profile") ? "#f4a462" : "#fff"}
+                />
+                Mi perfil
+              </Link>
+            </li>
+          ) : (
+            <>
+              <li>
+                <Link
+                  href={"/auth/login"}
+                  className={`${styles.navLink} ${
+                    pathname === "/auth/login" ? styles.active : ""
+                  }`}
+                  onClick={() => setOpen(false)}
+                >
+                  <Login
+                    size={28}
+                    stroke={pathname === "/auth/login" ? "#f4a462" : "#fff"}
+                  />
+                  Iniciar sesión
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={"/auth/register"}
+                  className={`${styles.navLink} ${
+                    pathname === "/auth/register" ? styles.active : ""
+                  }`}
+                  onClick={() => setOpen(false)}
+                >
+                  <Register
+                    size={28}
+                    stroke={pathname === "/auth/register" ? "#f4a462" : "#fff"}
+                  />
+                  Registrarse
+                </Link>
+              </li>
+            </>
+          )}
+        </ul>
       </div>
     </>
   );
