@@ -1,29 +1,24 @@
+import { RegisterFormSchema } from "@/utils/definitions";
 import clientPromise from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(req) {
   try {
+    const body = await req.json();
+
+    const parsedEvent = RegisterFormSchema.safeParse(body);
+
+    if (!parsedEvent.success) {
+      return new Response(JSON.stringify({ error: parsedEvent.error.errors }), {
+        status: 400,
+      });
+    }
+
     const client = await clientPromise; // Obtener el cliente de MongoDB
     const db = client.db(process.env.MONGODB_DB_NAME); // Seleccionar la base de datos
     const usersCollection = db.collection("users"); // Seleccionar la colección
 
-    const formData = await req.formData(); // Leer el FormData
-
-    const first_name = formData.get("first_name");
-    const last_name = formData.get("last_name");
-    const email = formData.get("email");
-    const password = formData.get("password");
-
-    // Verificar que los campos obligatorios estén presentes
-    if (!first_name || !last_name || !email || !password) {
-      return Response.json(
-        { error: "Todos los campos son obligatorios" },
-        { status: 400 }
-      );
-    }
-
-    // Verificar si el usuario ya existe
-    const userExists = await usersCollection.findOne({ email });
+    const userExists = await usersCollection.findOne({ email: body.email });
     if (userExists) {
       return Response.json(
         { error: "El email ya está registrado" },
@@ -31,21 +26,23 @@ export async function POST(req) {
       );
     }
 
-    // Hashear la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(body.password, 10);
 
-    // Crear el nuevo usuario
     const newUser = {
-      first_name,
-      last_name,
-      email,
+      first_name: body.first_name,
+      last_name: body.last_name,
+      email: body.email,
       password: hashedPassword,
     };
 
-    await usersCollection.insertOne(newUser); // Guardar el usuario en MongoDB
+    const result = await usersCollection.insertOne(newUser);
 
     return Response.json(
-      { data: { first_name }, message: "Usuario registrado con éxito" },
+      {
+        success: true,
+        data: { id: result.insertedId, first_name: body.first_name },
+        message: "Usuario registrado con éxito",
+      },
       { status: 201 }
     );
   } catch (error) {

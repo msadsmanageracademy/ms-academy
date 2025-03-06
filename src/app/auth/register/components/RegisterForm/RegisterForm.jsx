@@ -20,16 +20,16 @@ const RegisterForm = () => {
 
   const onSubmit = async ({ first_name, last_name, email, password }) => {
     try {
-      const formData = new FormData();
-      formData.append("first_name", first_name);
-      formData.append("last_name", last_name);
-      formData.append("email", email);
-      formData.append("password", password);
-
       const response = await fetch("/api/auth/register", {
+        headers: { "Content-Type": "application/json" },
         method: "POST",
-        body: formData,
-      }); // No es necesario establecer el Content-Type manualmente, porque FormData lo maneja automáticamente.
+        body: JSON.stringify({
+          first_name,
+          last_name,
+          email,
+          password,
+        }),
+      });
 
       const result = await response.json();
 
@@ -39,8 +39,8 @@ const RegisterForm = () => {
 
       toastSuccess(
         3000,
-        "Usuario creado con éxito",
-        `Bienvenido, ${result.data.first_name}!`
+        result.message,
+        `Bienvenido, ${result.data.first_name}! Ya puedes iniciar sesión`
       );
 
       router.push("/auth/login");

@@ -6,7 +6,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import styles from "./styles.module.css";
-import { useState } from "react";
 
 const EventsForm = () => {
   const {
@@ -22,22 +21,6 @@ const EventsForm = () => {
 
   const router = useRouter();
 
-  const validateForm = async () => {
-    const isFormValidated = await trigger();
-
-    console.log(isFormValidated);
-
-    console.log(errors);
-
-    if (!isFormValidated) {
-      toastError(3000, "Error en el formulario", "Intente nuevamente");
-      return;
-    }
-
-    // Solo llamar a handleSubmit si la validación es exitosa
-    handleSubmit(onSubmit)();
-  };
-
   const eventType = watch("type");
 
   const onSubmit = async ({
@@ -51,6 +34,18 @@ const EventsForm = () => {
     date,
   }) => {
     try {
+      const isFormValidated = await trigger(); // Valido según schema definido en zod
+
+      console.log(isFormValidated);
+
+      console.log(errors);
+
+      if (!isFormValidated) {
+        /* Si falla la validación, return */
+        toastError(3000, "Error en el formulario", "Intente nuevamente");
+        return;
+      }
+
       const response = await fetch("/api/events/", {
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -68,11 +63,17 @@ const EventsForm = () => {
 
       const result = await response.json();
 
+      console.log(result);
+
       if (!response.ok) {
         return toastError(3000, "Error al generar evento", result.error);
       }
 
-      toastSuccess(3000, "Evento creado con éxito");
+      toastSuccess(
+        3000,
+        result.message,
+        `Ve los detalles de ${result.data.title} en la sección correspondiente`
+      );
 
       router.push("/profile");
     } catch (err) {
@@ -152,7 +153,7 @@ const EventsForm = () => {
         <input {...register("price", { valueAsNumber: true })} />
       </div>
       <div className={styles.formCustomError}>{errors?.price?.message}</div>
-      <button className="button-primary" onClick={validateForm}>
+      <button className="button-primary" type="submit">
         Crear evento
       </button>
     </form>

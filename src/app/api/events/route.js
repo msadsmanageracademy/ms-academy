@@ -1,5 +1,5 @@
-import { MongoClient } from "mongodb";
 import { eventMongoSchema } from "@/utils/definitions";
+import clientPromise from "@/lib/db";
 
 export async function POST(req) {
   try {
@@ -15,8 +15,7 @@ export async function POST(req) {
       });
     }
 
-    const client = new MongoClient(process.env.MONGODB_URI);
-    await client.connect();
+    const client = await clientPromise; // Obtener el cliente de MongoDB
     const db = client.db(process.env.MONGODB_DB_NAME); // Seleccionar la base de datos
     const eventsCollection = db.collection("events");
 
@@ -26,10 +25,22 @@ export async function POST(req) {
       updatedAt: new Date(),
     });
 
-    client.close();
+    /* Como utilizo el cliente de Mongo, no es necesario cerrar manualmente la conexión con client.close() una vez realizada la operación 
+       (el cliente lo maneja automáticamente) */
 
-    return new Response(
-      JSON.stringify({ message: "Evento creado", id: result.insertedId }),
+    /* Response.json() es la forma recomendada de NextJs.
+       Añade automáticamente Content-Type: application/json
+       y genera un código más limpio (sin JSON.stringify) */
+
+    return Response.json(
+      {
+        success: true,
+        data: {
+          id: result.insertedId,
+          title: body.title,
+        },
+        message: "Evento creado con éxito",
+      },
       { status: 201 }
     );
   } catch (error) {
