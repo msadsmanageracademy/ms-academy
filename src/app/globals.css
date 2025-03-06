@@ -49,6 +49,7 @@ a {
   border: 0;
   border-radius: 0.75rem;
   color: #fff;
+  cursor: pointer;
   font-size: 1.125rem;
   max-width: fit-content;
   padding: 0.75em 1.75em;
@@ -56,6 +57,21 @@ a {
 
 .button-primary:hover {
   background-color: var(--palette-2);
+}
+
+.button-secondary {
+  background-color: var(--palette-2);
+  border: 0;
+  border-radius: 0.75rem;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.125rem;
+  max-width: fit-content;
+  padding: 0.75em 1.75em;
+}
+
+.button-secondary:hover {
+  background-color: var(--palette-1);
 }
 
 /* @media (prefers-color-scheme: dark) {

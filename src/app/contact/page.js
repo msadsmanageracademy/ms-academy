@@ -2,9 +2,9 @@ import styles from "./styles.module.css";
 
 const ContactPage = () => {
   return (
-    <>
-      <div className={styles.container}>Esta será la página de Contacto</div>
-    </>
+    <div className={styles.container}>
+      <div>Esta será la página de Contacto</div>
+    </div>
   );
 };
 

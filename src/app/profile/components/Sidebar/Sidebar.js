@@ -1,14 +1,14 @@
 "use client";
 
 import withReactContent from "sweetalert2-react-content";
-import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import styles from "./styles.module.css";
 import Swal from "sweetalert2";
 import Link from "next/link";
 
-export default function Sidebar() {
-  const { data: session } = useSession();
+const Sidebar = () => {
+  const { data: session, status } = useSession();
 
   const MySwal = withReactContent(Swal);
 
@@ -33,11 +33,14 @@ export default function Sidebar() {
 
   const links = [
     { href: "/profile", label: "Inicio" },
-    { href: "/profile/settings", label: "Configuración" },
+    { href: "/profile/settings", label: "Editar perfil" },
   ];
+
+  if (status === "loading") return null; // No muestro el sidebar hasta que la sesión haya cargado, esto elimina problema de parpadeo
+
   return (
     <nav className={styles.sidebar}>
-      <h2>Dashboard</h2>
+      <div className={styles.sidebarTitle}>Dashboard</div>
       <ul>
         {/* Enlaces comunes para todos los usuarios */}
         {links.map(({ href, label }) => (
@@ -54,14 +57,14 @@ export default function Sidebar() {
         {/* Opciones específicas para el usuario regular */}
         {!session?.user?.role || session.user.role === "user" ? (
           <li>
-            <a
+            <Link
               href="/profile/classes"
               className={
                 pathname === "/profile/classes" ? `${styles.active}` : ""
               }
             >
               Mis Clases
-            </a>
+            </Link>
           </li>
         ) : null}
 
@@ -69,19 +72,33 @@ export default function Sidebar() {
         {session?.user?.role === "admin" ? (
           <>
             <li>
-              <a
+              <Link
                 href="/profile/admin"
                 className={
                   pathname === "/profile/admin" ? `${styles.active}` : ""
                 }
               >
-                Definir Horarios
-              </a>
+                Crear cursos/clases
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/profile/stats"
+                className={
+                  pathname === "/profile/stats" ? `${styles.active}` : ""
+                }
+              >
+                Estadísticas
+              </Link>
             </li>
           </>
         ) : null}
-        <button onClick={() => handleLogout()}>Cerrar sesión</button>
+        <button onClick={() => handleLogout()} className="button-secondary">
+          Cerrar sesión
+        </button>
       </ul>
     </nav>
   );
-}
+};
+
+export default Sidebar;

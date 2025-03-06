@@ -21,3 +21,15 @@ export const RegisterFormSchema = z.object({
       message: "No debe contener espacios", // Chequear
     }),
 });
+
+export const eventMongoSchema = z.object({
+  type: z.enum(["class", "course"]),
+  title: z.string().min(3),
+  description: z.string().optional(),
+  duration: z.number().positive(),
+  date: z.date(),
+  participants: z.array(z.string()).default([]),
+  amount_of_classes: z.number().positive().optional(),
+  max_participants: z.number().positive(),
+  price: z.number().nonnegative(),
+});

@@ -1,8 +1,9 @@
 .container {
-  color: #000;
-  min-height: 100vh;
+  display: flex;
 }
 
 .dashboard {
-  display: flex;
+  color: #000;
+  min-height: 100vh;
+  padding: 5rem;
 }

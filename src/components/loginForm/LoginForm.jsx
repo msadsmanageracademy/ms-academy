@@ -39,7 +39,6 @@ const LoginPage = () => {
 
   return (
     <div className={styles.loginPage}>
-      <h1>Iniciar Sesión</h1>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <input

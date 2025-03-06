@@ -1,35 +1,43 @@
 .sidebar {
   align-items: center;
-  background: linear-gradient(120deg, var(--palette-1), #162c54);
+  background: var(--palette-5);
   color: white;
   display: flex;
-  padding: 0 2.75rem 1rem 2.75rem;
-  width: 100%;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 200px;
+  padding: 5rem 1rem;
+  text-align: center;
 }
 
-.sidebar h2 {
+.sidebarTitle {
   font-size: 1rem;
   font-weight: 700;
-  margin-right: 1rem;
+  text-decoration: underline;
 }
 
 .sidebar ul {
   align-items: center;
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 2rem;
   list-style: none;
   padding: 0;
 }
 
 .sidebar a {
-  border-radius: 5px;
-  color: white;
-  display: block;
-  font-size: 16px;
+  font-size: 1rem;
   text-decoration: none;
-  transition: background 0.3s ease;
+}
+
+.sidebar a:hover {
+  color: var(--palette-3);
 }
 
 .sidebar .active {
   color: var(--palette-3);
+}
+
+.sidebar button {
+  font-size: 1rem;
 }
