@@ -43,7 +43,7 @@ const Links = () => {
               }`}
               onClick={() => setOpen(false)}
             >
-              Clases
+              Próximas actividades
             </Link>
           </li>
           <li>
@@ -135,7 +135,7 @@ const Links = () => {
                 size={28}
                 stroke={pathname === "/classes" ? "#f4a462" : "#fff"}
               />
-              Clases
+              Próximas actividades
             </Link>
           </li>
           <li>

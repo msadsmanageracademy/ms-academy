@@ -49,3 +49,30 @@ export async function POST(req) {
     });
   }
 }
+
+export async function GET() {
+  try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    const eventsCollection = db.collection("events");
+
+    const currentDate = new Date(); // Fecha actual
+
+    const events = await eventsCollection
+      .find({ date: { $gt: currentDate } })
+      .sort({ date: 1 }) // Ascendente
+      .toArray();
+
+    return Response.json(
+      {
+        success: true,
+        data: events,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+    });
+  }
+}

@@ -112,10 +112,10 @@ const Sidebar = () => {
             </li>
           </>
         ) : null}
-        <div className={styles.logoutContainer} onClick={() => handleLogout()}>
+        <li className={styles.logoutContainer} onClick={() => handleLogout()}>
           <Logout size={28} />
           {isM && "Cerrar sesión"}
-        </div>
+        </li>
       </ul>
     </nav>
   );

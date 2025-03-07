@@ -15,7 +15,7 @@ const inter = Inter({
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="es" className={inter.className}>
       <body>
         <SessionWrapper>
           <Navbar />

@@ -14,10 +14,10 @@ export default function Home() {
               dolorem unde obcaecati illum. Tempora?
             </p>
             <Link
-              href="/schedule"
+              href="/classes"
               className={`button-primary ${styles.heroButton}`}
             >
-              Consultar disponibilidad
+              Consultar próximas actividades
             </Link>
           </div>
         </div>
