@@ -19,9 +19,9 @@ const AdminPage = () => {
     return null; // Evito que se renderice el contenido hasta que se redirija
   }
   return (
-    <div>
+    <>
       <EventsForm />
-    </div>
+    </>
   );
 };
 

@@ -39,7 +39,7 @@ const Links = () => {
             <Link
               href={"/classes"}
               className={`${styles.navLink} ${
-                pathname === "/classes" ? styles.active : ""
+                pathname.startsWith("/classes") ? styles.active : ""
               }`}
               onClick={() => setOpen(false)}
             >
@@ -127,13 +127,13 @@ const Links = () => {
             <Link
               href={"/classes"}
               className={`${styles.navLink} ${
-                pathname === "/classes" ? styles.active : ""
+                pathname.startsWith("/classes") ? styles.active : ""
               }`}
               onClick={() => setOpen(false)}
             >
               <Notebook
                 size={28}
-                stroke={pathname === "/classes" ? "#f4a462" : "#fff"}
+                stroke={pathname.startsWith("/classes") ? "#f4a462" : "#fff"}
               />
               Próximas actividades
             </Link>

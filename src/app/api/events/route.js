@@ -5,7 +5,10 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    body.date = new Date(body.date); // Dado que JSON convierte todo a string, vuelvo a darle el formato a la fecha
+    // Dado que JSON convierte todo a string, vuelvo a darle el formato a la fechas
+
+    body.start_date = new Date(body.start_date);
+    if (body.end_date) body.end_date = new Date(body.end_date);
 
     const parsedEvent = eventMongoSchema.safeParse(body);
 
@@ -59,8 +62,8 @@ export async function GET() {
     const currentDate = new Date(); // Fecha actual
 
     const events = await eventsCollection
-      .find({ date: { $gt: currentDate } })
-      .sort({ date: 1 }) // Ascendente
+      .find({ start_date: { $gt: currentDate } })
+      .sort({ start_date: 1 }) // Ascendente
       .toArray();
 
     return Response.json(

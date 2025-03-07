@@ -24,12 +24,28 @@ export const RegisterFormSchema = z.object({
 
 export const eventMongoSchema = z.object({
   type: z.enum(["class", "course"]),
-  title: z.string().min(3),
-  description: z.string().optional(),
-  duration: z.number().positive(),
-  date: z.date(),
+  title: z.string().min(3, { message: "Debe contener al menos 3 caracteres" }),
+  short_description: z
+    .string()
+    .min(10, { message: "Debe contener al menos 10 caracteres" }),
+  full_description: z
+    .string()
+    .min(10, { message: "Debe contener al menos 10 caracteres" })
+    .optional(),
+  duration: z
+    .number({ message: "Debe ingresar un número" })
+    .positive({ message: "Debe ingresar 1 o mayor" }),
+  start_date: z.date(),
+  end_date: z.date().optional(),
   participants: z.array(z.string()).default([]),
-  amount_of_classes: z.number().positive().optional(),
-  max_participants: z.number().positive(),
-  price: z.number().nonnegative(),
+  amount_of_classes: z
+    .number({ message: "Debe ingresar un número" })
+    .min(2, { message: "Debe haber al menos 2 clases" })
+    .optional(),
+  max_participants: z
+    .number({ message: "Debe ingresar un número" })
+    .nonnegative({ message: "Debe ingresar 0 o mayor" }),
+  price: z
+    .number({ message: "Debe ingresar un número" })
+    .nonnegative({ message: "Debe ingresar 0 o mayor" }),
 });
