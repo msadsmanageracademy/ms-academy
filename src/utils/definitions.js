@@ -22,6 +22,19 @@ export const RegisterFormSchema = z.object({
     }),
 });
 
+export const EditAccountFormSchema = RegisterFormSchema.omit({
+  password: true,
+}).extend({
+  avatarUrl: z.union([z.string().url(), z.literal("")]).optional(),
+  avatarPublicId: z.union([z.string().url(), z.literal("")]).optional(),
+  age: z.number({ message: "Debe ingresar un número" }).optional(),
+});
+
+/* Para el avatar:
+  z.union() en Zod permite que un campo pueda tener múltiples tipos de valores válidos (en este caso url o "").
+  z.string().url() valida que, si hay un valor, sea una URL válida.
+  z.literal("") permite que el valor sea una cadena vacía ("") */
+
 export const eventMongoSchema = z.object({
   type: z.enum(["class", "course"]),
   title: z.string().min(3, { message: "Debe contener al menos 3 caracteres" }),

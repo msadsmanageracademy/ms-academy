@@ -84,7 +84,7 @@ const EventsForm = () => {
         `Ve los detalles de ${result.data.title} en la sección correspondiente`
       );
 
-      router.push("/profile");
+      router.push("/account");
     } catch (err) {
       toastError(3000, "Error al crear evento", err.message);
     }

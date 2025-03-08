@@ -41,6 +41,7 @@ export const authOptions = {
     async jwt({ token, user }) {
       // Acá decido qué guardo en el token, que luego puedo recuperar en la sesión
       if (user) {
+        token.id = user.id;
         token.first_name = user.first_name;
         token.role = user.role;
       }
@@ -49,6 +50,7 @@ export const authOptions = {
     async session({ session, token }) {
       // Acá decido qué guardo en la sesión, proveniente del token
       if (token) {
+        session.user.id = token.id;
         session.user.first_name = token.first_name;
         session.user.role = token.role;
       }
@@ -57,6 +59,6 @@ export const authOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
-    signIn: "/profile",
+    signIn: "/account",
   },
 };

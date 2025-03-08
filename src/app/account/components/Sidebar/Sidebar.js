@@ -52,26 +52,26 @@ const Sidebar = () => {
         {/* Enlaces comunes para todos los usuarios */}
         <li>
           <Link
-            href="/profile"
-            className={pathname === "/profile" ? `${styles.active}` : ""}
+            href="/account"
+            className={pathname === "/account" ? `${styles.active}` : ""}
           >
             <Users
               size={28}
-              stroke={pathname === "/profile" ? "#f4a462" : "#fff"}
+              stroke={pathname === "/account" ? "#f4a462" : "#fff"}
             />
             {isM && session?.user.first_name}
           </Link>
         </li>
         <li>
           <Link
-            href="/profile/edit"
-            className={pathname === "/profile/edit" ? `${styles.active}` : ""}
+            href="/account/edit"
+            className={pathname === "/account/edit" ? `${styles.active}` : ""}
           >
             <Pencil
               size={28}
-              stroke={pathname === "/profile/edit" ? "#f4a462" : "#fff"}
+              stroke={pathname === "/account/edit" ? "#f4a462" : "#fff"}
             />
-            {isM && "Editar perfil"}
+            {isM && "Editar datos"}
           </Link>
         </li>
 
@@ -79,14 +79,14 @@ const Sidebar = () => {
         {!session?.user?.role || session.user.role === "user" ? (
           <li>
             <Link
-              href="/profile/my-classes"
+              href="/account/my-classes"
               className={
-                pathname === "/profile/my-classes" ? `${styles.active}` : ""
+                pathname === "/account/my-classes" ? `${styles.active}` : ""
               }
             >
               <List
                 size={28}
-                stroke={pathname === "/profile/my-classes" ? "#f4a462" : "#fff"}
+                stroke={pathname === "/account/my-classes" ? "#f4a462" : "#fff"}
               />
               {isM && "Mis clases"}
             </Link>
@@ -98,14 +98,14 @@ const Sidebar = () => {
           <>
             <li>
               <Link
-                href="/profile/admin"
+                href="/account/admin"
                 className={
-                  pathname === "/profile/admin" ? `${styles.active}` : ""
+                  pathname === "/account/admin" ? `${styles.active}` : ""
                 }
               >
                 <PlusSign
                   size={28}
-                  stroke={pathname === "/profile/admin" ? "#f4a462" : "#fff"}
+                  stroke={pathname === "/account/admin" ? "#f4a462" : "#fff"}
                 />
                 {isM && "Crear"}
               </Link>
