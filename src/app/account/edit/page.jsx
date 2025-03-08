@@ -52,14 +52,12 @@ const EditPage = () => {
 
   const onSubmit = async ({ first_name, last_name, age }) => {
     try {
-      const isFormValidated = await trigger(); // Validar el formulario
+      console.log("Errores de formulario", errors); // Errores en el form
 
-      if (!isFormValidated) {
-        toastError(3000, "Error en el formulario", "Intente nuevamente");
-        return;
-      }
+      /* handleSubmit ya valida el form (según schema definido en Zod) por lo que no es necesario utilizar trigger() para validar manualmente */
 
-      // Si la validación es exitosa, enviar los datos para actualización
+      /* Si la validación fue exitosa, hago el PATCH */
+
       const response = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

@@ -44,12 +44,6 @@ export default function Home() {
           <li>Logros, certificaciones o proyectos destacados.</li>
           <li>Una foto del cliente para darle un toque más personal.</li>
         </ul>
-        <Link
-          href="/about-me"
-          className={`button-primary ${styles.aboutMeButton}`}
-        >
-          Conocé más sobre mí
-        </Link>
       </div>
       <div className={styles.reviews}>
         <h3>Esto se podría mostrar como un carrusel</h3>

@@ -20,17 +20,11 @@ const RegisterForm = () => {
 
   const onSubmit = async ({ first_name, last_name, email, password }) => {
     try {
-      const isFormValidated = await trigger(); // Valido según schema definido en zod
+      console.log("Errores de formulario", errors); // Errores en el form
 
-      console.log(isFormValidated);
+      /* handleSubmit ya valida el form (según schema definido en Zod) por lo que no es necesario utilizar trigger() para validar manualmente */
 
-      console.log(errors);
-
-      if (!isFormValidated) {
-        /* Si falla la validación, return */
-        toastError(3000, "Error en el formulario", "Intente nuevamente");
-        return;
-      }
+      /* Si la validación fue exitosa, hago el POST */
 
       const response = await fetch("/api/auth/register", {
         headers: { "Content-Type": "application/json" },

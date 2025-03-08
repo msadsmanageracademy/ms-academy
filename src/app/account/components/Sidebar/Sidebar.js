@@ -5,8 +5,11 @@ import { PlusSign } from "@/components/icons/PlusSign";
 import { signOut, useSession } from "next-auth/react";
 import { Pencil } from "@/components/icons/Pencil";
 import { Logout } from "@/components/icons/Logout";
+import { Delete } from "@/components/icons/Delete";
+import { UserId } from "@/components/icons/UserId";
 import { useMediaQuery } from "react-responsive";
 import { Users } from "@/components/icons/Users";
+import { User } from "@/components/icons/User";
 import { List } from "@/components/icons/List";
 import { usePathname } from "next/navigation";
 import styles from "./styles.module.css";
@@ -55,7 +58,7 @@ const Sidebar = () => {
             href="/account"
             className={pathname === "/account" ? `${styles.active}` : ""}
           >
-            <Users
+            <User
               size={28}
               stroke={pathname === "/account" ? "#f4a462" : "#fff"}
             />
@@ -67,11 +70,11 @@ const Sidebar = () => {
             href="/account/edit"
             className={pathname === "/account/edit" ? `${styles.active}` : ""}
           >
-            <Pencil
+            <UserId
               size={28}
               stroke={pathname === "/account/edit" ? "#f4a462" : "#fff"}
             />
-            {isM && "Editar datos"}
+            {isM && "Mis datos"}
           </Link>
         </li>
 
@@ -98,16 +101,40 @@ const Sidebar = () => {
           <>
             <li>
               <Link
-                href="/account/admin"
+                href="/account/create-events"
                 className={
-                  pathname === "/account/admin" ? `${styles.active}` : ""
+                  pathname === "/account/create-events"
+                    ? `${styles.active}`
+                    : ""
                 }
               >
                 <PlusSign
                   size={28}
-                  stroke={pathname === "/account/admin" ? "#f4a462" : "#fff"}
+                  stroke={
+                    pathname === "/account/create-events" ? "#f4a462" : "#fff"
+                  }
                 />
                 {isM && "Crear"}
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/account/edit-events"
+                className={
+                  pathname.startsWith("/account/edit-events")
+                    ? `${styles.active}`
+                    : ""
+                }
+              >
+                <Pencil
+                  size={28}
+                  stroke={
+                    pathname.startsWith("/account/edit-events")
+                      ? "#f4a462"
+                      : "#fff"
+                  }
+                />
+                {isM && "Editar"}
               </Link>
             </li>
           </>

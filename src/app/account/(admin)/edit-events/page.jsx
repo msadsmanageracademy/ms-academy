@@ -1,14 +1,21 @@
 "use client";
 
 import OvalSpinner from "@/components/spinners/OvalSpinner";
+import withReactContent from "sweetalert2-react-content";
 import { useEffect, useMemo, useState } from "react";
-import { toastError } from "@/utils/alerts";
+import { useRouter } from "next/navigation";
+import { toastError, toastSuccess } from "@/utils/alerts";
 import styles from "./styles.module.css";
+import Swal from "sweetalert2";
 import Link from "next/link";
 
-const ClassesPage = () => {
+const EditEventsPage = () => {
+  const MySwal = withReactContent(Swal);
+
   const [events, setEvents] = useState([]); // Estado para guardar los eventos
   const [loading, setLoading] = useState(true);
+
+  const router = useRouter();
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -39,6 +46,49 @@ const ClassesPage = () => {
     [events]
   );
 
+  const handleDeleteEvent = (id) => {
+    MySwal.fire({
+      title: "Eliminar evento",
+      text: "¿Está seguro que desea eliminar el evento?",
+      icon: "error",
+      showCancelButton: true,
+      confirmButtonColor: "#c91111",
+      cancelButtonColor: "#292c33",
+      confirmButtonText: "Eliminar",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteEvent(id);
+      }
+    });
+  };
+
+  const deleteEvent = async (id) => {
+    try {
+      const response = await fetch(`/api/events/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return toastError(3000, "Error al eliminar el evento", result.error);
+      }
+
+      toastSuccess(
+        3000,
+        "Evento eliminado",
+        "El evento ha sido eliminado con éxito"
+      );
+
+      router.push("/account");
+    } catch (err) {
+      toastError(3000, "Error al editar los datos", err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -46,6 +96,7 @@ const ClassesPage = () => {
       </div>
     );
   }
+
   return (
     <div className={styles.container}>
       <div className={styles.classes}>
@@ -94,12 +145,20 @@ const ClassesPage = () => {
               <div>Cantidad de clases: {amount_of_classes} </div>
               <div>Duración total: {duration / 60} horas</div>
               <div>Cupo: {max_participants} personas</div>
-              <Link
-                href={`/classes/${_id}`}
-                className={`button-primary ${styles.button}`}
-              >
-                Ver más
-              </Link>
+              <div className={styles.buttonsContainer}>
+                <Link
+                  href={`/account/edit-events/${_id}`}
+                  className={`button-primary ${styles.editButton}`}
+                >
+                  Editar
+                </Link>
+                <button
+                  className={`button-primary ${styles.deleteButton}`}
+                  onClick={() => handleDeleteEvent(_id)}
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           )
         )}
@@ -125,9 +184,20 @@ const ClassesPage = () => {
                   : "No se puede mostrar la fecha"}
               </div>
               <div>Duración: {duration} minutos </div>
-              <button className={`button-primary ${styles.button}`}>
-                Inscribirse
-              </button>
+              <div className={styles.buttonsContainer}>
+                <Link
+                  href={`/account/edit-events/${_id}`}
+                  className={`button-primary ${styles.editButton}`}
+                >
+                  Editar
+                </Link>
+                <button
+                  className={`button-primary ${styles.deleteButton}`}
+                  onClick={() => handleDeleteEvent(_id)}
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           )
         )}
@@ -136,4 +206,4 @@ const ClassesPage = () => {
   );
 };
 
-export default ClassesPage;
+export default EditEventsPage;

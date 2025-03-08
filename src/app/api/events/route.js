@@ -1,6 +1,33 @@
 import { eventMongoSchema } from "@/utils/definitions";
 import clientPromise from "@/lib/db";
 
+export async function GET() {
+  try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    const eventsCollection = db.collection("events");
+
+    const currentDate = new Date(); // Fecha actual
+
+    const events = await eventsCollection
+      .find({ start_date: { $gt: currentDate } })
+      .sort({ start_date: 1 }) // Ascendente
+      .toArray();
+
+    return Response.json(
+      {
+        success: true,
+        data: events,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+    });
+  }
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -45,33 +72,6 @@ export async function POST(req) {
         message: "Evento creado con éxito",
       },
       { status: 201 }
-    );
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-    });
-  }
-}
-
-export async function GET() {
-  try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    const eventsCollection = db.collection("events");
-
-    const currentDate = new Date(); // Fecha actual
-
-    const events = await eventsCollection
-      .find({ start_date: { $gt: currentDate } })
-      .sort({ start_date: 1 }) // Ascendente
-      .toArray();
-
-    return Response.json(
-      {
-        success: true,
-        data: events,
-      },
-      { status: 200 }
     );
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
