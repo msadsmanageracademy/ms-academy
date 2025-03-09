@@ -1,14 +1,57 @@
 "use client";
 
 import OvalSpinner from "@/components/spinners/OvalSpinner";
+import { toastError, toastSuccess } from "@/utils/alerts";
 import { useEffect, useMemo, useState } from "react";
-import { toastError } from "@/utils/alerts";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import styles from "./styles.module.css";
 import Link from "next/link";
 
 const ClassesPage = () => {
-  const [events, setEvents] = useState([]); // Estado para guardar los eventos
+  const { data: session, status } = useSession();
+
+  const router = useRouter();
+
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const signUpForTheEvent = async (id) => {
+    try {
+      console.log("Me ejecuté");
+      console.log(id);
+      if (!session) {
+        return toastError(
+          3000,
+          "Error al inscribirse",
+          "Para inscribirse, primero debe iniciar sesión"
+        );
+      }
+
+      const response = await fetch(`/api/events/sign-up/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.user.id }),
+      });
+
+      const result = await response.json();
+
+      console.log(response);
+      console.log(result);
+
+      if (!response.ok)
+        return toastError(3000, "Error al inscribirse", result.message);
+
+      toastSuccess(3000, "Inscripción exitosa", result.message);
+      router.push("account/my-classes");
+    } catch (error) {
+      return toastError(
+        3000,
+        "Error al inscribirse",
+        "Hubo un problema inesperado al procesar tu inscripción"
+      );
+    }
+  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -125,7 +168,10 @@ const ClassesPage = () => {
                   : "No se puede mostrar la fecha"}
               </div>
               <div>Duración: {duration} minutos </div>
-              <button className={`button-primary ${styles.button}`}>
+              <button
+                className={`button-primary ${styles.button}`}
+                onClick={() => signUpForTheEvent(_id)}
+              >
                 Inscribirse
               </button>
             </div>

@@ -16,12 +16,11 @@ import Image from "next/image";
 const EditPage = () => {
   const {
     formState: { errors },
-    trigger,
     handleSubmit,
     register,
   } = useForm({
     resolver: zodResolver(EditAccountFormSchema),
-    defaultValues: {}, // Aquí puedes cargar los valores por defecto desde la DB
+    defaultValues: {},
   });
 
   const { data: session } = useSession(); // Obtiene el estado de la sesión
@@ -35,11 +34,18 @@ const EditPage = () => {
   useEffect(() => {
     const retrieveUserData = async () => {
       try {
-        const res = await fetch(`/api/users/${userId}`);
-        if (!res.ok) throw new Error("Error al obtener los datos del usuario");
+        const response = await fetch(`/api/users/${userId}`);
 
-        const data = await res.json();
-        setUserData(data.data);
+        const result = await response.json();
+
+        if (!response.ok)
+          return toastError(
+            3000,
+            "Error al recuperar el usuario",
+            result.message
+          );
+
+        setUserData(result.data);
       } catch (err) {
         toastError(3000, "Error al cargar la data del usuario", err);
       } finally {
@@ -50,7 +56,7 @@ const EditPage = () => {
     if (userId) retrieveUserData();
   }, [userId]);
 
-  const onSubmit = async ({ first_name, last_name, age }) => {
+  const onSubmit = async (data) => {
     try {
       console.log("Errores de formulario", errors); // Errores en el form
 
@@ -61,7 +67,7 @@ const EditPage = () => {
       const response = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ first_name, last_name, age, avatarUrl }),
+        body: JSON.stringify(data),
       });
 
       const result = await response.json();
@@ -70,16 +76,14 @@ const EditPage = () => {
         return toastError(3000, "Error al editar los datos", result.error);
       }
 
-      console.log("Envié datos al BE");
-
-      toastSuccess(
-        3000,
-        "Información actualizada",
-        "Datos actualizados con éxito"
-      );
+      toastSuccess(3000, "Información actualizada", result.message);
       router.push("/account");
     } catch (err) {
-      toastError(3000, "Error al editar los datos", err.message);
+      toastError(
+        3000,
+        "Error al editar los datos",
+        "Ha sucedido un error inesperado"
+      );
     }
   };
 
@@ -164,17 +168,20 @@ const EditPage = () => {
             {...register("email")}
             className={`${styles.input}`}
             defaultValue={userData?.email}
-            disabled
+            readOnly
           />
         </div>
         <div className={styles.formRow}>
           <label>Edad</label>
           <input
-            {...register("age", { valueAsNumber: true })}
+            {...register("age", {
+              valueAsNumber: true,
+            })}
             className={`${styles.input}`}
-            defaultValue={userData?.age || ""}
+            defaultValue={userData?.age ?? ""}
           />
         </div>
+        <div className={styles.formCustomError}>{errors?.age?.message}</div>
         <div className={styles.formRow}>
           <label>Avatar</label>
           <div className={styles.avatarContainer}>

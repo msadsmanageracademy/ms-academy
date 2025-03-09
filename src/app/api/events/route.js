@@ -22,9 +22,12 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-    });
+    return Response.json(
+      {
+        error: error.message,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -37,23 +40,24 @@ export async function POST(req) {
     body.start_date = new Date(body.start_date);
     if (body.end_date) body.end_date = new Date(body.end_date);
 
-    const parsedEvent = eventMongoSchema.safeParse(body);
+    const parsedBody = eventMongoSchema.safeParse(body);
 
-    if (!parsedEvent.success) {
-      return new Response(JSON.stringify({ error: parsedEvent.error.errors }), {
-        status: 400,
-      });
+    if (!parsedBody.success) {
+      return Response.json(
+        {
+          success: false,
+          message: "El formato de los datos es inválido",
+          details: parsedBody.error.errors,
+        },
+        { status: 400 }
+      );
     }
 
     const client = await clientPromise; // Obtener el cliente de MongoDB
     const db = client.db(process.env.MONGODB_DB_NAME); // Seleccionar la base de datos
     const eventsCollection = db.collection("events");
 
-    const result = await eventsCollection.insertOne({
-      ...parsedEvent.data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    await eventsCollection.insertOne(body);
 
     /* Como utilizo el cliente de Mongo, no es necesario cerrar manualmente la conexión con client.close() una vez realizada la operación 
        (el cliente lo maneja automáticamente) */
@@ -65,17 +69,12 @@ export async function POST(req) {
     return Response.json(
       {
         success: true,
-        data: {
-          id: result.insertedId,
-          title: body.title,
-        },
-        message: "Evento creado con éxito",
+        message: `Evento ${body.title} creado con éxito`,
       },
       { status: 201 }
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-    });
+    console.error("Error al inscribirse al evento:", error);
+    return Response.json({ error: "Error en el servidor" }, { status: 500 });
   }
 }

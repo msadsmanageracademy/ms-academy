@@ -12,16 +12,25 @@ const CourseDetail = () => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  console.log(id);
-
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const res = await fetch(`/api/events/${id}`);
-        if (!res.ok) throw new Error("Error al obtener el curso");
+        const response = await fetch(`/api/events/${id}`);
 
-        const data = await res.json();
-        setCourse(data.data);
+        const result = await response.json();
+
+        console.log(response);
+
+        console.log(result);
+
+        if (!response.ok)
+          return toastError(
+            3000,
+            "Error al recuperar el curso",
+            result.message
+          );
+
+        setCourse(result.data);
       } catch (err) {
         toastError(3000, "Error al cargar el curso", err);
         router.push("/classes"); // Redirige si hay error
@@ -42,6 +51,8 @@ const CourseDetail = () => {
   }
 
   if (!course) return <p>No se encontró el curso</p>;
+
+  console.log(course);
 
   return (
     <div className={styles.container}>

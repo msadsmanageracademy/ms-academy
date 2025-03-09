@@ -1,3 +1,4 @@
+import { EditAccountFormSchema } from "@/utils/definitions";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 
@@ -9,11 +10,14 @@ export async function GET(req, { params }) {
 
     const { id } = params;
 
-    if (!ObjectId.isValid(id)) {
-      return new Response(JSON.stringify({ error: "ID inválido" }), {
-        status: 400,
-      });
-    }
+    if (!ObjectId.isValid(id))
+      return Response.json(
+        {
+          success: false,
+          message: "ID de usuario inválido",
+        },
+        { status: 400 }
+      );
 
     const user = await usersCollection.findOne(
       { _id: new ObjectId(id) },
@@ -21,38 +25,63 @@ export async function GET(req, { params }) {
     );
 
     if (!user) {
-      return new Response(JSON.stringify({ error: "Usuario no encontrado" }), {
-        status: 404,
-      });
+      return Response.json(
+        { success: false, message: "Usuario no encontrado" },
+        { status: 400 }
+      );
     }
 
     return Response.json({ success: true, data: user }, { status: 200 });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-    });
+    console.error("Error al recuperar el usuario:", error);
+    return Response.json({ error: "Error en el servidor" }, { status: 500 });
   }
 }
 
 export async function PATCH(req, { params }) {
   try {
+    const { id } = params;
+
+    if (!ObjectId.isValid(id))
+      return Response.json(
+        {
+          success: false,
+          message: "ID de usuario inválido",
+        },
+        { status: 400 }
+      );
+
+    const body = await req.json();
+
+    const parsedBody = EditAccountFormSchema.safeParse(body); // Paso el body por el schema de edición de perfil previo a enviar a la DB
+
+    if (!parsedBody.success) {
+      return Response.json(
+        {
+          success: false,
+          message: "El formato de los datos es inválido",
+          details: parsedBody.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const usersCollection = db.collection("users");
 
-    const { id } = params;
-
-    if (!ObjectId.isValid(id))
-      return new Response("ID inválido", { status: 400 });
-
-    const body = await req.json();
-
     await usersCollection.updateOne({ _id: new ObjectId(id) }, { $set: body });
 
-    return Response.json({ success: true }, { status: 200 });
+    return Response.json(
+      { success: true, message: "Información actualizada con éxito" },
+      { status: 200 }
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-    });
+    return Response.json(
+      {
+        error: error.message,
+      },
+      { status: 500 }
+    );
   }
 }

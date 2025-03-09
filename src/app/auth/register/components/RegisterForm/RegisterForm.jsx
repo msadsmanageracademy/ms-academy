@@ -18,7 +18,7 @@ const RegisterForm = () => {
     resolver: zodResolver(RegisterFormSchema),
   });
 
-  const onSubmit = async ({ first_name, last_name, email, password }) => {
+  const onSubmit = async (data) => {
     try {
       console.log("Errores de formulario", errors); // Errores en el form
 
@@ -29,12 +29,7 @@ const RegisterForm = () => {
       const response = await fetch("/api/auth/register", {
         headers: { "Content-Type": "application/json" },
         method: "POST",
-        body: JSON.stringify({
-          first_name,
-          last_name,
-          email,
-          password,
-        }),
+        body: JSON.stringify(data),
       });
 
       const result = await response.json();
@@ -79,6 +74,7 @@ const RegisterForm = () => {
         />
       </div>
       <div className={styles.formCustomError}>{errors?.password?.message}</div>
+      <input {...register("role", { value: "user" })} type="hidden" />
       <button className="button-primary" type="submit">
         Registrarse
       </button>

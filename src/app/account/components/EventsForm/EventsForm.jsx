@@ -65,17 +65,14 @@ const EventsForm = () => {
 
       const result = await response.json();
 
+      console.log(response);
       console.log(result);
 
       if (!response.ok) {
-        return toastError(3000, "Error al generar evento", result.error);
+        return toastError(3000, "Error al generar evento", result.message);
       }
 
-      toastSuccess(
-        3000,
-        result.message,
-        `Ve los detalles de ${result.data.title} en la sección correspondiente`
-      );
+      toastSuccess(3000, "Operación exitosa", result.message);
 
       router.push("/account");
     } catch (err) {

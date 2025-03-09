@@ -115,9 +115,9 @@ const EditEventsPage = () => {
             max_participants,
           }) => (
             <div key={_id} className={styles.text}>
-              <div>Título: {title} </div>
-              <div>Resumen: {short_description} </div>
-              <div>Descripción completa: {full_description} </div>
+              <div>Título: {title}</div>
+              <div>Resumen: {short_description}</div>
+              <div>Descripción completa: {full_description}</div>
               <div>
                 Inicia:{" "}
                 {start_date

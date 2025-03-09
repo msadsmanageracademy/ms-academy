@@ -18,22 +18,28 @@ export const RegisterFormSchema = z.object({
       message: "Debe contener al menos un carácter especial",
     })
     .refine((value) => !/\s/.test(value), {
-      message: "No debe contener espacios", // Chequear
+      message: "No debe contener espacios",
     }),
-});
-
-export const EditAccountFormSchema = RegisterFormSchema.omit({
-  password: true,
-}).extend({
-  avatarUrl: z.union([z.string().url(), z.literal("")]).optional(),
-  avatarPublicId: z.union([z.string().url(), z.literal("")]).optional(),
-  age: z.number({ message: "Debe ingresar un número" }).optional(),
+  role: z.enum(["user", "admin"]),
+  age: z
+    .number({ message: "Debe ingresar un número" })
+    .nullable()
+    .default(null), // TODO: Si se deja vacío al editar, pide que el campo sea un número
 });
 
 /* Para el avatar:
   z.union() en Zod permite que un campo pueda tener múltiples tipos de valores válidos (en este caso url o "").
   z.string().url() valida que, si hay un valor, sea una URL válida.
   z.literal("") permite que el valor sea una cadena vacía ("") */
+
+export const EditAccountFormSchema = RegisterFormSchema.omit({
+  email: true, // Debería omitir su validación? Está en el form pero es readonly, averiguar cuál es la mejor práctica.
+  password: true,
+  role: true,
+}).extend({
+  avatarUrl: z.union([z.string().url(), z.literal("")]).optional(),
+  avatarPublicId: z.union([z.string().url(), z.literal("")]).optional(),
+});
 
 export const eventMongoSchema = z.object({
   type: z.enum(["class", "course"]),
@@ -48,8 +54,8 @@ export const eventMongoSchema = z.object({
   duration: z
     .number({ message: "Debe ingresar un número" })
     .positive({ message: "Debe ingresar 1 o mayor" }),
-  start_date: z.date(),
-  end_date: z.date().optional(),
+  start_date: z.date(), // TODO: Si el campo queda vacío obtengo error en FE al editar curso
+  end_date: z.date().optional(), // TODO: Si el campo queda vacío obtengo error en FE al editar curso
   participants: z.array(z.string()).default([]),
   amount_of_classes: z
     .number({ message: "Debe ingresar un número" })

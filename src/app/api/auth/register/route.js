@@ -6,12 +6,17 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    const parsedEvent = RegisterFormSchema.safeParse(body);
+    const parsedBody = RegisterFormSchema.safeParse(body);
 
-    if (!parsedEvent.success) {
-      return new Response(JSON.stringify({ error: parsedEvent.error.errors }), {
-        status: 400,
-      });
+    if (!parsedBody.success) {
+      return Response.json(
+        {
+          success: false,
+          message: "El formato de los datos es inválido",
+          details: parsedBody.error.errors,
+        },
+        { status: 400 }
+      );
     }
 
     const client = await clientPromise; // Obtener el cliente de MongoDB
@@ -29,9 +34,7 @@ export async function POST(req) {
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
     const newUser = {
-      first_name: body.first_name,
-      last_name: body.last_name,
-      email: body.email,
+      ...body,
       password: hashedPassword,
     };
 
