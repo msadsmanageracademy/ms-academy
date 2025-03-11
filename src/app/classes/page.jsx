@@ -43,7 +43,7 @@ const ClassesPage = () => {
         return toastError(3000, "Error al inscribirse", result.message);
 
       toastSuccess(3000, "Inscripción exitosa", result.message);
-      router.push("account/my-classes");
+      router.push("dashboard/my-classes");
     } catch (error) {
       return toastError(
         3000,
@@ -168,12 +168,21 @@ const ClassesPage = () => {
                   : "No se puede mostrar la fecha"}
               </div>
               <div>Duración: {duration} minutos </div>
-              <button
-                className={`button-primary ${styles.button}`}
-                onClick={() => signUpForTheEvent(_id)}
-              >
-                Inscribirse
-              </button>
+              {session?.user?.role === "admin" ? (
+                <Link
+                  href={`/dashboard/edit-events/${_id}`}
+                  className="button-primary"
+                >
+                  Editar
+                </Link>
+              ) : (
+                <button
+                  className={`button-primary ${styles.button}`}
+                  onClick={() => signUpForTheEvent(_id)}
+                >
+                  Inscribirse
+                </button>
+              )}
             </div>
           )
         )}

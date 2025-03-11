@@ -2,11 +2,15 @@
 
 import OvalSpinner from "@/components/spinners/OvalSpinner";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { toastError } from "@/utils/alerts";
 import styles from "./styles.module.css";
+import Link from "next/link";
 
 const CourseDetail = () => {
+  const { data: session, status } = useSession();
+
   const { id } = useParams();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -105,9 +109,18 @@ const CourseDetail = () => {
           <span>Cupo: </span>
           {course.max_participants} personas
         </div>
-        <button className={`button-primary ${styles.button}`}>
-          Inscribirse
-        </button>
+        {session?.user?.role === "admin" ? (
+          <Link
+            href={`/dashboard/edit-events/${course._id}`}
+            className="button-primary"
+          >
+            Editar
+          </Link>
+        ) : (
+          <button className={`button-primary ${styles.button}`}>
+            Inscribirse
+          </button>
+        )}
       </div>
     </div>
   );

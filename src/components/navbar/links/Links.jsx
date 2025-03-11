@@ -60,9 +60,9 @@ const Links = () => {
           {session ? (
             <li>
               <Link
-                href={"/account"}
+                href={"/dashboard"}
                 className={`${styles.navLink} ${
-                  pathname.startsWith("/account") ? styles.active : ""
+                  pathname.startsWith("/dashboard") ? styles.active : ""
                 }`}
                 onClick={() => setOpen(false)}
               >
@@ -156,15 +156,17 @@ const Links = () => {
           {session ? (
             <li>
               <Link
-                href={"/account"}
+                href={"/dashboard"}
                 className={`${styles.navLink} ${
-                  pathname.startsWith("/account") ? styles.active : ""
+                  pathname.startsWith("/dashboard") ? styles.active : ""
                 }`}
                 onClick={() => setOpen(false)}
               >
                 <Users
                   size={28}
-                  stroke={pathname.startsWith("/account") ? "#f4a462" : "#fff"}
+                  stroke={
+                    pathname.startsWith("/dashboard") ? "#f4a462" : "#fff"
+                  }
                 />
                 Mi cuenta
               </Link>

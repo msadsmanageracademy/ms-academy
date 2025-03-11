@@ -53,6 +53,10 @@ export async function PATCH(req, { params }) {
 
     const body = await req.json();
 
+    console.log(body);
+
+    console.log(id);
+
     const parsedBody = EditAccountFormSchema.safeParse(body); // Paso el body por el schema de edición de perfil previo a enviar a la DB
 
     if (!parsedBody.success) {
@@ -66,11 +70,18 @@ export async function PATCH(req, { params }) {
       );
     }
 
+    console.log(parsedBody);
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const usersCollection = db.collection("users");
 
-    await usersCollection.updateOne({ _id: new ObjectId(id) }, { $set: body });
+    const result = await usersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: body }
+    );
+
+    console.log(result);
 
     return Response.json(
       { success: true, message: "Información actualizada con éxito" },

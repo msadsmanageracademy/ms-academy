@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import styles from "./styles.module.css";
 import Image from "next/image";
 
-const EditPage = () => {
+const AccountPage = () => {
   const {
     formState: { errors },
     handleSubmit,
@@ -77,7 +77,7 @@ const EditPage = () => {
       }
 
       toastSuccess(3000, "Información actualizada", result.message);
-      router.push("/account");
+      router.push("/dashboard");
     } catch (err) {
       toastError(
         3000,
@@ -101,7 +101,7 @@ const EditPage = () => {
       const publicId = result.info.public_id;
 
       try {
-        const updateResponse = await fetch(`/api/users/${userId}`, {
+        const updateResponse = await fetch(`/api/users/${userId}/avatar`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -111,6 +111,7 @@ const EditPage = () => {
         });
 
         await updateResponse.json();
+
         if (!updateResponse.ok) {
           throw new Error("Error al actualizar el avatar del usuario");
         }
@@ -220,4 +221,4 @@ const EditPage = () => {
   );
 };
 
-export default EditPage;
+export default AccountPage;

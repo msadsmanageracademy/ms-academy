@@ -83,7 +83,7 @@ const EditEventsPage = () => {
         "El evento ha sido eliminado con éxito"
       );
 
-      router.push("/account");
+      router.push("/dashboard");
     } catch (err) {
       toastError(3000, "Error al editar los datos", err.message);
     }
@@ -147,7 +147,7 @@ const EditEventsPage = () => {
               <div>Cupo: {max_participants} personas</div>
               <div className={styles.buttonsContainer}>
                 <Link
-                  href={`/account/edit-events/${_id}`}
+                  href={`/dashboard/edit-events/${_id}`}
                   className={`button-primary ${styles.editButton}`}
                 >
                   Editar
@@ -186,7 +186,7 @@ const EditEventsPage = () => {
               <div>Duración: {duration} minutos </div>
               <div className={styles.buttonsContainer}>
                 <Link
-                  href={`/account/edit-events/${_id}`}
+                  href={`/dashboard/edit-events/${_id}`}
                   className={`button-primary ${styles.editButton}`}
                 >
                   Editar

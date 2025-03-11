@@ -78,7 +78,7 @@ const EditEventByIdPage = () => {
         "Información actualizada",
         "Datos actualizados con éxito"
       );
-      router.push("/account");
+      router.push("/dashboard");
     } catch (err) {
       toastError(3000, "Error al editar los datos", err.message);
     }
@@ -94,7 +94,7 @@ const EditEventByIdPage = () => {
         setEvent(data.data);
       } catch (err) {
         toastError(3000, "Error al cargar el curso o clase", err);
-        router.push("/account/edit-events"); // Redirige si hay error
+        router.push("/dashboard/edit-events");
       } finally {
         setLoading(false);
       }

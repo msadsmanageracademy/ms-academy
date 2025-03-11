@@ -28,7 +28,7 @@ const LoginPage = () => {
       if (res.error) {
         setError("Credenciales incorrectas");
       } else {
-        router.push("/account"); // Redirigir después del login exitoso
+        router.push("/dashboard"); // Redirigir después del login exitoso
       }
     } catch (error) {
       setError("Error en el servidor. Inténtalo de nuevo.");

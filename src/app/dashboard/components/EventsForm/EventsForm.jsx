@@ -74,7 +74,7 @@ const EventsForm = () => {
 
       toastSuccess(3000, "Operación exitosa", result.message);
 
-      router.push("/account");
+      router.push("/dashboard");
     } catch (err) {
       toastError(3000, "Error al crear evento", err.message);
     }

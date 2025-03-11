@@ -7,6 +7,8 @@ export async function PATCH(req, { params }) {
     const { id } = params;
     const { userId } = body;
 
+    console.log(body);
+
     if (!ObjectId.isValid(id))
       return Response.json(
         {

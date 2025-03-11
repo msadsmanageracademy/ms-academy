@@ -7,7 +7,6 @@ import { Pencil } from "@/components/icons/Pencil";
 import { Logout } from "@/components/icons/Logout";
 import { Delete } from "@/components/icons/Delete";
 import { UserId } from "@/components/icons/UserId";
-import { useMediaQuery } from "react-responsive";
 import { Users } from "@/components/icons/Users";
 import { User } from "@/components/icons/User";
 import { List } from "@/components/icons/List";
@@ -17,12 +16,6 @@ import Swal from "sweetalert2";
 import Link from "next/link";
 
 const Sidebar = () => {
-  const isXL = useMediaQuery({ query: "(min-width: 1200px)" });
-  const isL = useMediaQuery({ query: "(min-width: 992px)" });
-  const isM = useMediaQuery({ query: "(min-width: 768px)" });
-  const isSm = useMediaQuery({ query: "(min-width: 576px)" });
-  const isXS = useMediaQuery({ query: "(min-width: 400px)" });
-
   const { data: session, status } = useSession();
 
   const MySwal = withReactContent(Swal);
@@ -47,63 +40,64 @@ const Sidebar = () => {
 
   const pathname = usePathname();
 
-  if (status === "loading") return null; // No muestro el sidebar hasta que la sesión haya cargado, esto elimina problema de parpadeo
-
   return (
-    <nav className={`${styles.sidebar} ${!isM ? styles.mobile : ""}`}>
+    <nav className={styles.sidebar}>
       <ul>
         {/* Enlaces comunes para todos los usuarios */}
         <li>
           <Link
-            href="/account"
-            className={pathname === "/account" ? `${styles.active}` : ""}
+            href="/dashboard"
+            className={pathname === "/dashboard" ? `${styles.active}` : ""}
           >
             <User
               size={28}
-              stroke={pathname === "/account" ? "#f4a462" : "#fff"}
+              stroke={pathname === "/dashboard" ? "#f4a462" : "#fff"}
             />
-            {isM && session?.user.first_name}
+            <span>{session?.user.first_name}</span>
           </Link>
         </li>
         <li>
           <Link
-            href="/account/edit"
-            className={pathname === "/account/edit" ? `${styles.active}` : ""}
+            href="/dashboard/account"
+            className={
+              pathname === "/dashboard/account" ? `${styles.active}` : ""
+            }
           >
             <UserId
               size={28}
-              stroke={pathname === "/account/edit" ? "#f4a462" : "#fff"}
+              stroke={pathname === "/dashboard/account" ? "#f4a462" : "#fff"}
             />
-            {isM && "Mis datos"}
+            <span>Mis datos</span>
           </Link>
         </li>
 
         {/* Opciones específicas para el usuario regular */}
-        {!session?.user?.role || session.user.role === "user" ? (
+        {session?.user.role === "user" ? (
           <li>
             <Link
-              href="/account/my-classes"
+              href="/dashboard/my-classes"
               className={
-                pathname === "/account/my-classes" ? `${styles.active}` : ""
+                pathname === "/dashboard/my-classes" ? `${styles.active}` : ""
               }
             >
               <List
                 size={28}
-                stroke={pathname === "/account/my-classes" ? "#f4a462" : "#fff"}
+                stroke={
+                  pathname === "/dashboard/my-classes" ? "#f4a462" : "#fff"
+                }
               />
-              {isM && "Mis clases"}
+              <span>Mis clases</span>
             </Link>
           </li>
         ) : null}
-
         {/* Opciones específicas para el admin */}
         {session?.user?.role === "admin" ? (
           <>
             <li>
               <Link
-                href="/account/create-events"
+                href="/dashboard/create-events"
                 className={
-                  pathname === "/account/create-events"
+                  pathname === "/dashboard/create-events"
                     ? `${styles.active}`
                     : ""
                 }
@@ -111,17 +105,17 @@ const Sidebar = () => {
                 <PlusSign
                   size={28}
                   stroke={
-                    pathname === "/account/create-events" ? "#f4a462" : "#fff"
+                    pathname === "/dashboard/create-events" ? "#f4a462" : "#fff"
                   }
                 />
-                {isM && "Crear"}
+                <span>Crear</span>
               </Link>
             </li>
             <li>
               <Link
-                href="/account/edit-events"
+                href="/dashboard/edit-events"
                 className={
-                  pathname.startsWith("/account/edit-events")
+                  pathname.startsWith("/dashboard/edit-events")
                     ? `${styles.active}`
                     : ""
                 }
@@ -129,19 +123,19 @@ const Sidebar = () => {
                 <Pencil
                   size={28}
                   stroke={
-                    pathname.startsWith("/account/edit-events")
+                    pathname.startsWith("/dashboard/edit-events")
                       ? "#f4a462"
                       : "#fff"
                   }
                 />
-                {isM && "Editar"}
+                <span>Editar</span>
               </Link>
             </li>
           </>
         ) : null}
         <li className={styles.logoutContainer} onClick={() => handleLogout()}>
           <Logout size={28} />
-          {isM && "Cerrar sesión"}
+          <span>Cerrar sesión</span>
         </li>
       </ul>
     </nav>
