@@ -1,4 +1,7 @@
-import { eventMongoSchema } from "@/utils/definitions";
+import {
+  AddGoogleInformationToEvent,
+  EditEventFormSchema,
+} from "@/utils/definitions";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 
@@ -50,10 +53,17 @@ export async function PATCH(req, { params }) {
 
     const body = await req.json();
 
-    body.start_date = new Date(body.start_date);
+    if (body.start_date) body.start_date = new Date(body.start_date);
     if (body.end_date) body.end_date = new Date(body.end_date);
 
-    const parsedBody = eventMongoSchema.safeParse(body); // Paso el body por el schema de eventos previo a enviar a la DB
+    let parsedBody;
+
+    if (body.googleEventId && body.googleEventUrl) {
+      // Estoy agregando datos de Google al evento
+      parsedBody = AddGoogleInformationToEvent.safeParse(body); // Paso el body por el schema de eventos previo a enviar a la DB
+    } else {
+      parsedBody = EditEventFormSchema.safeParse(body); // Paso el body por el schema de eventos previo a enviar a la DB
+    }
 
     if (!parsedBody.success) {
       return Response.json(

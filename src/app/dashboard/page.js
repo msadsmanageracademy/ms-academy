@@ -20,6 +20,8 @@ const ProfilePage = () => {
     return <OvalSpinner />;
   }
 
+  console.log(session);
+
   if (session) {
     return (
       <div>

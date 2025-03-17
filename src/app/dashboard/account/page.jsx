@@ -5,7 +5,7 @@ import OvalSpinner from "@/components/spinners/OvalSpinner";
 import { EditAccountFormSchema } from "@/utils/definitions";
 import { toastError, toastSuccess } from "@/utils/alerts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CldUploadWidget } from "next-cloudinary";
+// import { CldUploadWidget } from "next-cloudinary";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,10 +23,12 @@ const AccountPage = () => {
     defaultValues: {},
   });
 
-  const { data: session } = useSession(); // Obtiene el estado de la sesión
+  const { data: session, update } = useSession(); // Obtiene el estado de la sesión
+
   const router = useRouter();
 
   const userId = session?.user?.id;
+
   const [userData, setUserData] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -76,6 +78,10 @@ const AccountPage = () => {
         return toastError(3000, "Error al editar los datos", result.error);
       }
 
+      console.log(result);
+
+      if (result.name) await update({ name: result.name }); // Actualizo la sesión de next-auth en el FE para que refleje la edición del perfil
+
       toastSuccess(3000, "Información actualizada", result.message);
       router.push("/dashboard");
     } catch (err) {
@@ -84,47 +90,6 @@ const AccountPage = () => {
         "Error al editar los datos",
         "Ha sucedido un error inesperado"
       );
-    }
-  };
-
-  const [avatarUrl, setAvatarUrl] = useState("");
-
-  useEffect(() => {
-    if (userData?.avatarUrl) {
-      setAvatarUrl(userData.avatarUrl);
-    }
-  }, [userData]); // Así puedo actualizar la avatarUrl cuando se obtiene userData
-
-  const handleUpload = async (result) => {
-    if (result.event === "success") {
-      const imageUrl = result.info.secure_url;
-      const publicId = result.info.public_id;
-
-      try {
-        const updateResponse = await fetch(`/api/users/${userId}/avatar`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            avatarUrl: imageUrl,
-            avatarPublicId: publicId,
-          }),
-        });
-
-        await updateResponse.json();
-
-        if (!updateResponse.ok) {
-          throw new Error("Error al actualizar el avatar del usuario");
-        }
-
-        setAvatarUrl(imageUrl);
-        toastSuccess(
-          3000,
-          "Avatar actualizado",
-          "Avatar actualizado con éxito"
-        );
-      } catch (error) {
-        toastError(3000, "Error al actualizar el avatar", error.message);
-      }
     }
   };
 
@@ -137,6 +102,8 @@ const AccountPage = () => {
   }
 
   if (!userData) return <p>No se pudo obtener la data del usuario</p>;
+
+  console.log(userData);
 
   return (
     <div className={styles.container}>
@@ -186,12 +153,17 @@ const AccountPage = () => {
         <div className={styles.formRow}>
           <label>Avatar</label>
           <div className={styles.avatarContainer}>
-            {avatarUrl ? (
-              <Image src={avatarUrl} height={64} width={64} alt="Avatar" />
+            {userData?.image ? (
+              <Image src={userData.image} height={64} width={64} alt="Avatar" />
             ) : (
               <UserProfile size={64} />
             )}
-            <CldUploadWidget
+            {/* {avatarUrl ? (
+              <Image src={avatarUrl} height={64} width={64} alt="Avatar" />
+            ) : (
+              <UserProfile size={64} />
+            )} */}
+            {/* <CldUploadWidget
               onSuccess={handleUpload}
               uploadPreset={process.env.NEXT_PUBLIC_UPLOAD_PRESET}
               options={{
@@ -207,7 +179,7 @@ const AccountPage = () => {
                   Subir Avatar
                 </a>
               )}
-            </CldUploadWidget>
+            </CldUploadWidget> */}
           </div>
         </div>
         <button

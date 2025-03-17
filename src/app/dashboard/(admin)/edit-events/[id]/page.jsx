@@ -2,7 +2,7 @@
 
 import OvalSpinner from "@/components/spinners/OvalSpinner";
 import { toastError, toastSuccess } from "@/utils/alerts";
-import { eventMongoSchema } from "@/utils/definitions";
+import { EventFormSchema } from "@/utils/definitions";
 import { useRouter, useParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -20,7 +20,7 @@ const EditEventByIdPage = () => {
     handleSubmit,
     register,
   } = useForm({
-    resolver: zodResolver(eventMongoSchema),
+    resolver: zodResolver(EventFormSchema),
   });
 
   const { id } = useParams();
@@ -52,7 +52,6 @@ const EditEventByIdPage = () => {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type,
           title,
           short_description,
           full_description,
@@ -78,7 +77,7 @@ const EditEventByIdPage = () => {
         "Información actualizada",
         "Datos actualizados con éxito"
       );
-      router.push("/dashboard");
+      router.push("/dashboard/edit-events");
     } catch (err) {
       toastError(3000, "Error al editar los datos", err.message);
     }

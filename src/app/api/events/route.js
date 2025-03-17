@@ -1,4 +1,4 @@
-import { eventMongoSchema } from "@/utils/definitions";
+import { EventFormSchema } from "@/utils/definitions";
 import clientPromise from "@/lib/db";
 
 export async function GET() {
@@ -37,10 +37,10 @@ export async function POST(req) {
 
     // Dado que JSON convierte todo a string, vuelvo a darle el formato a la fechas
 
-    body.start_date = new Date(body.start_date);
+    if (body.start_date) body.start_date = new Date(body.start_date);
     if (body.end_date) body.end_date = new Date(body.end_date);
 
-    const parsedBody = eventMongoSchema.safeParse(body);
+    const parsedBody = EventFormSchema.safeParse(body);
 
     if (!parsedBody.success) {
       return Response.json(

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export async function middleware(req) {
-  console.log("Middleware is running");
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   // Si no hay token y la ruta es protegida, redirigir al login

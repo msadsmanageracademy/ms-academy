@@ -6,8 +6,6 @@ export const LoginFormSchema = z.object({
 });
 
 export const RegisterFormSchema = z.object({
-  first_name: z.string().min(1, { message: "Ingrese su nombre" }).trim(),
-  last_name: z.string().min(1, { message: "Ingrese su apellido" }).trim(),
   email: z.string().email({ message: "Ingrese un email válido" }).trim(),
   password: z
     .string()
@@ -21,10 +19,6 @@ export const RegisterFormSchema = z.object({
       message: "No debe contener espacios",
     }),
   role: z.enum(["user", "admin"]),
-  age: z
-    .number({ message: "Debe ingresar un número" })
-    .nullable()
-    .default(null), // TODO: Si se deja vacío al editar, pide que el campo sea un número
 });
 
 /* Para el avatar:
@@ -33,15 +27,21 @@ export const RegisterFormSchema = z.object({
   z.literal("") permite que el valor sea una cadena vacía ("") */
 
 export const EditAccountFormSchema = RegisterFormSchema.omit({
-  email: true, // Debería omitir su validación? Está en el form pero es readonly, averiguar cuál es la mejor práctica.
+  email: true,
   password: true,
   role: true,
 }).extend({
-  avatarUrl: z.union([z.string().url(), z.literal("")]).optional(),
-  avatarPublicId: z.union([z.string().url(), z.literal("")]).optional(),
+  first_name: z.string().trim().optional(), // TODO: Al dejarlo vacío, se guarda como "". Lo ideal sería que se guarde como null
+  last_name: z.string().trim().optional(), // TODO: Al dejarlo vacío, se guarda como "". Lo ideal sería que se guarde como null
+  age: z
+    .number({ message: "Debe ingresar un número" })
+    .nullable()
+    .default(null), // TODO: Si se deja vacío al editar, pide que el campo sea un número
+  // avatarUrl: z.union([z.string().url(), z.literal("")]).optional(),
+  // avatarPublicId: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
-export const eventMongoSchema = z.object({
+export const EventFormSchema = z.object({
   type: z.enum(["class", "course"]),
   title: z.string().min(3, { message: "Debe contener al menos 3 caracteres" }),
   short_description: z
@@ -67,4 +67,17 @@ export const eventMongoSchema = z.object({
   price: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" }),
+  googleEventId: z.string().optional(),
+  googleEventUrl: z.string().optional(),
+});
+
+export const EditEventFormSchema = EventFormSchema.omit({
+  type: true,
+  googleEventId: true,
+  googleEventUrl: true,
+});
+
+export const AddGoogleInformationToEvent = z.object({
+  googleEventId: z.string().min(1),
+  googleEventUrl: z.string().min(1),
 });

@@ -41,7 +41,7 @@ const RegisterForm = () => {
       toastSuccess(
         3000,
         result.message,
-        `Bienvenido, ${result.data.first_name}! Ya puedes iniciar sesión`
+        `Bienvenido, ya puedes iniciar sesión`
       );
 
       router.push("/auth/login");
@@ -52,16 +52,6 @@ const RegisterForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <div className={styles.formRow}>
-        <input {...register("first_name")} placeholder="Nombre" />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.first_name?.message}
-      </div>
-      <div className={styles.formRow}>
-        <input {...register("last_name")} placeholder="Apellido" />
-      </div>
-      <div className={styles.formCustomError}>{errors?.last_name?.message}</div>
       <div className={styles.formRow}>
         <input {...register("email")} placeholder="Email" />
       </div>

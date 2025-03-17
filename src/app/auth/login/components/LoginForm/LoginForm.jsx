@@ -38,7 +38,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className={styles.loginPage}>
+    <>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
           <input
@@ -62,8 +62,12 @@ const LoginPage = () => {
           {loading ? <OvalSpinner /> : "Ingresar"}
         </button>
       </form>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </div>
+      {error && (
+        <p style={{ color: "red", fontSize: "0.975rem", marginTop: "1rem" }}>
+          {error}
+        </p>
+      )}
+    </>
   );
 };
 

@@ -1,5 +1,6 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
+import GoogleProvider from "next-auth/providers/google";
 import clientPromise from "@/lib/db";
 import { compare } from "bcryptjs";
 
@@ -29,36 +30,114 @@ export const authOptions = {
         if (!isValid) throw new Error("Contraseña incorrecta");
 
         return {
+          name: user.first_name, // Estará si el usuario completó su perfil
           id: user._id,
-          first_name: user.first_name,
           email: user.email,
           role: user.role,
+          hasAuthorizedCalendar: user.hasAuthorizedCalendar || false,
         };
+      },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        url: "https://accounts.google.com/o/oauth2/auth",
+        params: {
+          access_type: "offline",
+          response_type: "code",
+          scope: "openid email profile",
+        },
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      // Acá decido qué guardo en el token, que luego puedo recuperar en la sesión
-      if (user) {
-        token.id = user.id;
-        token.first_name = user.first_name;
-        token.role = user.role;
+    async jwt({ token, trigger, session, user, account }) {
+      /* Si trigger === "update", quiere decir que utilicé el método update() de next-auth (en el FE)
+        El objeto session es lo que paso como parámetro en update() en el FE
+        Actualizo la propiedad del token con la información que envío desde FE, esto me permite por ejemplo editar el perfil y actualizar la info de la session */
+
+      if (trigger === "update" && session?.name) {
+        const updatedToken = { ...token, name: session.name };
+
+        return updatedToken;
       }
+
+      // Acá decido qué guardo en el token, que luego puedo recuperar en la sesión
+
+      if (user && account?.provider === "credentials") {
+        return {
+          name: user.first_name, // Estará si el usuario completó su perfil
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+      }
+
+      // Si el usuario inicia sesión con Google y ya tenía una sesión, fusiono la info
+      if (user && account?.provider === "google") {
+        const client = await clientPromise;
+        const db = client.db(process.env.MONGODB_DB_NAME);
+        const usersCollection = db.collection("users");
+
+        let existingUser = await usersCollection.findOne({
+          email: user.email,
+        });
+
+        if (!existingUser) {
+          const newUser = {
+            email: user.email,
+            image: user.image,
+            role: "user",
+          };
+          const result = await usersCollection.insertOne(newUser);
+
+          existingUser = { ...newUser, _id: result.insertedId };
+        }
+
+        // En caso de loguearse con Google después de haber creado una cuenta regular, actualizo sus datos en la DB para incluir la imagen de Google
+
+        if (existingUser && !existingUser.image) {
+          const result = await usersCollection.updateOne(
+            { _id: existingUser._id },
+            { $set: { image: user.image } }
+          );
+          if (!result) throw new Error("Usuario no encontrado");
+        }
+
+        return {
+          name: existingUser.first_name,
+          id: existingUser._id.toString(),
+          email: existingUser.email,
+          image: user.image,
+          role: existingUser.role,
+          googleAccessToken: account.access_token,
+          googleScope: account.scope,
+          hasAuthorizedCalendar: existingUser.hasAuthorizedCalendar || false,
+        };
+      }
+
       return token;
     },
     async session({ session, token }) {
       // Acá decido qué guardo en la sesión, proveniente del token
-      if (token) {
-        session.user.id = token.id;
-        session.user.first_name = token.first_name;
-        session.user.role = token.role;
-      }
+
+      session.user = {
+        name: token.name || null,
+        id: token.id || null,
+        email: token.email || null,
+        image: token.image || null,
+        role: token.role,
+        hasAuthorizedCalendar: token.hasAuthorizedCalendar || false,
+      };
+      session.googleAccessToken = token.googleAccessToken || null;
+      session.googleScope = token.googleScope || null; // Pasamos el scope a la sesión
+
       return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: "/account",
-  },
+  // pages: {
+  //   signIn: "/dashboard",
+  // },
 };

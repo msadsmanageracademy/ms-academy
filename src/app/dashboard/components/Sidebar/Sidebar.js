@@ -16,7 +16,7 @@ import Swal from "sweetalert2";
 import Link from "next/link";
 
 const Sidebar = () => {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
 
   const MySwal = withReactContent(Swal);
 
@@ -53,7 +53,7 @@ const Sidebar = () => {
               size={28}
               stroke={pathname === "/dashboard" ? "#f4a462" : "#fff"}
             />
-            <span>{session?.user.first_name}</span>
+            <span>{session?.user.name || "Usuario"}</span>
           </Link>
         </li>
         <li>

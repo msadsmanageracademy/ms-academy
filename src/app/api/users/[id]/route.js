@@ -53,10 +53,6 @@ export async function PATCH(req, { params }) {
 
     const body = await req.json();
 
-    console.log(body);
-
-    console.log(id);
-
     const parsedBody = EditAccountFormSchema.safeParse(body); // Paso el body por el schema de edición de perfil previo a enviar a la DB
 
     if (!parsedBody.success) {
@@ -70,21 +66,18 @@ export async function PATCH(req, { params }) {
       );
     }
 
-    console.log(parsedBody);
-
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const usersCollection = db.collection("users");
 
-    const result = await usersCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: body }
-    );
-
-    console.log(result);
+    await usersCollection.updateOne({ _id: new ObjectId(id) }, { $set: body });
 
     return Response.json(
-      { success: true, message: "Información actualizada con éxito" },
+      {
+        success: true,
+        message: "Información actualizada con éxito",
+        name: body.first_name, // Envío al FE para actualizar la sesión de next-auth
+      },
       { status: 200 }
     );
   } catch (error) {

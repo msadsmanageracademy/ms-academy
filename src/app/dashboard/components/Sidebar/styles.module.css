@@ -5,17 +5,9 @@
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  /* min-width: auto;
-  max-width: 150px; */
   padding: 5rem 1.5rem;
   text-align: center;
 }
-
-/* .sidebar.mobile {
-  min-width: auto;
-  max-width: 150px;
-  padding-inline: 1.5rem;
-} */
 
 .sidebar ul {
   align-items: flex-start;
@@ -57,7 +49,7 @@
   display: none;
 }
 
-@media (min-width: 576px) {
+@media (min-width: 768px) {
   .sidebar {
     max-width: 150px;
     min-width: 200px;

@@ -1,5 +1,5 @@
 import { toastError, toastSuccess } from "@/utils/alerts";
-import { eventMongoSchema } from "@/utils/definitions";
+import { EventFormSchema } from "@/utils/definitions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import "react-datepicker/dist/react-datepicker.css";
@@ -15,7 +15,7 @@ const EventsForm = () => {
     register,
     watch,
   } = useForm({
-    resolver: zodResolver(eventMongoSchema),
+    resolver: zodResolver(EventFormSchema),
     defaultValues: {
       max_participants: 0, // Valor por defecto
       amount_of_classes: 2,
@@ -64,9 +64,6 @@ const EventsForm = () => {
       });
 
       const result = await response.json();
-
-      console.log(response);
-      console.log(result);
 
       if (!response.ok) {
         return toastError(3000, "Error al generar evento", result.message);

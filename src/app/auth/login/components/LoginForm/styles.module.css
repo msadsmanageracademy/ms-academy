@@ -4,8 +4,6 @@
   border-radius: 0.75rem;
   display: flex;
   flex-direction: column;
-  margin: 3rem auto;
-  max-width: 400px;
   padding: 2.25rem 1.75rem;
   width: 100%;
 }
@@ -15,7 +13,10 @@
 }
 
 .form input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
   min-height: 30px;
+  padding: 8px;
   width: 100%;
 }
 
