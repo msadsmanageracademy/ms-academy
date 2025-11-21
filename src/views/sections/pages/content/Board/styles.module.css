@@ -1,0 +1,109 @@
+.board {
+  align-items: center;
+  background: #2c2c2c;
+  background-image: url("/images/corkboard.jpg");
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  max-width: 1200px;
+  margin: 1rem auto;
+  min-height: 50vh;
+  padding: 2rem;
+  position: relative;
+  width: 100%;
+}
+
+.board.courses {
+  background-image: url("/images/blackboard.jpg");
+}
+
+.boardTitle {
+  color: #fff;
+  font-family: "Chalkduster", "Comic Sans MS", cursive;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.emptyMessage {
+  color: #fff;
+  font-size: 1.2rem;
+  font-style: italic;
+  padding: 2rem;
+  text-align: center;
+}
+
+.notesContainer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.postIt {
+  border-radius: 5px;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.3);
+  color: #222;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 180px;
+  max-width: 220px;
+  padding: 1rem;
+  position: relative;
+  transform: rotate(-2deg);
+  transition: transform 0.2s ease-in-out;
+  width: 100%;
+}
+
+.postIt:hover {
+  box-shadow: 5px 8px 15px rgba(0, 0, 0, 0.4);
+  transform: scale(1.025) translateY(-2.5px) rotate(-1.5deg);
+}
+
+.classNote {
+  background: #5dade2;
+}
+
+.courseNote {
+  background: #ffd700;
+}
+
+.postItPin {
+  background: rgb(212, 4, 4);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  height: 15px;
+  left: 50%;
+  position: absolute;
+  top: -8px;
+  transform: translateX(-50%);
+  width: 15px;
+}
+
+.postItTitle {
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.postItText {
+  color: #222;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font-size: 0.925rem;
+  gap: 0.5rem;
+  margin: 1.25rem 0;
+}
+
+.postItText p {
+  margin: 0;
+}

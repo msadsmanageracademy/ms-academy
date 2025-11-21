@@ -1,4 +1,4 @@
-import { EditAccountFormSchema } from "@/utils/definitions";
+import { EditAccountFormSchema } from "@/utils/validation";
 import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
 

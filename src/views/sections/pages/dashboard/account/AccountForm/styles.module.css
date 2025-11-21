@@ -1,0 +1,59 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 400px;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form label {
+  color: var(--palette-2);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.input {
+  background-color: #fff;
+  border: 2px solid var(--palette-4);
+  border-radius: 0.5rem;
+  color: var(--palette-1);
+  font-size: 1rem;
+  min-height: 2.5rem;
+  padding: 0.75rem 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.input:focus {
+  border-color: var(--palette-3);
+  box-shadow: 0 0 0 3px rgba(244, 164, 98, 0.1);
+  outline: none;
+}
+
+.input.number {
+  max-width: 200px;
+}
+
+.input.readOnly {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.input.readOnly:focus {
+  border-color: #d1d5db;
+  box-shadow: none;
+}
+
+.formCustomError {
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: -0.75rem;
+}

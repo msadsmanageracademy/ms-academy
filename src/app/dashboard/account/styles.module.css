@@ -1,72 +1,10 @@
-.form {
-  border: var(--palette-3) 2px solid;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-inline: auto;
-  max-width: 300px;
-  padding: 2.75rem 2rem;
+.container {
+  max-width: 100%;
+  overflow-x: hidden;
+  padding: 2rem;
 }
 
-.formRow {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.form label {
-  font-size: 1rem;
-}
-
-.input {
-  min-height: 1.75rem;
-  padding-inline: 0.5rem;
-  width: 100%;
-}
-
-.input.select {
-  padding-inline: 0.25rem;
-}
-
-.input:read-only {
-  background-color: rgba(239, 239, 239, 0.3);
-  border-color: rgba(118, 118, 118, 0.3);
-  color: rgb(84, 84, 84);
-  cursor: default;
-}
-
-.avatarContainer {
-  align-items: center;
-  display: flex;
-  gap: 1.5rem;
-}
-
-.avatarContainer svg,
-.avatarContainer img {
-  border-radius: 100%;
-  flex-shrink: 0;
-  max-width: 64px;
-}
-
-.avatarButton {
-  background-color: var(--palette-1);
-  border-radius: 0.25rem;
-  color: #fff;
-  cursor: pointer;
-  font-size: 0.875rem;
-  padding: 0.5em 1em;
-}
-
-.avatarButton:hover {
-  background-color: var(--palette-2);
-}
-
-.submitButton {
-  font-size: 1rem;
-  margin-left: auto;
-}
-
-.formCustomError {
-  color: #ff5555;
-  font-size: 0.85rem;
+.container h1 {
+  color: var(--palette-1);
+  margin-bottom: 2rem;
 }

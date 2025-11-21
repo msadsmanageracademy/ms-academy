@@ -1,0 +1,7 @@
+.container {
+  background-color: var(--palette-5);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  padding: 3.5rem;
+}

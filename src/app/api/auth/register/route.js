@@ -1,4 +1,4 @@
-import { RegisterFormSchema } from "@/utils/definitions";
+import { RegisterFormSchema } from "@/utils/validation";
 import clientPromise from "@/lib/db";
 import bcrypt from "bcryptjs";
 

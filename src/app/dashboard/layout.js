@@ -1,17 +1,14 @@
 "use client";
 
-import OvalSpinner from "@/components/spinners/OvalSpinner";
-import Sidebar from "./components/Sidebar/Sidebar";
-import { useSession } from "next-auth/react";
-import { toastError } from "@/utils/alerts";
-import { useRouter } from "next/navigation";
-import styles from "./layout.module.css";
+import PageWrapper from "@/views/components/layout/PageWrapper";
+import Sidebar from "./Sidebar";
+import styles from "./styles.module.css";
 
 export default function ProfileLayout({ children }) {
   return (
-    <div className={styles.container}>
+    <div className={styles.layoutContainer}>
       <Sidebar />
-      <div className={styles.dashboard}>{children}</div>
+      <PageWrapper>{children}</PageWrapper>
     </div>
   );
 }

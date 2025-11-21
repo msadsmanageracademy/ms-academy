@@ -1,0 +1,7 @@
+.container {
+  margin: 0 auto;
+  max-width: var(--section-max-width);
+  min-height: 90vh;
+  padding-top: var(--navbar-height);
+  width: 100%;
+}

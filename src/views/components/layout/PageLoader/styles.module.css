@@ -1,0 +1,9 @@
+.container {
+  align-items: center;
+  background-color: #ffffff;
+  display: flex;
+  height: 100vh;
+  inset: 0;
+  justify-content: center;
+  z-index: 10000;
+}
