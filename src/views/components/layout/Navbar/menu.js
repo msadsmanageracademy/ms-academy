@@ -14,16 +14,9 @@ const MENU = [
   },
   {
     description: "Clases y cursos disponibles",
+    href: "/content",
     iconKey: "NavbarClasses",
     label: "Próximas actividades",
-    submenu: [
-      {
-        description: "Clases y cursos",
-        href: "/content",
-        iconKey: "NavbarLoan",
-        label: "Material",
-      },
-    ],
   },
   {
     description: "Contacto",
