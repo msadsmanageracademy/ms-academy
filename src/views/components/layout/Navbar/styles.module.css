@@ -1,6 +1,6 @@
 .header {
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  background: var(--palette-5);
+  background: var(--color-7);
   color: #fff;
   height: var(--navbar-height);
   position: fixed;
@@ -26,12 +26,12 @@
   max-width: 80px;
 }
 
-.logo {
+.logoLink {
   font-size: var(--font-size-3xl);
   font-weight: 700;
 }
 
-.logo:hover {
+.logoLink:hover {
   text-decoration: none;
 }
 
@@ -67,7 +67,7 @@
 }
 
 .link:not(.active)::after {
-  background-color: var(--palette-3);
+  background-color: var(--color-2);
   border-radius: 40px;
   bottom: 0;
   content: "";
@@ -116,7 +116,7 @@
 }
 
 .dropToggle:hover {
-  color: var(--palette-3);
+  color: var(--color-2);
 }
 
 /* remove Firefox inner focus padding */
@@ -165,8 +165,8 @@
 }
 
 .submenuListItem:hover {
-  border-color: var(--palette-3);
-  box-shadow: 0px 1px 7px 0px var(--palette-3);
+  border-color: var(--color-2);
+  box-shadow: 0px 1px 7px 0px var(--color-2);
 }
 
 .linkWithIcon {
@@ -200,7 +200,7 @@
 }
 
 .mobileMenu {
-  background: var(--palette-5);
+  background: var(--color-7);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
   left: 0;
   padding: 1rem;
@@ -225,7 +225,7 @@
 }
 
 .mobileListItemOpen .labelContainer svg {
-  fill: var(--palette-3);
+  fill: var(--color-2);
 }
 
 .mobileSubToggle {
@@ -282,14 +282,14 @@
 
 .mobileSublink {
   align-items: center;
-  color: var(--gray-900);
+  color: var(--gray-100-900);
   display: flex;
   font-size: 0.85rem;
   padding: 0.35rem 0;
 }
 
 .active {
-  color: var(--palette-3);
+  color: var(--color-2);
 }
 
 @media (min-width: 1200px) {

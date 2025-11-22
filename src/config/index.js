@@ -1,6 +1,7 @@
 import { customConfig } from "./custom.js";
 
 const baseConfig = {
+  allowRegistration: true,
   strongPassword: true,
 };
 

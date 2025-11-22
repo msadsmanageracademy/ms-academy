@@ -33,21 +33,17 @@ const AccountForm = ({ userData, userId, onUpdate }) => {
       const result = await response.json();
 
       if (!response.ok) {
-        return toastError(3000, "Error al editar los datos", result.error);
+        return toastError(3000, "Ha habido un error", result.error);
       }
 
       if (result.name && onUpdate) {
         await onUpdate({ name: result.name });
       }
 
-      toastSuccess(3000, "Información actualizada", result.message);
+      toastSuccess(3000, "Operación exitosa", result.message);
       router.push("/dashboard");
     } catch (err) {
-      toastError(
-        3000,
-        "Error al editar los datos",
-        "Ha sucedido un error inesperado"
-      );
+      toastError(3000, "Ha habido un error", "Ha sucedido un error inesperado");
     }
   };
 

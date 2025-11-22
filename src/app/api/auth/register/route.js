@@ -1,9 +1,17 @@
 import { RegisterFormSchema } from "@/utils/validation";
-import clientPromise from "@/lib/db";
 import bcrypt from "bcryptjs";
+import clientPromise from "@/lib/db";
+import { config } from "@/config";
 
 export async function POST(req) {
   try {
+    if (!config.allowRegistration) {
+      return Response.json(
+        { error: "El registro de nuevos usuarios está deshabilitado" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
 
     const parsedBody = RegisterFormSchema.safeParse(body);

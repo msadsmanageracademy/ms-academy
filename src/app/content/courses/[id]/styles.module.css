@@ -1,6 +1,6 @@
 .container {
   background: #fff;
-  border: 2px solid var(--palette-4);
+  border: 2px solid var(--color-7);
   border-radius: 0.75rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   display: flex;
@@ -12,12 +12,12 @@
 }
 
 .header {
-  border-bottom: 2px solid var(--palette-4);
+  border-bottom: 2px solid var(--color-7);
   padding-bottom: 1.5rem;
 }
 
 .title {
-  color: var(--palette-1);
+  color: var(--color-4);
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 1rem;
@@ -30,7 +30,7 @@
 }
 
 .subtitle {
-  color: var(--palette-3);
+  color: var(--color-3);
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -38,7 +38,7 @@
 }
 
 .description {
-  color: var(--palette-2);
+  color: var(--color-7);
   font-size: 1rem;
   line-height: 1.6;
   white-space: pre-line;
@@ -46,7 +46,7 @@
 
 .infoGrid {
   background: #fff;
-  border: 2px solid var(--palette-4);
+  border: 2px solid var(--color-7);
   border-radius: 0.5rem;
   display: grid;
   gap: 1rem;
@@ -61,19 +61,19 @@
 }
 
 .infoLabel {
-  color: var(--palette-3);
+  color: var(--color-3);
   font-size: 0.875rem;
   font-weight: 600;
 }
 
 .infoValue {
-  color: var(--palette-1);
+  color: var(--color-4);
   font-size: 1.1rem;
   font-weight: 500;
 }
 
 .actionsContainer {
-  border-top: 2px solid var(--palette-4);
+  border-top: 2px solid var(--color-7);
   display: flex;
   gap: 1rem;
   justify-content: flex-end;

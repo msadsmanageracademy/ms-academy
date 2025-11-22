@@ -9,6 +9,8 @@ export const LoginFormSchema = z.object({
 });
 
 export const RegisterFormSchema = z.object({
+  first_name: z.string().trim().optional(),
+  last_name: z.string().trim().optional(),
   email: z.string().email({ message: "Ingrese un email válido" }).trim(),
   password: strongPassword
     ? z

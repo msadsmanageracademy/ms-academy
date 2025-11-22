@@ -3,12 +3,13 @@
 import { Cross } from "@/views/components/icons/Cross";
 import { Hamburger } from "@/views/components/icons/Hamburger";
 import ICONS from "./iconsMap";
+import Image from "next/image";
 import Link from "next/link";
 import MENU from "./menu";
 import { NavbarArrow } from "@/views/components/icons";
+import styles from "./styles.module.css";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import styles from "./styles.module.css";
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -117,8 +118,13 @@ const Navbar = ({ menu = MENU }) => {
     <header className={styles.header}>
       <div className={styles.inner}>
         <div className={styles.logoContainer}>
-          <Link href="/" className={styles.logo} aria-label="">
-            LOGO
+          <Link href="/" className={styles.logoLink} aria-label="">
+            <Image
+              alt="MS Academy Logo"
+              height={300}
+              src="/images/logo-2.png"
+              width={300}
+            />
           </Link>
         </div>
         <nav className={styles.nav} aria-label="Main navigation">
@@ -274,8 +280,8 @@ const Navbar = ({ menu = MENU }) => {
                   animate={
                     openSubmenu === i
                       ? {
-                          borderColor: "var(--palette-3)",
-                          boxShadow: "0px 1px 7px 0px var(--palette-3)",
+                          borderColor: "var(--color-2)",
+                          boxShadow: "0px 1px 7px 0px var(--color-2)",
                         }
                       : { borderColor: "#bbbbbb", boxShadow: "none" }
                   }
@@ -317,7 +323,7 @@ const Navbar = ({ menu = MENU }) => {
                           key={i}
                           animate={
                             openSubmenu === i || isActive(item)
-                              ? { color: "var(--palette-3)" }
+                              ? { color: "var(--color-2)" }
                               : { color: "#fff" }
                           }
                           transition={{ duration: 0.2 }}
@@ -367,9 +373,7 @@ const Navbar = ({ menu = MENU }) => {
                             aria-hidden
                           >
                             {React.createElement(ICONS[item.iconKey], {
-                              fill: isActive(item)
-                                ? "var(--palette-3)"
-                                : "#fff",
+                              fill: isActive(item) ? "var(--color-2)" : "#fff",
                               height: 24,
                               width: 24,
                             })}

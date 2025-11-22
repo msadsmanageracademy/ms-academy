@@ -1,8 +1,8 @@
 "use client";
 
 import PageWrapper from "@/views/components/layout/PageWrapper";
-import RegisterForm from "./components/RegisterForm/RegisterForm";
-import { Google } from "@/views/components/icons/Google";
+import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import RegisterForm from "@/views/sections/pages/register/RegisterForm";
 import { signIn } from "next-auth/react";
 import styles from "./styles.module.css";
 
@@ -13,16 +13,19 @@ const RegisterPage = () => {
 
   return (
     <PageWrapper>
-      <div className={styles.title}>Creá tu cuenta</div>
-      <button
-        className={`button-primary ${styles.googleLogin}`}
-        onClick={handleGoogleLogin}
-      >
-        <Google size={24} />
-        Registrate con Google
-      </button>
-      <div className={styles.text}>O registrate con tu email y contraseña:</div>
-      <RegisterForm />
+      <div className={styles.container}>
+        <div className={styles.title}>Creá tu cuenta</div>
+        <PrimaryLink
+          asButton
+          google
+          text={"Registrate con Google"}
+          onClick={handleGoogleLogin}
+        />
+        <div className={styles.text}>
+          O registrate con tu email y contraseña:
+        </div>
+        <RegisterForm />
+      </div>
     </PageWrapper>
   );
 };

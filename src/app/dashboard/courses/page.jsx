@@ -43,14 +43,10 @@ const CoursesPage = () => {
       if (!res.ok) throw new Error("Error deleting course");
 
       setCourses(courses.filter((c) => c._id !== id));
-      toastSuccess(
-        3000,
-        "Curso eliminado",
-        "El curso se eliminó correctamente"
-      );
+      toastSuccess(3000, "Operación exitosa", "El curso ha sido eliminado");
     } catch (err) {
       console.error("Error deleting course:", err);
-      toastError(3000, "Error", "No se pudo eliminar el curso");
+      toastError(3000, "Ha habido un error", "No se pudo eliminar el curso");
     }
   };
 
@@ -78,18 +74,22 @@ const CoursesPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        return toastError(3000, "Error", data.message);
+        return toastError(3000, "Ha habido un error", data.message);
       }
 
       setCourses(courses.filter((c) => c._id !== courseId));
       toastSuccess(
         3000,
-        "Inscripción cancelada",
-        "Tu inscripción se canceló correctamente"
+        "Operación exitosa",
+        "Tu inscripción ha sido cancelada"
       );
     } catch (err) {
       console.error("Error unenrolling from course:", err);
-      toastError(3000, "Error", "No se pudo cancelar la inscripción");
+      toastError(
+        3000,
+        "Ha habido un error",
+        "No se pudo cancelar la inscripción"
+      );
     }
   };
 

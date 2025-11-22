@@ -1,6 +1,6 @@
 .sidebar {
   align-items: center;
-  background: var(--palette-5);
+  background: var(--color-7);
   color: white;
   display: flex;
   flex-direction: column;
@@ -30,20 +30,20 @@
 }
 
 .sidebar .active {
-  color: var(--palette-3);
+  color: var(--color-2);
 }
 
 .sidebar a:hover,
 .sidebar .logoutContainer:hover {
-  color: var(--palette-3);
+  color: var(--color-2);
 }
 
 .sidebar a:hover > svg {
-  stroke: var(--palette-3);
+  stroke: var(--color-2);
 }
 
 .sidebar .logoutContainer:hover svg {
-  stroke: var(--palette-3);
+  stroke: var(--color-2);
 }
 
 .sidebar li span {

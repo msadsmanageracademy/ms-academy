@@ -1,6 +1,6 @@
 .link {
   align-items: center;
-  background: var(--palette-5);
+  background: var(--color-4);
   border: #fff 1px solid;
   border-radius: 0.75rem;
   color: #fff;
@@ -15,12 +15,12 @@
 }
 
 .link.danger {
-  background-color: #dc2626;
-  border: 1px solid #b91c1c;
+  background-color: var(--danger);
+  border: 1px solid var(--danger-hover);
 }
 
 .link.danger:hover {
-  background-color: #b91c1c;
+  background-color: var(--danger-hover);
 }
 
 .link.disabled {
@@ -32,7 +32,7 @@
 }
 
 .link:hover {
-  background-color: var(--palette-1);
+  background-color: var(--color-6);
   text-decoration: none;
 }
 

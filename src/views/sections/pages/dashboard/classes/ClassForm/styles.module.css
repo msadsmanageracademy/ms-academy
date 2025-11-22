@@ -12,16 +12,16 @@
 }
 
 .form label {
-  color: var(--palette-2);
+  color: var(--color-4);
   font-size: 0.95rem;
   font-weight: 600;
 }
 
 .input {
   background-color: #fff;
-  border: 2px solid var(--palette-4);
+  border: 2px solid var(--color-5);
   border-radius: 0.5rem;
-  color: var(--palette-1);
+  color: var(--color-4);
   font-size: 1rem;
   min-height: 2.5rem;
   padding: 0.75rem 1rem;
@@ -30,8 +30,8 @@
 }
 
 .input:focus {
-  border-color: var(--palette-3);
-  box-shadow: 0 0 0 3px rgba(244, 164, 98, 0.1);
+  border-color: var(--color-2);
+  box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.15);
   outline: none;
 }
 
@@ -41,7 +41,7 @@
 
 .input.textarea {
   background-color: #fff;
-  border: 2px solid var(--palette-4);
+  border: 2px solid var(--color-5);
   border-radius: 0.5rem;
   font-family: inherit;
   height: 100px;
@@ -50,8 +50,8 @@
 }
 
 .input.textarea:focus {
-  border-color: var(--palette-3);
-  box-shadow: 0 0 0 3px rgba(244, 164, 98, 0.1);
+  border-color: var(--color-2);
+  box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.15);
   outline: none;
 }
 
@@ -64,7 +64,7 @@
 }
 
 .formCustomError {
-  color: #dc2626;
+  color: var(--danger);
   font-size: 0.875rem;
   font-weight: 500;
   margin-top: -0.75rem;
@@ -83,8 +83,8 @@
   width: 1.25rem;
 }
 
-.checkboxLabel {
-  color: var(--palette-2);
+form label.checkboxLabel {
+  color: var(--color-7);
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 500;

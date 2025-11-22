@@ -4,8 +4,9 @@
   display: flex;
   flex-direction: column;
   margin: 0 auto;
-  max-width: 325px;
+  max-width: 400px;
   padding: 3rem 0.75rem;
+  width: 100%;
 }
 
 .title {
@@ -17,16 +18,5 @@
 
 .text {
   font-size: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.googleLogin {
-  align-items: center;
-  border-radius: 5px;
-  border: thin solid #888;
-  box-shadow: 1px 1px 1px grey;
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  white-space: nowrap;
+  margin: 2rem 0 0.5rem 0;
 }

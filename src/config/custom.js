@@ -1,3 +1,4 @@
 export const customConfig = {
-  strongPassword: false,
+  allowRegistration: false,
+  strongPassword: true,
 };

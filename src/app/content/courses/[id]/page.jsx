@@ -23,14 +23,10 @@ const CourseDetail = () => {
         const response = await fetch(`/api/courses/${id}`);
         const result = await response.json();
         if (!response.ok)
-          return toastError(
-            3000,
-            "Error al recuperar el curso",
-            result.message
-          );
+          return toastError(3000, "Ha habido un error", result.message);
         setCourse(result.data);
       } catch (err) {
-        toastError(3000, "Error al cargar el curso", err);
+        toastError(3000, "Ha habido un error", err);
         router.push("/content");
       } finally {
         setLoading(false);
@@ -45,7 +41,7 @@ const CourseDetail = () => {
       if (!session) {
         return toastError(
           3000,
-          "Error al inscribirse",
+          "Ha habido un error",
           "Para inscribirse, primero debe iniciar sesión"
         );
       }
@@ -54,7 +50,7 @@ const CourseDetail = () => {
         return toastError(
           3000,
           "Acción no permitida",
-          "Los administradores no pueden inscribirse a cursos"
+          "Admins no pueden inscribirse a cursos"
         );
       }
 
@@ -74,15 +70,15 @@ const CourseDetail = () => {
       const responseData = await response.json();
 
       if (!response.ok)
-        return toastError(3000, "Error al inscribirse", responseData.message);
+        return toastError(3000, "Ha habido un error", responseData.message);
 
       toastSuccess(3000, "Inscripción exitosa", responseData.message);
       router.push("/dashboard/courses");
     } catch (error) {
       return toastError(
         3000,
-        "Error al inscribirse",
-        "Hubo un problema inesperado al procesar tu inscripción"
+        "Ha habido un error",
+        "Problema inesperado al procesar tu inscripción"
       );
     }
   };

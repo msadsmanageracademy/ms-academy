@@ -20,15 +20,11 @@ const AccountPage = () => {
         const result = await response.json();
 
         if (!response.ok)
-          return toastError(
-            3000,
-            "Error al recuperar el usuario",
-            result.message
-          );
+          return toastError(3000, "Ha habido un error", result.message);
 
         setUserData(result.data);
       } catch (err) {
-        toastError(3000, "Error al cargar la data del usuario", err);
+        toastError(3000, "Ha habido un error", err);
       } finally {
         setLoading(false);
       }

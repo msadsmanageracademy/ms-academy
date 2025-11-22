@@ -86,7 +86,9 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
         closeLoading();
         return toastError(
           3000,
-          isEditMode ? "Error al actualizar clase" : "Error al crear clase",
+          isEditMode
+            ? "Ha habido un error al actualizar la clase"
+            : "Ha habido un error al crear la clase",
           result.message
         );
       }
@@ -114,8 +116,8 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
           } else {
             toastSuccess(
               4000,
-              "Clase creada y agregada a Calendar",
-              "La clase se creó con éxito y se agregó a tu Google Calendar"
+              "Operación exitosa",
+              "Clase creada en Google Calendar"
             );
           }
         } catch (calendarError) {

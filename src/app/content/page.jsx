@@ -45,18 +45,14 @@ const ContentPage = () => {
   const classSignUp = async (id) => {
     try {
       if (!session) {
-        return toastError(
-          3000,
-          "Error al inscribirse",
-          "Para inscribirse, primero debe iniciar sesión"
-        );
+        return toastError(3000, "Acción no permitida", "Debe iniciar sesión");
       }
 
       if (session.user.role === "admin") {
         return toastError(
           3000,
           "Acción no permitida",
-          "Los administradores no pueden inscribirse a clases"
+          "Admins no pueden inscribirse a clases"
         );
       }
 
@@ -76,15 +72,15 @@ const ContentPage = () => {
       const responseData = await response.json();
 
       if (!response.ok)
-        return toastError(3000, "Error al inscribirse", responseData.message);
+        return toastError(3000, "Ha habido un error", responseData.message);
 
       toastSuccess(3000, "Inscripción exitosa", responseData.message);
       router.push("dashboard/classes");
     } catch (error) {
       return toastError(
         3000,
-        "Error al inscribirse",
-        "Hubo un problema inesperado al procesar tu inscripción"
+        "Ha habido un error",
+        "Problema inesperado al procesar tu inscripción"
       );
     }
   };

@@ -36,11 +36,7 @@ const ClassesPage = () => {
     // Check URL params for calendar connection status
     const params = new URLSearchParams(window.location.search);
     if (params.get("calendar_connected") === "true") {
-      toastSuccess(
-        3000,
-        "Google Calendar conectado",
-        "Ahora puedes agregar clases a tu calendario"
-      );
+      toastSuccess(3000, "Operación exitosa", "Google Calendar conectado");
       // Clean URL
       window.history.replaceState({}, "", "/dashboard/classes");
       setHasCalendarAccess(true);
@@ -88,13 +84,13 @@ const ClassesPage = () => {
       setClasses(classes.filter((c) => c._id !== id));
       toastSuccess(
         3000,
-        "Clase eliminada",
+        "Operación exitosa",
         "La clase se eliminó correctamente"
       );
     } catch (err) {
       console.error("Error deleting class:", err);
       closeLoading();
-      toastError(3000, "Error", "No se pudo eliminar la clase");
+      toastError(3000, "Ha habido un error", "No se pudo eliminar la clase");
     }
   };
 
@@ -122,18 +118,22 @@ const ClassesPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        return toastError(3000, "Error", data.message);
+        return toastError(3000, "Ha habido un error", data.message);
       }
 
       setClasses(classes.filter((c) => c._id !== classId));
       toastSuccess(
         3000,
-        "Inscripción cancelada",
-        "Tu inscripción se canceló correctamente"
+        "Operación exitosa",
+        "Tu inscripción ha sido cancelada"
       );
     } catch (err) {
       console.error("Error unenrolling from class:", err);
-      toastError(3000, "Error", "No se pudo cancelar la inscripción");
+      toastError(
+        3000,
+        "Ha habido un error",
+        "No se pudo cancelar la inscripción"
+      );
     }
   };
 
@@ -143,14 +143,22 @@ const ClassesPage = () => {
       const data = await res.json();
 
       if (!res.ok || !data.authUrl) {
-        return toastError(3000, "Error", "No se pudo iniciar la autorización");
+        return toastError(
+          3000,
+          "Ha habido un error",
+          "No se pudo iniciar la autorización"
+        );
       }
 
       // Redirect to Google OAuth
       window.location.href = data.authUrl;
     } catch (err) {
       console.error("Error connecting calendar:", err);
-      toastError(3000, "Error", "No se pudo conectar con Google Calendar");
+      toastError(
+        3000,
+        "Ha habido un error",
+        "No se pudo conectar con Google Calendar"
+      );
     }
   };
 
@@ -173,7 +181,7 @@ const ClassesPage = () => {
 
       if (!res.ok) {
         setAddingToCalendar(null);
-        return toastError(3000, "Error", data.message);
+        return toastError(3000, "Ha habido un error", data.message);
       }
 
       // Update class in state with calendar data
@@ -192,17 +200,19 @@ const ClassesPage = () => {
 
       toastSuccess(
         4000,
-        "Agregado a Calendar",
-        data.googleMeetLink
-          ? "Evento creado con link de Google Meet"
-          : "Evento creado en tu calendario"
+        "Operación exitosa",
+        data.googleMeetLink ? "Clase creada con Google Meet" : "Clase creada"
       );
 
       setAddingToCalendar(null);
     } catch (err) {
       closeLoading();
       console.error("Error adding to calendar:", err);
-      toastError(3000, "Error", "No se pudo agregar al calendario");
+      toastError(
+        3000,
+        "Ha habido un error",
+        "No se pudo agregar a Google Calendar"
+      );
       setAddingToCalendar(null);
     }
   };

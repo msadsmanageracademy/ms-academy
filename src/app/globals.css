@@ -1,13 +1,24 @@
 :root {
-  --gray: #f1eaea;
-  --red: #c91111;
-  --palette-1: #1e3b71;
-  --palette-2: #2a9d90;
-  --palette-3: #f4a462;
-  --palette-4: #e8c468;
-  --palette-5: #292c33;
-  --palette-6: #d96b52;
-  --palette-7: #415a77;
+  --color-1: #e3e3e3;
+  --color-2: #ff9f1c;
+  --color-3: #ff5c5c;
+  --color-4: #264478;
+  --color-5: #815b5a;
+  --color-6: #362b2b;
+  --color-7: #120d0d;
+  --danger: #c91111;
+  --danger-hover: #9b0f0f;
+  --linear-gradient: linear-gradient(
+    0.25turn,
+    #e3e3e3,
+    #ff5c5c,
+    #815b5a,
+    #362b2b,
+    #120d0d
+  );
+  --success: #16a34a;
+  --warning: #eab308;
+  --warning-hover: #ca9a06;
   --font-size-sm: 14px;
   --font-size-rg: 16px;
   --font-size-md: 18px;
@@ -16,7 +27,7 @@
   --font-size-2xl: 28px;
   --font-size-3xl: 34px;
   --font-size-4xl: 48px;
-  --navbar-height: 70px;
+  --navbar-height: 80px;
   --navbar-padding-inline: 2rem;
   --section-max-width: 1480px;
   --section-padding-inline-sm: 0.75rem;
@@ -65,7 +76,7 @@ svg {
 
 /* Custom SweetAlert2 loader color */
 .custom-loader {
-  border-color: var(--palette-3) !important;
+  border-color: var(--success) !important;
   border-right-color: transparent !important;
 }
 
