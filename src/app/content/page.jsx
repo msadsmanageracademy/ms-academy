@@ -52,6 +52,14 @@ const ContentPage = () => {
         );
       }
 
+      if (session.user.role === "admin") {
+        return toastError(
+          3000,
+          "Acción no permitida",
+          "Los administradores no pueden inscribirse a clases"
+        );
+      }
+
       const result = await confirmSignUp(
         "¿Inscribirse a esta clase?",
         "Confirma que deseas inscribirte a esta clase gratuita"

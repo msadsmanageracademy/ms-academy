@@ -1,17 +1,26 @@
 import Link from "next/link";
 import styles from "./styles.module.css";
-import { Arrow, Google, Plus } from "@/views/components/icons";
+import {
+  Arrow,
+  Google,
+  GoogleCalendar,
+  GoogleMeet,
+  Plus,
+} from "@/views/components/icons";
 
 export default function PrimaryLink({
   arrow = false,
   asButton = false,
+  calendar = false,
   className = "",
   danger = false,
   disabled = false,
   google = false,
   href = "",
+  meet = false,
   onClick = null,
   plus = false,
+  target = "_self",
   text = "Inscribirse",
   type = "button",
 }) {
@@ -27,14 +36,24 @@ export default function PrimaryLink({
         if (!disabled && onClick) onClick();
       }}
     >
-      {google ? <Google className={styles.iconLeft} /> : null} {text}{" "}
-      {plus ? <Plus className={styles.iconRight} /> : null}{" "}
+      {calendar ? <GoogleCalendar className={styles.iconLeft} /> : null}
+      {google ? <Google className={styles.iconLeft} /> : null}
+      {meet ? <GoogleMeet className={styles.iconLeft} /> : null}
+      {text}
+      {plus ? <Plus className={styles.iconRight} /> : null}
       {arrow ? <Arrow className={styles.iconRight} /> : null}
     </button>
   ) : (
-    <Link aria-disabled={disabled} className={classes.join(" ")} href={href}>
-      {plus ? <Plus className={styles.iconLeft} /> : null}
-      {google ? <Google className={styles.iconLeft} /> : null} {text}{" "}
+    <Link
+      aria-disabled={disabled}
+      className={classes.join(" ")}
+      href={href}
+      target={target}
+    >
+      {calendar ? <GoogleCalendar className={styles.iconLeft} /> : null}
+      {google ? <Google className={styles.iconLeft} /> : null}
+      {meet ? <GoogleMeet className={styles.iconLeft} /> : null}
+      {text} {plus ? <Plus className={styles.iconRight} /> : null}
       {arrow ? <Arrow className={styles.iconRight} /> : null}
     </Link>
   );

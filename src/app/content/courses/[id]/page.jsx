@@ -50,6 +50,14 @@ const CourseDetail = () => {
         );
       }
 
+      if (session.user.role === "admin") {
+        return toastError(
+          3000,
+          "Acción no permitida",
+          "Los administradores no pueden inscribirse a cursos"
+        );
+      }
+
       const result = await confirmSignUp(
         "¿Inscribirse a este curso?",
         "Confirma que deseas inscribirte a este curso"

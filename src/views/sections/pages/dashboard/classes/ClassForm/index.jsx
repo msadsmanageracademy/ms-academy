@@ -4,12 +4,20 @@ import DatePicker from "react-datepicker";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { toastError, toastSuccess } from "@/utils/alerts";
+import { GoogleCalendar, GoogleMeet } from "@/views/components/icons";
+import {
+  closeLoading,
+  showLoading,
+  toastError,
+  toastSuccess,
+} from "@/utils/alerts";
 
-const ClassForm = ({ classData, onSuccess, onCancel }) => {
+const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
   const isEditMode = !!classData;
+  const [addToCalendar, setAddToCalendar] = useState(false);
 
   const {
     formState: { errors },
@@ -44,6 +52,16 @@ const ClassForm = ({ classData, onSuccess, onCancel }) => {
     price,
   }) => {
     try {
+      // Show loading modal for both create and create+calendar
+      if (!isEditMode) {
+        showLoading(
+          "Creando clase...",
+          addToCalendar
+            ? "Por favor espera mientras creamos la clase y el evento de Google Calendar"
+            : "Por favor espera mientras creamos la clase"
+        );
+      }
+
       const url = isEditMode
         ? `/api/classes/${classData._id}`
         : "/api/classes/";
@@ -65,6 +83,7 @@ const ClassForm = ({ classData, onSuccess, onCancel }) => {
       const result = await response.json();
 
       if (!response.ok) {
+        closeLoading();
         return toastError(
           3000,
           isEditMode ? "Error al actualizar clase" : "Error al crear clase",
@@ -72,7 +91,46 @@ const ClassForm = ({ classData, onSuccess, onCancel }) => {
         );
       }
 
-      toastSuccess(3000, "Operación exitosa", result.message);
+      // If creating a new class and addToCalendar is checked, create calendar event
+      if (!isEditMode && addToCalendar && result.data?._id) {
+        try {
+          const calendarResponse = await fetch(
+            `/api/classes/${result.data._id}/add-to-calendar`,
+            {
+              method: "POST",
+            }
+          );
+
+          const calendarData = await calendarResponse.json();
+
+          closeLoading();
+
+          if (!calendarResponse.ok) {
+            toastError(
+              3000,
+              "Clase creada, pero error al agregar a Calendar",
+              calendarData.message
+            );
+          } else {
+            toastSuccess(
+              4000,
+              "Clase creada y agregada a Calendar",
+              "La clase se creó con éxito y se agregó a tu Google Calendar"
+            );
+          }
+        } catch (calendarError) {
+          console.error("Error adding to calendar:", calendarError);
+          closeLoading();
+          toastError(
+            3000,
+            "Clase creada, pero error al agregar a Calendar",
+            "La clase se creó correctamente pero no se pudo agregar al calendario"
+          );
+        }
+      } else {
+        closeLoading();
+        toastSuccess(3000, "Operación exitosa", result.message);
+      }
 
       if (onSuccess) {
         onSuccess();
@@ -157,6 +215,22 @@ const ClassForm = ({ classData, onSuccess, onCancel }) => {
         />
       </div>
       <div className={styles.formCustomError}>{errors?.price?.message}</div>
+
+      {!isEditMode && hasCalendarAccess && (
+        <div className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            id="addToCalendar"
+            checked={addToCalendar}
+            onChange={(e) => setAddToCalendar(e.target.checked)}
+            className={styles.checkbox}
+          />
+          <label htmlFor="addToCalendar" className={styles.checkboxLabel}>
+            {<GoogleCalendar />} Calendar / {<GoogleMeet />} Meet
+          </label>
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: "1rem" }}>
         <PrimaryLink
           asButton

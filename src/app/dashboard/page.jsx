@@ -204,9 +204,21 @@ const DashboardPage = () => {
         <div className={styles.quickActions}>
           <h2>Accesos Rápidos</h2>
           <div className={styles.actionsGrid}>
-            <PrimaryLink href="/dashboard/classes" text="Ver Clases" />
-            <PrimaryLink href="/dashboard/courses" text="Ver Cursos" />
-            <PrimaryLink href="/dashboard/account" text="Mi Cuenta" />
+            <PrimaryLink
+              className={styles.actionsGridLink}
+              href="/dashboard/classes"
+              text="Ver Clases"
+            />
+            <PrimaryLink
+              className={styles.actionsGridLink}
+              href="/dashboard/courses"
+              text="Ver Cursos"
+            />
+            <PrimaryLink
+              className={styles.actionsGridLink}
+              href="/dashboard/account"
+              text="Mi Cuenta"
+            />
             {!isAdmin && (
               <PrimaryLink href="/content" text="Próximas actividades" />
             )}

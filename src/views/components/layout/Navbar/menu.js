@@ -6,14 +6,14 @@ const MENU = [
     label: "Inicio",
   },
   {
-    description: "Working to improve Core Banking",
+    description: "Dashboard",
     href: "/dashboard",
     iconKey: "NavbarDashboard",
     label: "Dashboard",
     protected: true,
   },
   {
-    description: "Global Fineract deployments",
+    description: "Clases y cursos disponibles",
     iconKey: "NavbarClasses",
     label: "Próximas actividades",
     submenu: [
@@ -26,23 +26,23 @@ const MENU = [
     ],
   },
   {
-    description: "Trailblazing the path to an agile financial world",
+    description: "Contacto",
     href: "/contact",
     iconKey: "NavbarContact",
     label: "Contacto",
   },
   {
-    description: "Trailblazing the path to an agile financial world",
+    description: "Sobre mí",
+    href: "/about",
+    iconKey: "NavbarAbout",
+    label: "Sobre mí",
+  },
+  {
+    description: "Ingresar a la plataforma",
     href: "/login",
     iconKey: "NavbarLogin",
     label: "Ingresar",
     hideWhenAuthenticated: true,
-  },
-  {
-    description: "Working to improve Core Banking",
-    href: "/about",
-    iconKey: "NavbarAbout",
-    label: "Sobre mí",
   },
 ];
 

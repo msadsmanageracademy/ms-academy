@@ -1,10 +1,13 @@
 export { AlertCircle } from "@/views/components/icons/AlertCircle";
 export { Arrow } from "@/views/components/icons/Arrow";
+export { Calendar } from "@/views/components/icons/Calendar";
 export { CheckCircle } from "@/views/components/icons/CheckCircle";
 export { Cross } from "@/views/components/icons/Cross";
 export { Delete } from "@/views/components/icons/Delete";
 export { Dialogue } from "@/views/components/icons/Dialogue";
 export { Google } from "@/views/components/icons/Google";
+export { GoogleCalendar } from "@/views/components/icons/GoogleCalendar";
+export { GoogleMeet } from "@/views/components/icons/GoogleMeet";
 export { Hamburger } from "@/views/components/icons/Hamburger";
 export { List } from "@/views/components/icons/List";
 export { Logout } from "@/views/components/icons/Logout";
@@ -24,3 +27,4 @@ export { Star } from "@/views/components/icons/Star";
 export { User } from "@/views/components/icons/User";
 export { UserId } from "@/views/components/icons/UserId";
 export { UserProfile } from "@/views/components/icons/UserProfile";
+export { Videocall } from "@/views/components/icons/Videocall";

@@ -20,8 +20,6 @@ const LoginPage = () => {
 
   if (!session && status === "loading") return <PageLoader />;
 
-  console.log(status);
-
   if (session) {
     router.push("/dashboard");
     return null;

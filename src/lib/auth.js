@@ -120,7 +120,28 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      // Acá decido qué guardo en la sesión, proveniente del token
+      // Fetch fresh hasAuthorizedCalendar status from database
+      let hasAuthorizedCalendar = token.hasAuthorizedCalendar || false;
+
+      if (token.id) {
+        try {
+          const client = await clientPromise;
+          const db = client.db(process.env.MONGODB_DB_NAME);
+          const usersCollection = db.collection("users");
+          const { ObjectId } = require("mongodb");
+
+          const user = await usersCollection.findOne(
+            { _id: new ObjectId(token.id) },
+            { projection: { hasAuthorizedCalendar: 1 } }
+          );
+
+          if (user) {
+            hasAuthorizedCalendar = user.hasAuthorizedCalendar || false;
+          }
+        } catch (error) {
+          console.error("Error fetching calendar authorization status:", error);
+        }
+      }
 
       session.user = {
         name: token.name || null,
@@ -128,7 +149,7 @@ export const authOptions = {
         email: token.email || null,
         image: token.image || null,
         role: token.role,
-        hasAuthorizedCalendar: token.hasAuthorizedCalendar || false,
+        hasAuthorizedCalendar,
       };
       session.googleAccessToken = token.googleAccessToken || null;
       session.googleScope = token.googleScope || null; // Pasamos el scope a la sesión

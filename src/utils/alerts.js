@@ -101,3 +101,23 @@ export const confirmUnenroll = (title, text) => {
     cancelButtonText: "No, mantener inscripción",
   });
 };
+
+export const showLoading = (title, text) => {
+  Swal.fire({
+    title,
+    text,
+    showConfirmButton: false,
+    allowEscapeKey: false,
+    allowOutsideClick: false,
+    customClass: {
+      loader: "custom-loader",
+    },
+    didOpen: () => {
+      Swal.showLoading();
+    },
+  });
+};
+
+export const closeLoading = () => {
+  Swal.close();
+};

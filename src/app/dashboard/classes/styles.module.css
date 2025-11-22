@@ -1,7 +1,9 @@
 .container {
   max-width: 100%;
+  min-height: 90vh;
   overflow-x: hidden;
-  padding: 2rem;
+  padding: calc(var(--navbar-height) + 1rem) 0 1rem 1rem;
+  width: 100%;
 }
 
 .container h1 {
@@ -16,6 +18,52 @@
 .listSection h2 {
   color: var(--palette-1);
   margin-bottom: 1.5rem;
+}
+
+.headerActions {
+  align-items: center;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.headerActions h2 {
+  margin-bottom: 0;
+}
+
+.calendarStatus {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.googleLink {
+  margin: 0 auto;
+  max-width: 175px;
+  width: 100%;
+}
+
+.addToCalendarButton {
+  background: var(--palette-5);
+  border: none;
+  border-radius: 0.25rem;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.75rem;
+  transition: background 0.2s;
+}
+
+.addToCalendarButton:hover:not(:disabled) {
+  background: var(--palette-2);
+}
+
+.addToCalendarButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .noClasses {
@@ -38,7 +86,9 @@
 .table {
   background: #fff;
   border-collapse: collapse;
-  min-width: 800px;
+  max-width: 1200px;
+  min-width: 1000px;
+  overflow-x: auto;
   width: 100%;
 }
 
@@ -51,7 +101,7 @@
 .table td {
   border: 1px solid var(--palette-4);
   padding: 0.75rem;
-  text-align: left;
+  text-align: center;
 }
 
 .table th {
@@ -65,6 +115,7 @@
 .actionButtons {
   display: flex;
   gap: 0.5rem;
+  justify-content: center;
 }
 
 .iconButton {
@@ -163,4 +214,10 @@
   display: flex;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+@media (min-width: 576px) {
+  .container {
+    padding: calc(var(--navbar-height) + 2rem) 0 2rem 2rem;
+  }
 }

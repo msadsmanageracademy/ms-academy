@@ -1,6 +1,7 @@
-import clientPromise from "@/lib/db";
-import { ObjectId } from "mongodb";
 import { ClassFormSchema } from "@/utils/validation";
+import { ObjectId } from "mongodb";
+import clientPromise from "@/lib/db";
+import { google } from "googleapis";
 
 export async function GET(req, { params }) {
   try {
@@ -79,7 +80,24 @@ export async function PATCH(req, { params }) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
+    const usersCollection = db.collection("users");
 
+    // Get the existing class to check if it has a calendar event
+    const existingClass = await classesCollection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!existingClass) {
+      return Response.json(
+        {
+          success: false,
+          message: "Clase no encontrada",
+        },
+        { status: 404 }
+      );
+    }
+
+    // Update the class in database
     const result = await classesCollection.updateOne(
       { _id: new ObjectId(id) },
       { $set: body }
@@ -93,6 +111,78 @@ export async function PATCH(req, { params }) {
         },
         { status: 404 }
       );
+    }
+
+    // If class has a Google Calendar event, update it only if relevant fields changed
+    const relevantFieldsChanged =
+      (body.title && body.title !== existingClass.title) ||
+      (body.short_description &&
+        body.short_description !== existingClass.short_description) ||
+      (body.start_date &&
+        new Date(body.start_date).getTime() !==
+          new Date(existingClass.start_date).getTime()) ||
+      (body.duration && body.duration !== existingClass.duration);
+
+    if (
+      existingClass.googleEventId &&
+      existingClass.createdBy &&
+      relevantFieldsChanged
+    ) {
+      try {
+        // Get the admin user who created the event
+        const adminUser = await usersCollection.findOne({
+          _id: new ObjectId(existingClass.createdBy),
+        });
+
+        if (adminUser?.googleCalendarTokens) {
+          const oauth2Client = new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`
+          );
+
+          oauth2Client.setCredentials(adminUser.googleCalendarTokens);
+
+          const calendar = google.calendar({
+            version: "v3",
+            auth: oauth2Client,
+          });
+
+          // Calculate end time (start time + duration in minutes)
+          const startDate = new Date(
+            body.start_date || existingClass.start_date
+          );
+          const endDate = new Date(startDate);
+          const duration = body.duration || existingClass.duration;
+          endDate.setMinutes(endDate.getMinutes() + duration);
+
+          // Update the event in Google Calendar
+          await calendar.events.patch({
+            calendarId: "primary",
+            eventId: existingClass.googleEventId,
+            resource: {
+              summary: body.title || existingClass.title,
+              description:
+                body.short_description || existingClass.short_description || "",
+              start: {
+                dateTime: startDate.toISOString(),
+                timeZone: "America/Argentina/Buenos_Aires",
+              },
+              end: {
+                dateTime: endDate.toISOString(),
+                timeZone: "America/Argentina/Buenos_Aires",
+              },
+            },
+          });
+
+          console.log(
+            `Updated Google Calendar event: ${existingClass.googleEventId}`
+          );
+        }
+      } catch (calendarError) {
+        console.error("Error updating calendar event:", calendarError);
+        // Continue even if calendar update fails
+      }
     }
 
     return Response.json(
@@ -124,7 +214,62 @@ export async function DELETE(req, { params }) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
+    const usersCollection = db.collection("users");
 
+    // Get the class to check if it has a calendar event
+    const classItem = await classesCollection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!classItem) {
+      return Response.json(
+        {
+          success: false,
+          message: "Clase no encontrada",
+        },
+        { status: 404 }
+      );
+    }
+
+    // If class has a Google Calendar event, delete it
+    if (classItem.googleEventId && classItem.createdBy) {
+      try {
+        // Get the admin user who created the event
+        const adminUser = await usersCollection.findOne({
+          _id: new ObjectId(classItem.createdBy),
+        });
+
+        if (adminUser?.googleCalendarTokens) {
+          const oauth2Client = new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`
+          );
+
+          oauth2Client.setCredentials(adminUser.googleCalendarTokens);
+
+          const calendar = google.calendar({
+            version: "v3",
+            auth: oauth2Client,
+          });
+
+          // Delete the event from Google Calendar
+          await calendar.events.delete({
+            calendarId: "primary",
+            eventId: classItem.googleEventId,
+          });
+
+          console.log(
+            `Deleted Google Calendar event: ${classItem.googleEventId}`
+          );
+        }
+      } catch (calendarError) {
+        console.error("Error deleting calendar event:", calendarError);
+        // Continue with class deletion even if calendar deletion fails
+      }
+    }
+
+    // Delete the class from database
     const result = await classesCollection.deleteOne({
       _id: new ObjectId(id),
     });

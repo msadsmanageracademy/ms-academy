@@ -63,6 +63,12 @@ svg {
   background: rgb(187 186 186) !important;
 }
 
+/* Custom SweetAlert2 loader color */
+.custom-loader {
+  border-color: var(--palette-3) !important;
+  border-right-color: transparent !important;
+}
+
 /* Reusable classes */
 
 .wrapper {

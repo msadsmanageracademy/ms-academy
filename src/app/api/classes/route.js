@@ -59,12 +59,15 @@ export async function POST(req) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
 
-    await classesCollection.insertOne(body);
+    const result = await classesCollection.insertOne(body);
 
     return Response.json(
       {
         success: true,
         message: `Clase creada con éxito`,
+        data: {
+          _id: result.insertedId.toString(),
+        },
       },
       { status: 201 }
     );

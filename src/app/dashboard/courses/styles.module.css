@@ -1,7 +1,8 @@
 .container {
   max-width: 100%;
+  min-height: 90vh;
   overflow-x: hidden;
-  padding: 2rem;
+  padding: calc(var(--navbar-height) + 1rem) 0 1rem 1rem;
 }
 
 .container h1 {
@@ -51,7 +52,7 @@
 .table td {
   border: 1px solid var(--palette-4);
   padding: 0.75rem;
-  text-align: left;
+  text-align: center;
 }
 
 .table th {
@@ -65,6 +66,7 @@
 .actionButtons {
   display: flex;
   gap: 0.5rem;
+  justify-content: center;
 }
 
 .iconButton {
@@ -177,4 +179,10 @@
 
 .button-danger:hover {
   background: #b91c1c;
+}
+
+@media (min-width: 576px) {
+  .container {
+    padding: calc(var(--navbar-height) + 2rem) 0 2rem 2rem;
+  }
 }
