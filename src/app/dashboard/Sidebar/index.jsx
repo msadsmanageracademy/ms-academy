@@ -7,13 +7,12 @@ import styles from "./styles.module.css";
 import { usePathname } from "next/navigation";
 import withReactContent from "sweetalert2-react-content";
 import {
-  List,
   Logout,
   NavbarClasses,
-  Pencil,
-  UserId,
-  User,
   NavbarDashboard,
+  Pencil,
+  User,
+  UserId,
 } from "@/views/components/icons";
 import { signOut, useSession } from "next-auth/react";
 

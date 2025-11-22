@@ -1,63 +1,135 @@
 .sidebar {
-  align-items: center;
   background: var(--color-7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding-top: calc(var(--navbar-height) + 2.5rem);
-  padding-inline: 1rem;
-  text-align: center;
+  left: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 var(--navbar-padding-inline);
+  position: sticky;
+  right: 0;
+  top: var(--navbar-height);
+  width: 100vw;
+  z-index: 10;
+}
+
+.sidebar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .sidebar ul {
-  align-items: flex-start;
+  align-items: center;
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  flex-direction: row;
+  gap: 0;
   list-style: none;
+  margin: 0;
   padding: 0;
+  white-space: nowrap;
+}
+
+.sidebar li {
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.2s;
 }
 
 .sidebar a,
 .sidebar .logoutContainer {
   align-items: center;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   display: flex;
-  font-size: 1rem;
-  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   text-decoration: none;
+  transition: color 0.2s;
+}
+
+.sidebar li:first-child a {
+  padding-left: 0;
 }
 
 .sidebar .active {
   color: var(--color-2);
 }
 
-.sidebar a:hover,
-.sidebar .logoutContainer:hover {
-  color: var(--color-2);
+.sidebar .active > svg {
+  stroke: var(--color-2);
 }
 
-.sidebar a:hover > svg {
-  stroke: var(--color-2);
+.sidebar li:has(.active) {
+  border-bottom-color: var(--color-2);
+}
+
+.sidebar a:hover:not(.active),
+.sidebar .logoutContainer:hover {
+  color: #fff;
+}
+
+.sidebar a:hover:not(.active) > svg {
+  stroke: #fff;
 }
 
 .sidebar .logoutContainer:hover svg {
-  stroke: var(--color-2);
+  stroke: #fff;
 }
 
 .sidebar li span {
   display: none;
 }
 
-@media (min-width: 768px) {
-  .sidebar {
-    max-width: 150px;
-    min-width: 200px;
-    padding-inline: 1rem;
-  }
+.logoutContainer {
+  margin-left: auto;
+  padding-right: 0;
+}
 
+@media (min-width: 700px) {
   .sidebar li span {
     display: block;
+  }
+
+  .sidebar a,
+  .sidebar .logoutContainer {
+    font-size: 0.9rem;
+    gap: 0.625rem;
+  }
+
+  .sidebar li:first-child a {
+    padding-left: 0;
+  }
+
+  .sidebar .logoutContainer {
+    padding-right: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .sidebar a,
+  .sidebar .logoutContainer {
+    font-size: 0.95rem;
+    gap: 0.75rem;
+  }
+
+  .sidebar li:first-child a {
+    padding-left: 0;
+  }
+
+  .sidebar .logoutContainer {
+    padding-right: 0;
   }
 }

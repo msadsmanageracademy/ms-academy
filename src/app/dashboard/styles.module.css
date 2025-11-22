@@ -1,5 +1,10 @@
 .layoutContainer {
   display: flex;
+  flex-direction: column;
+}
+
+.mainContent {
+  flex: 1;
 }
 
 .container {
@@ -83,9 +88,9 @@
 }
 
 .actionsGrid {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   max-width: 1000px;
 }
 
@@ -168,8 +173,11 @@
 }
 
 .upcomingInfo span {
+  align-items: center;
   color: var(--color-7);
+  display: flex;
   font-weight: 500;
+  gap: 0.4rem;
 }
 
 @media (min-width: 576px) {

@@ -7,7 +7,7 @@ export default function ProfileLayout({ children }) {
   return (
     <div className={styles.layoutContainer}>
       <Sidebar />
-      {children}
+      <div className={styles.mainContent}>{children}</div>
     </div>
   );
 }

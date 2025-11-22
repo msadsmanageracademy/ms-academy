@@ -5,6 +5,7 @@ import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Clock, Money, NavbarClasses } from "@/views/components/icons";
 import { useEffect, useState } from "react";
 
 const DashboardPage = () => {
@@ -165,11 +166,19 @@ const DashboardPage = () => {
                     {nextClass.short_description}
                   </p>
                   <div className={styles.upcomingInfo}>
-                    <span>⏱️ {nextClass.duration} min</span>
+                    <span>
+                      <Clock fill={"var(--color-4)"} size={28} />{" "}
+                      {nextClass.duration} min
+                    </span>
                     {nextClass.price === 0 ? (
-                      <span>🆓 Gratis</span>
+                      <span>
+                        <Money fill={"var(--color-4)"} size={28} /> Gratis
+                      </span>
                     ) : (
-                      <span>💵 ${nextClass.price}</span>
+                      <span>
+                        <Money fill={"var(--color-4)"} size={28} /> $
+                        {nextClass.price}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -192,8 +201,14 @@ const DashboardPage = () => {
                     {nextCourse.short_description}
                   </p>
                   <div className={styles.upcomingInfo}>
-                    <span>📚 {nextCourse.amount_of_classes} clases</span>
-                    <span>💵 ${nextCourse.price}</span>
+                    <span>
+                      <NavbarClasses fill={"var(--color-4)"} size={28} />
+                      {nextCourse.amount_of_classes} clases
+                    </span>
+                    <span>
+                      <Money fill={"var(--color-4)"} size={28} /> $
+                      {nextCourse.price}
+                    </span>
                   </div>
                 </div>
               )}
