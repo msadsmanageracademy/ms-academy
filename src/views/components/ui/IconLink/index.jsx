@@ -5,14 +5,15 @@ import styles from "./styles.module.css";
 const IconLink = ({
   asButton = false,
   className = "",
-  color = "var(--color-7)",
   danger = false,
   dark = false,
   disabled = false,
+  fill = "#fff",
   google = false,
-  hoverColor,
   icon,
   onClick,
+  spinning = false,
+  success,
   text = "",
   warning = false,
   ...props
@@ -21,6 +22,7 @@ const IconLink = ({
   if (danger) classes.push(`${styles.danger}`);
   if (disabled) classes.push(`${styles.disabled}`);
   if (google) classes.push(`${styles.google}`);
+  if (success) classes.push(`${styles.success}`);
   if (warning) classes.push(`${styles.warning}`);
 
   const IconComponent = icon ? Icons[icon] : null;
@@ -34,12 +36,20 @@ const IconLink = ({
       }}
       {...props}
     >
-      {IconComponent && <IconComponent />}
+      {IconComponent && (
+        <span className={spinning ? styles.spinning : ""}>
+          <IconComponent fill={fill} />
+        </span>
+      )}
       {text && <span className={styles.text}>{text}</span>}
     </button>
   ) : (
     <Link className={classes.join(" ")} {...props}>
-      {IconComponent && <IconComponent />}
+      {IconComponent && (
+        <span className={spinning ? styles.spinning : ""}>
+          <IconComponent fill={fill} />
+        </span>
+      )}
       {text && <span className={styles.text}>{text}</span>}
     </Link>
   );

@@ -84,6 +84,60 @@
   transform: scaleX(1);
 }
 
+.notificationLink {
+  align-items: center;
+  display: flex;
+  gap: 0.25rem;
+  position: relative;
+}
+
+.badge {
+  align-items: center;
+  background: var(--danger);
+  border-radius: 10px;
+  color: #fff;
+  display: flex;
+  font-size: 0.65rem;
+  font-weight: 700;
+  height: 18px;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 0.35rem;
+  position: absolute;
+  right: -8px;
+  top: -2px;
+}
+
+.refreshButton {
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.refreshButton:hover:not(:disabled) {
+  transform: rotate(90deg);
+}
+
+.refreshButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 0.5s linear;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .hamburger {
   align-items: center;
   background: none;

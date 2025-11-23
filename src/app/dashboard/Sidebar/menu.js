@@ -12,6 +12,12 @@ const SIDEBAR_MENU = [
     roles: ["user", "admin"],
   },
   {
+    href: "/dashboard/notifications",
+    iconKey: "Bell",
+    label: "Notificaciones",
+    roles: ["user", "admin"],
+  },
+  {
     href: "/dashboard/classes",
     iconKey: "NavbarClasses",
     label: "Clases",

@@ -1,20 +1,21 @@
 "use client";
 
-import { Cross } from "@/views/components/icons/Cross";
-import { Hamburger } from "@/views/components/icons/Hamburger";
 import ICONS from "./iconsMap";
 import Image from "next/image";
 import Link from "next/link";
 import MENU from "./menu";
 import styles from "./styles.module.css";
+import { useNotifications } from "@/providers/NotificationProvider";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Bell, Cross, Hamburger } from "@/views/components/icons";
 import React, { useEffect, useRef, useState } from "react";
 
 const Navbar = ({ menu = MENU }) => {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { unreadCount } = useNotifications();
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileRef = useRef(null);
 
@@ -94,6 +95,24 @@ const Navbar = ({ menu = MENU }) => {
                 </Link>
               </li>
             ))}
+            {session && (
+              <li className={styles.item}>
+                <Link
+                  href="/dashboard/notifications"
+                  className={`${styles.link} ${styles.notificationLink} ${
+                    pathname === "/dashboard/notifications" ? styles.active : ""
+                  }`}
+                  aria-label={`Notifications ${
+                    unreadCount > 0 ? `(${unreadCount} unread)` : ""
+                  }`}
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className={styles.badge}>{unreadCount}</span>
+                  )}
+                </Link>
+              </li>
+            )}
           </ul>
 
           <button

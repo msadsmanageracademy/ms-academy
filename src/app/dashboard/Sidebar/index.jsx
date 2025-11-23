@@ -7,6 +7,7 @@ import styles from "./styles.module.css";
 import { usePathname } from "next/navigation";
 import withReactContent from "sweetalert2-react-content";
 import {
+  Bell,
   Logout,
   NavbarClasses,
   NavbarDashboard,
@@ -17,6 +18,7 @@ import {
 import { signOut, useSession } from "next-auth/react";
 
 const ICONS = {
+  Bell,
   User,
   UserId,
   NavbarClasses,
@@ -35,7 +37,7 @@ const Sidebar = () => {
       text: "¿Está seguro que desea cerrar la sesión?",
       icon: "info",
       showCancelButton: true,
-      confirmButtonColor: "#1aa849",
+      confirmButtonColor: "var(--success)",
       cancelButtonColor: "#292c33",
       confirmButtonText: "Confirmar",
       cancelButtonText: "Cancelar",

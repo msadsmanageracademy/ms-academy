@@ -3,11 +3,12 @@ import { Oval } from "react-loader-spinner";
 export const OvalSpinner = ({ size }) => {
   return (
     <Oval
-      visible={true}
-      height={size || "80"}
-      width={size || "80"}
-      color="#3b7b3a"
+      visible
       ariaLabel="oval-loading"
+      color="var(--color-3)"
+      height={size || "80"}
+      secondaryColor="var(--danger)"
+      width={size || "80"}
       wrapperStyle={{}}
       wrapperClass=""
     />

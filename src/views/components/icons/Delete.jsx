@@ -1,6 +1,5 @@
 export const Delete = ({
-  fill = "currentColor",
-  filled,
+  fill = "#fff",
   size,
   height,
   width,
@@ -9,12 +8,12 @@ export const Delete = ({
 }) => {
   return (
     <svg
-      width={size || width || 24}
+      fill={"none"}
       height={size || height || 24}
       viewBox="0 0 24 24"
-      fill={filled ? fill : "none"}
+      stroke={fill}
+      width={size || width || 24}
       xmlns="http://www.w3.org/2000/svg"
-      stroke="#fff"
       {...props}
     >
       <path d="M20.5001 6H3.5" strokeWidth="1.5" strokeLinecap="round" />

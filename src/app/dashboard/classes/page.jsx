@@ -5,9 +5,9 @@ import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { es } from "date-fns/locale";
-import { format, formatDistanceToNow } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
+import { useNotifications } from "@/providers/NotificationProvider";
 import {
   closeLoading,
   confirmDelete,
@@ -16,10 +16,12 @@ import {
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
+import { format, formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 
 const ClassesPage = () => {
   const { data: session } = useSession();
+  const { incrementCount } = useNotifications();
   const [addingToCalendar, setAddingToCalendar] = useState(null);
   const [classes, setClasses] = useState([]);
   const [editingClass, setEditingClass] = useState(null);
@@ -211,6 +213,9 @@ const ClassesPage = () => {
         data.googleMeetLink ? "Clase creada con Google Meet" : "Clase creada"
       );
 
+      // Notification created for admin
+      incrementCount();
+
       setAddingToCalendar(null);
     } catch (err) {
       closeLoading();
@@ -332,7 +337,6 @@ const ClassesPage = () => {
                             {classItem.googleEventId ? (
                               <div className={styles.calendarStatus}>
                                 <IconLink
-                                  google
                                   href={classItem.calendarEventLink}
                                   icon={"GoogleCalendar"}
                                   rel="noopener noreferrer"
@@ -340,7 +344,6 @@ const ClassesPage = () => {
                                 />
                                 {classItem.googleMeetLink && (
                                   <IconLink
-                                    google
                                     href={classItem.googleMeetLink}
                                     icon={"GoogleMeet"}
                                     rel="noopener noreferrer"
@@ -352,7 +355,6 @@ const ClassesPage = () => {
                               <div className={styles.calendarButton}>
                                 <IconLink
                                   asButton
-                                  google
                                   disabled={addingToCalendar === classItem._id}
                                   icon={"GoogleCalendar"}
                                   onClick={() =>

@@ -3,13 +3,15 @@
 import { Board } from "@/views/sections/pages/content/Board";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PageWrapper from "@/views/components/layout/PageWrapper";
-import { confirmSignUp, toastError, toastSuccess } from "@/utils/alerts";
-import { useSession } from "next-auth/react";
+import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { confirmSignUp, toastError, toastSuccess } from "@/utils/alerts";
 import { useEffect, useState } from "react";
 
 const ContentPage = () => {
   const { data: session } = useSession();
+  const { incrementCount } = useNotifications();
   const router = useRouter();
   const [classes, setClasses] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -75,6 +77,8 @@ const ContentPage = () => {
         return toastError(3000, "Ha habido un error", responseData.message);
 
       toastSuccess(3000, "Inscripción exitosa", responseData.message);
+      // Notification created for user on signup
+      incrementCount();
       router.push("dashboard/classes");
     } catch (error) {
       return toastError(

@@ -1,0 +1,132 @@
+.container {
+  max-width: 100%;
+  min-height: 90vh;
+  overflow-x: hidden;
+  padding: calc(var(--navbar-height) + 1rem) 1rem 1rem 1rem;
+  width: 100%;
+}
+
+.header {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  color: var(--color-4);
+  margin-bottom: 0.5rem;
+}
+
+.unreadText {
+  color: var(--color-5);
+  font-size: 0.9rem;
+}
+
+.infoText {
+  color: var(--color-5);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.empty {
+  align-items: center;
+  background: #fff;
+  border-radius: 0.5rem;
+  display: flex;
+  justify-content: center;
+  min-height: 200px;
+  padding: 3rem;
+}
+
+.empty p {
+  color: var(--color-5);
+  font-size: 1.1rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notification {
+  align-items: flex-start;
+  background: #fff;
+  border-left: 4px solid transparent;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 1rem;
+  padding: 1.25rem;
+  transition: all 0.2s;
+}
+
+.notification:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.notification.unread {
+  background: #fefefe;
+  border-left-color: var(--color-2);
+}
+
+.iconWrapper {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 0.5rem;
+}
+
+.title {
+  color: var(--color-7);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.message {
+  color: var(--color-6);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.date {
+  color: var(--color-5);
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.notificationActions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+@media (min-width: 576px) {
+  .container {
+    padding: calc(var(--navbar-height) + 2rem) 2rem 2rem 2rem;
+  }
+
+  .header {
+    align-items: center;
+    flex-direction: row;
+  }
+}

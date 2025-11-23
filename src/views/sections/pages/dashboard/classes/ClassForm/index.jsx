@@ -3,6 +3,7 @@ import { ClassFormSchema } from "@/utils/validation";
 import DatePicker from "react-datepicker";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
+import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -17,6 +18,7 @@ import { useEffect, useState } from "react";
 
 const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
   const isEditMode = !!classData;
+  const { incrementCount } = useNotifications();
   const [addToCalendar, setAddToCalendar] = useState(false);
 
   const {
@@ -147,6 +149,10 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
       } else {
         closeLoading();
         toastSuccess(3000, "Operación exitosa", result.message);
+        // Notification created for admin on class create/edit
+        if (!isEditMode || classData?.participants?.length > 0) {
+          incrementCount();
+        }
       }
 
       if (onSuccess) {

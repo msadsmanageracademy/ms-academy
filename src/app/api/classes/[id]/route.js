@@ -113,6 +113,54 @@ export async function PATCH(req, { params }) {
       );
     }
 
+    // Create notifications
+    const notifications = db.collection("notifications");
+    const notificationsToCreate = [];
+
+    // Notify admin about modification
+    if (existingClass.createdBy) {
+      notificationsToCreate.push({
+        userId: new ObjectId(existingClass.createdBy),
+        type: "class_modified",
+        title: "Clase modificada",
+        message: `Has modificado la clase "${
+          body.title || existingClass.title
+        }"`,
+        relatedId: new ObjectId(id),
+        relatedType: "class",
+        read: false,
+        createdAt: new Date(),
+        metadata: {
+          classTitle: body.title || existingClass.title,
+        },
+      });
+    }
+
+    // Notify all enrolled users about modification
+    if (existingClass.participants && existingClass.participants.length > 0) {
+      existingClass.participants.forEach((participantId) => {
+        notificationsToCreate.push({
+          userId: new ObjectId(participantId),
+          type: "class_modified",
+          title: "Clase modificada",
+          message: `La clase "${
+            body.title || existingClass.title
+          }" ha sido modificada`,
+          relatedId: new ObjectId(id),
+          relatedType: "class",
+          read: false,
+          createdAt: new Date(),
+          metadata: {
+            classTitle: body.title || existingClass.title,
+          },
+        });
+      });
+    }
+
+    if (notificationsToCreate.length > 0) {
+      await notifications.insertMany(notificationsToCreate);
+    }
+
     // If class has a Google Calendar event, update it only if relevant fields changed
     const relevantFieldsChanged =
       (body.title && body.title !== existingClass.title) ||
@@ -282,6 +330,31 @@ export async function DELETE(req, { params }) {
         },
         { status: 404 }
       );
+    }
+
+    // Notify all enrolled users about class cancellation
+    if (classItem.participants && classItem.participants.length > 0) {
+      const notifications = db.collection("notifications");
+      const notificationsToCreate = classItem.participants.map(
+        (participantId) => ({
+          userId: new ObjectId(participantId),
+          type: "class_cancelled",
+          title: "Clase cancelada",
+          message: `La clase "${classItem.title}" ha sido cancelada`,
+          relatedId: new ObjectId(id),
+          relatedType: "class",
+          read: false,
+          createdAt: new Date(),
+          metadata: {
+            classTitle: classItem.title,
+            startDate: classItem.start_date,
+          },
+        })
+      );
+
+      if (notificationsToCreate.length > 0) {
+        await notifications.insertMany(notificationsToCreate);
+      }
     }
 
     return Response.json(

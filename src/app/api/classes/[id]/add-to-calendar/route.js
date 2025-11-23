@@ -1,8 +1,8 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { google } from "googleapis";
-import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import { authOptions } from "@/lib/auth";
+import clientPromise from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { google } from "googleapis";
 
 // Initialize OAuth2 client
 const oauth2Client = new google.auth.OAuth2(
@@ -166,6 +166,23 @@ export async function POST(req, { params }) {
         },
       }
     );
+
+    // Create notification for admin
+    const notifications = db.collection("notifications");
+    await notifications.insertOne({
+      userId: new ObjectId(session.user.id),
+      type: "class_added_to_calendar",
+      title: "Clase agregada a Calendar",
+      message: `La clase "${classData.title}" se agregó a Google Calendar`,
+      relatedId: new ObjectId(id),
+      relatedType: "class",
+      read: false,
+      createdAt: new Date(),
+      metadata: {
+        classTitle: classData.title,
+        googleMeetLink,
+      },
+    });
 
     return Response.json(
       {
