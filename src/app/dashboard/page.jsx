@@ -2,10 +2,12 @@
 
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Clock, Money, NavbarClasses } from "@/views/components/icons";
+import { format, formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 
 const DashboardPage = () => {
@@ -150,17 +152,20 @@ const DashboardPage = () => {
             <div className={styles.upcomingGrid}>
               {nextClass && (
                 <div className={styles.upcomingCard}>
-                  <div className={styles.upcomingBadge}>Próxima Clase</div>
+                  <div className={styles.upcomingBadge}>
+                    Próxima Clase (
+                    {formatDistanceToNow(new Date(nextClass.start_date), {
+                      locale: es,
+                    })}
+                    )
+                  </div>
                   <h3>{nextClass.title}</h3>
                   <p className={styles.upcomingDate}>
-                    {new Date(nextClass.start_date).toLocaleString("es-AR", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {format(
+                      new Date(nextClass.start_date),
+                      "EEEE, dd/MM/yyyy, h:mm a",
+                      { locale: es }
+                    )}
                   </p>
                   <p className={styles.upcomingDescription}>
                     {nextClass.short_description}
@@ -186,16 +191,21 @@ const DashboardPage = () => {
 
               {nextCourse && (
                 <div className={styles.upcomingCard}>
-                  <div className={styles.upcomingBadge}>Próximo Curso</div>
+                  <div className={styles.upcomingBadge}>
+                    Próximo Curso (
+                    {formatDistanceToNow(new Date(nextCourse.start_date), {
+                      locale: es,
+                    })}
+                    )
+                  </div>
                   <h3>{nextCourse.title}</h3>
                   <p className={styles.upcomingDate}>
                     Inicia:{" "}
-                    {new Date(nextCourse.start_date).toLocaleString("es-AR", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {format(
+                      new Date(nextCourse.start_date),
+                      "EEEE, dd/MM/yyyy",
+                      { locale: es }
+                    )}
                   </p>
                   <p className={styles.upcomingDescription}>
                     {nextCourse.short_description}

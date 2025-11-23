@@ -1,19 +1,21 @@
 "use client";
 
 import ClassForm from "@/views/sections/pages/dashboard/classes/ClassForm";
+import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { es } from "date-fns/locale";
+import { format, formatDistanceToNow } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import {
   closeLoading,
   confirmDelete,
   confirmUnenroll,
-  showLoading,
   toastError,
+  toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
-import { Delete, Pencil } from "@/views/components/icons";
 import { useEffect, useState } from "react";
 
 const ClassesPage = () => {
@@ -67,9 +69,9 @@ const ClassesPage = () => {
 
     if (!result.isConfirmed) return;
 
-    showLoading(
+    toastLoading(
       "Eliminando clase...",
-      "Por favor espera, se eliminará la clase y su evento de Google Calendar si existe"
+      "Se eliminará la clase y su evento de Google Calendar si existe"
     );
 
     try {
@@ -107,6 +109,8 @@ const ClassesPage = () => {
 
     if (!result.isConfirmed) return;
 
+    toastLoading("Cancelando inscripción...", "Procesando tu solicitud");
+
     try {
       const res = await fetch(
         `/api/classes/sign-up/${classId}?userId=${session.user.id}`,
@@ -116,6 +120,8 @@ const ClassesPage = () => {
       );
 
       const data = await res.json();
+
+      closeLoading();
 
       if (!res.ok) {
         return toastError(3000, "Ha habido un error", data.message);
@@ -129,6 +135,7 @@ const ClassesPage = () => {
       );
     } catch (err) {
       console.error("Error unenrolling from class:", err);
+      closeLoading();
       toastError(
         3000,
         "Ha habido un error",
@@ -165,9 +172,9 @@ const ClassesPage = () => {
   const handleAddToCalendar = async (classId) => {
     setAddingToCalendar(classId);
 
-    showLoading(
+    toastLoading(
       "Agregando a Google Calendar...",
-      "Por favor espera mientras creamos el evento y el link de Meet"
+      "Creando el evento y el link de Meet"
     );
 
     try {
@@ -286,10 +293,11 @@ const ClassesPage = () => {
                     <tr>
                       <th>Título</th>
                       <th>Fecha</th>
+                      <th>Hora</th>
                       <th>Duración</th>
                       <th>Precio</th>
                       <th>Participantes</th>
-                      {hasCalendarAccess && <th>Links Google</th>}
+                      {hasCalendarAccess && <th>Google</th>}
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -298,9 +306,15 @@ const ClassesPage = () => {
                       <tr key={classItem._id}>
                         <td>{classItem.title}</td>
                         <td>
-                          {new Date(classItem.start_date).toLocaleString(
-                            "es-AR"
-                          )}
+                          {format(new Date(classItem.start_date), "dd/MM/yyyy")}{" "}
+                          (
+                          {formatDistanceToNow(new Date(classItem.start_date), {
+                            locale: es,
+                          })}
+                          )
+                        </td>
+                        <td>
+                          {format(new Date(classItem.start_date), "h:mm a")}
                         </td>
                         <td>{classItem.duration} min</td>
                         <td>
@@ -309,66 +323,65 @@ const ClassesPage = () => {
                             : `$${classItem.price}`}
                         </td>
                         <td>
-                          {classItem.participants?.length || 0} /{" "}
-                          {classItem.max_participants || "∞"}
+                          {!classItem.max_participants
+                            ? "Sin límite"
+                            : `${classItem.participants?.length} / ${classItem.max_participants}`}
                         </td>
                         {hasCalendarAccess && (
                           <td>
                             {classItem.googleEventId ? (
                               <div className={styles.calendarStatus}>
-                                <PrimaryLink
-                                  calendar
-                                  className={styles.googleLink}
+                                <IconLink
+                                  google
                                   href={classItem.calendarEventLink}
+                                  icon={"GoogleCalendar"}
                                   rel="noopener noreferrer"
                                   target="_blank"
-                                  text="Calendar"
                                 />
                                 {classItem.googleMeetLink && (
-                                  <PrimaryLink
-                                    meet
-                                    className={styles.googleLink}
+                                  <IconLink
+                                    google
                                     href={classItem.googleMeetLink}
+                                    icon={"GoogleMeet"}
                                     rel="noopener noreferrer"
                                     target="_blank"
-                                    text="Meet"
                                   />
                                 )}
                               </div>
                             ) : (
-                              <PrimaryLink
-                                asButton
-                                calendar
-                                className={styles.googleLink}
-                                disabled={addingToCalendar === classItem._id}
-                                onClick={() =>
-                                  handleAddToCalendar(classItem._id)
-                                }
-                                text={
-                                  addingToCalendar === classItem._id
-                                    ? "Cargando..."
-                                    : "Agregar"
-                                }
-                              />
+                              <div className={styles.calendarButton}>
+                                <IconLink
+                                  asButton
+                                  google
+                                  disabled={addingToCalendar === classItem._id}
+                                  icon={"GoogleCalendar"}
+                                  onClick={() =>
+                                    handleAddToCalendar(classItem._id)
+                                  }
+                                  text={
+                                    addingToCalendar === classItem._id
+                                      ? "Aguarde..."
+                                      : "Agregar"
+                                  }
+                                />
+                              </div>
                             )}
                           </td>
                         )}
                         <td>
                           <div className={styles.actionButtons}>
-                            <button
+                            <IconLink
+                              asButton
+                              warning
+                              icon={"Pencil"}
                               onClick={() => handleEdit(classItem)}
-                              className={styles.iconButton}
-                              title="Editar"
-                            >
-                              <Pencil size={20} />
-                            </button>
-                            <button
+                            />
+                            <IconLink
+                              asButton
+                              danger
+                              icon={"Delete"}
                               onClick={() => handleDelete(classItem._id)}
-                              className={styles.iconButtonDanger}
-                              title="Eliminar"
-                            >
-                              <Delete size={20} />
-                            </button>
+                            />
                           </div>
                         </td>
                       </tr>
@@ -418,32 +431,52 @@ const ClassesPage = () => {
               <PrimaryLink href="/content" text="Ver próximas actividades" />
             </div>
           ) : (
-            <div className={styles.classGrid}>
-              {classes.map((classItem) => (
-                <div key={classItem._id} className={styles.classCard}>
-                  <h3>{classItem.title}</h3>
-                  <p>{classItem.short_description}</p>
-                  <p>
-                    <strong>Fecha:</strong>{" "}
-                    {new Date(classItem.start_date).toLocaleString("es-AR")}
-                  </p>
-                  <p>
-                    <strong>Duración:</strong> {classItem.duration} minutos
-                  </p>
-                  <p>
-                    <strong>Precio:</strong> $
-                    {classItem.price === 0 ? "Sin costo" : classItem.price}
-                  </p>
-                  <div className={styles.actions}>
-                    <PrimaryLink
-                      asButton
-                      danger
-                      text={"Cancelar inscripción"}
-                      onClick={() => handleUnenroll(classItem._id)}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className={styles.tableContainer}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Título</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Duración</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classes.map((classItem) => (
+                    <tr key={classItem._id}>
+                      <td>{classItem.title}</td>
+                      <td>
+                        {format(new Date(classItem.start_date), "dd/MM/yyyy")} (
+                        {formatDistanceToNow(new Date(classItem.start_date), {
+                          locale: es,
+                        })}
+                        )
+                      </td>
+                      <td>
+                        {format(new Date(classItem.start_date), "h:mm a")}
+                      </td>
+                      <td>{classItem.duration} min</td>
+                      <td>
+                        {classItem.price === 0
+                          ? "Sin costo"
+                          : `$${classItem.price}`}
+                      </td>
+                      <td>
+                        <div className={styles.actionButtons}>
+                          <PrimaryLink
+                            asButton
+                            danger
+                            text={"Cancelar inscripción"}
+                            onClick={() => handleUnenroll(classItem._id)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

@@ -3,6 +3,7 @@
 import CourseForm from "@/views/sections/pages/dashboard/courses/CourseForm";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { format } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import { Delete, Pencil } from "@/views/components/icons";
@@ -162,15 +163,11 @@ const CoursesPage = () => {
                       <tr key={course._id}>
                         <td>{course.title}</td>
                         <td>
-                          {new Date(course.start_date).toLocaleDateString(
-                            "es-AR"
-                          )}
+                          {format(new Date(course.start_date), "dd/MM/yyyy")}
                         </td>
                         <td>
                           {course.end_date
-                            ? new Date(course.end_date).toLocaleDateString(
-                                "es-AR"
-                              )
+                            ? format(new Date(course.end_date), "dd/MM/yyyy")
                             : "N/A"}
                         </td>
                         <td>{course.amount_of_classes}</td>
@@ -247,12 +244,12 @@ const CoursesPage = () => {
                   <p>{course.short_description}</p>
                   <p>
                     <strong>Inicio:</strong>{" "}
-                    {new Date(course.start_date).toLocaleDateString("es-AR")}
+                    {format(new Date(course.start_date), "dd/MM/yyyy")}
                   </p>
                   <p>
                     <strong>Fin:</strong>{" "}
                     {course.end_date
-                      ? new Date(course.end_date).toLocaleDateString("es-AR")
+                      ? format(new Date(course.end_date), "dd/MM/yyyy")
                       : "N/A"}
                   </p>
                   <p>

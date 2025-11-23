@@ -1,6 +1,8 @@
 "use client";
 
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { es } from "date-fns/locale";
+import { format } from "date-fns";
 import styles from "./styles.module.css";
 
 export const Board = ({ items, title, type, onSignUp }) => {
@@ -32,9 +34,10 @@ export const Board = ({ items, title, type, onSignUp }) => {
                 <h3 className={styles.postItTitle}>{title}</h3>
                 <div className={styles.postItText}>
                   <p>
-                    Día: {new Date(start_date).toLocaleDateString("es-AR")}{" "}
+                    {format(new Date(start_date), "EEEE, dd/MM/yyyy, h:mm a", {
+                      locale: es,
+                    })}
                   </p>
-                  <p>Hora: {new Date(start_date).toLocaleTimeString()}</p>
                 </div>
                 <PrimaryLink asButton onClick={() => onSignUp(_id)} />
               </div>
@@ -59,7 +62,7 @@ export const Board = ({ items, title, type, onSignUp }) => {
                     <p>
                       Comienza:{" "}
                       {start_date
-                        ? new Date(start_date).toLocaleDateString("es-AR")
+                        ? format(new Date(start_date), "dd/MM/yyyy")
                         : "No se puede mostrar la fecha"}
                     </p>
                     <p>Cantidad de clases: {amount_of_classes}</p>

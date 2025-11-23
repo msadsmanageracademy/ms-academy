@@ -1,0 +1,59 @@
+.link {
+  align-items: center;
+  background-color: var(--color-1);
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  padding: 0.5em;
+  transition: background 0.2s;
+}
+
+.link:hover {
+  background-color: #d3d3d3;
+}
+
+.link.google {
+  background-color: var(--google);
+}
+
+.link.google:hover {
+  background-color: var(--google-hover);
+}
+
+.link.danger {
+  background-color: var(--danger);
+}
+
+.link.danger:hover {
+  background-color: var(--danger-hover);
+}
+
+.link.warning {
+  background-color: var(--warning);
+}
+
+.link.warning:hover {
+  background-color: var(--warning-hover);
+}
+
+.link.success {
+  background-color: var(--success);
+}
+
+.link.success:hover {
+  background-color: var(--success-hover);
+}
+
+.link.disabled {
+  background-color: #cccccc;
+  cursor: default;
+  pointer-events: none;
+}
+
+.text {
+  color: var(--color-7);
+  font-weight: 600;
+}

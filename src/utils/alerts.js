@@ -2,9 +2,12 @@ import Swal from "sweetalert2";
 
 export const toastError = (timer, title, text) => {
   Swal.fire({
-    background: `rgba(28, 25, 25, 0.95)`,
+    background: `var(--color-7)`,
     color: `#fff`,
-    customClass: { timerProgressBar: "toast-progress-dark" },
+    customClass: {
+      timerProgressBar: "toast-progress-error",
+      popup: "toast-popup",
+    },
     icon: "error",
     iconColor: "var(--danger)",
     position: "bottom-end",
@@ -21,11 +24,36 @@ export const toastError = (timer, title, text) => {
   });
 };
 
+export const toastLoading = (title, text) => {
+  Swal.fire({
+    background: `var(--color-7)`,
+    color: `#fff`,
+    customClass: {
+      loader: "custom-loader-toast",
+      popup: "toast-popup",
+    },
+    position: "bottom-end",
+    showConfirmButton: false,
+    text,
+    timer: false,
+    title,
+    toast: true,
+    allowEscapeKey: false,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    },
+  });
+};
+
 export const toastSuccess = (timer, title, text) => {
   Swal.fire({
-    background: `rgba(28, 25, 25, 0.95)`,
+    background: `var(--color-7)`,
     color: `#fff`,
-    customClass: { timerProgressBar: "toast-progress-dark" },
+    customClass: {
+      timerProgressBar: "toast-progress-success",
+      popup: "toast-popup",
+    },
     icon: "success",
     iconColor: "var(--success)",
     position: "bottom-end",
@@ -78,22 +106,6 @@ export const confirmUnenroll = (title, text) => {
     cancelButtonColor: "#6b7280",
     confirmButtonText: "Sí, cancelar inscripción",
     cancelButtonText: "No, mantener inscripción",
-  });
-};
-
-export const showLoading = (title, text) => {
-  Swal.fire({
-    title,
-    text,
-    showConfirmButton: false,
-    allowEscapeKey: false,
-    allowOutsideClick: false,
-    customClass: {
-      loader: "custom-loader",
-    },
-    didOpen: () => {
-      Swal.showLoading();
-    },
   });
 };
 

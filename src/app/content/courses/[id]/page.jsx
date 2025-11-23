@@ -3,6 +3,7 @@
 import PageLoader from "@/views/components/layout/PageLoader";
 import PageWrapper from "@/views/components/layout/PageWrapper";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { format } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import { confirmSignUp, toastError, toastSuccess } from "@/utils/alerts";
@@ -111,13 +112,7 @@ const CourseDetail = () => {
             <div className={styles.infoLabel}>Fecha de inicio</div>
             <div className={styles.infoValue}>
               {course.start_date
-                ? new Date(course.start_date).toLocaleString("es-AR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                ? format(new Date(course.start_date), "dd/MM/yyyy, h:mm a")
                 : "No disponible"}
             </div>
           </div>
@@ -126,13 +121,7 @@ const CourseDetail = () => {
             <div className={styles.infoLabel}>Fecha de finalización</div>
             <div className={styles.infoValue}>
               {course.end_date
-                ? new Date(course.end_date).toLocaleString("es-AR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                ? format(new Date(course.end_date), "dd/MM/yyyy, h:mm a")
                 : "No disponible"}
             </div>
           </div>

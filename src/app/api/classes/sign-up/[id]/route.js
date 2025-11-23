@@ -7,8 +7,6 @@ export async function PATCH(req, { params }) {
     const { id } = params;
     const { userId } = body;
 
-    console.log(body);
-
     if (!ObjectId.isValid(id))
       return Response.json(
         {
@@ -34,7 +32,7 @@ export async function PATCH(req, { params }) {
     const result = await classesCollection.updateOne(
       { _id: new ObjectId(id) },
       {
-        $addToSet: { participants: new ObjectId(userId) }, // addToSet evita duplicados
+        $addToSet: { participants: new ObjectId(userId) },
       }
     );
 

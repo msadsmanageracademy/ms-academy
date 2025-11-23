@@ -8,6 +8,8 @@
   --color-7: #120d0d;
   --danger: #c91111;
   --danger-hover: #9b0f0f;
+  --google: #dbe6f6;
+  --google-hover: #b8c5da;
   --linear-gradient: linear-gradient(
     0.25turn,
     #e3e3e3,
@@ -70,13 +72,44 @@ svg {
   vertical-align: middle;
 }
 
-.toast-progress-dark {
-  background: rgb(187 186 186) !important;
+/* SweetAlert2 Toast Styles */
+.toast-progress-error {
+  background: var(--danger) !important;
 }
 
-/* Custom SweetAlert2 loader color */
-.custom-loader {
-  border-color: var(--success) !important;
+.toast-progress-success {
+  background: var(--success) !important;
+}
+
+.toast-popup {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  font-size: 15px !important;
+  padding: 1.5rem !important;
+}
+
+.toast-popup .swal2-icon {
+  margin: 0 1rem 0 0 !important;
+}
+
+.toast-popup .swal2-loader {
+  margin: 0 1rem 0 0 !important;
+}
+
+.toast-popup .swal2-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+}
+
+.toast-popup .swal2-html-container {
+  font-size: 14px !important;
+  margin: 0.25rem 0 0 0 !important;
+}
+
+/* Custom SweetAlert2 loader for toast */
+.custom-loader-toast {
+  border-color: var(--color-2) !important;
   border-right-color: transparent !important;
 }
 

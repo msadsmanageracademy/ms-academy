@@ -4,16 +4,16 @@ import DatePicker from "react-datepicker";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { GoogleCalendar, GoogleMeet } from "@/views/components/icons";
 import {
   closeLoading,
-  showLoading,
+  toastLoading,
   toastError,
   toastSuccess,
 } from "@/utils/alerts";
+import { useEffect, useState } from "react";
 
 const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
   const isEditMode = !!classData;
@@ -24,6 +24,7 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
     control,
     handleSubmit,
     register,
+    reset,
   } = useForm({
     resolver: zodResolver(ClassFormSchema),
     defaultValues: classData
@@ -43,6 +44,19 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
 
   const router = useRouter();
 
+  useEffect(() => {
+    if (classData) {
+      reset({
+        title: classData.title,
+        short_description: classData.short_description,
+        start_date: new Date(classData.start_date),
+        duration: classData.duration,
+        max_participants: classData.max_participants || 0,
+        price: classData.price || 0,
+      });
+    }
+  }, [classData, reset]);
+
   const onSubmit = async ({
     title,
     short_description,
@@ -52,13 +66,14 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
     price,
   }) => {
     try {
-      // Show loading modal for both create and create+calendar
-      if (!isEditMode) {
-        showLoading(
+      if (isEditMode) {
+        toastLoading("Actualizando clase...", "Guardando cambios");
+      } else {
+        toastLoading(
           "Creando clase...",
           addToCalendar
-            ? "Por favor espera mientras creamos la clase y el evento de Google Calendar"
-            : "Por favor espera mientras creamos la clase"
+            ? "Creando clase y evento de Google Calendar"
+            : "Guardando nueva clase"
         );
       }
 
