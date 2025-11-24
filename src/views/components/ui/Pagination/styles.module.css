@@ -7,13 +7,6 @@
   padding: 1rem 0;
 }
 
-.arrowButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-}
-
 .pageNumbers {
   display: flex;
   gap: 0.25rem;
@@ -67,9 +60,5 @@
     min-width: 36px;
     padding: 0.4rem 0.5rem;
     font-size: 0.85rem;
-  }
-
-  .arrowButton {
-    min-width: 36px;
   }
 }

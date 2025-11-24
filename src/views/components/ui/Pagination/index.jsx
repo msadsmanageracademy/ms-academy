@@ -60,13 +60,10 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     <div className={styles.pagination}>
       <IconLink
         asButton
-        icon="Arrow"
+        icon="Back"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
-        className={styles.arrowButton}
-        style={{ transform: "rotate(180deg)" }}
       />
-
       <div className={styles.pageNumbers}>
         {pageNumbers.map((page, index) => (
           <button
@@ -81,13 +78,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           </button>
         ))}
       </div>
-
       <IconLink
         asButton
-        icon="Arrow"
         disabled={currentPage === totalPages}
+        icon="Forward"
         onClick={() => onPageChange(currentPage + 1)}
-        className={styles.arrowButton}
       />
     </div>
   );

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import styles from "./styles.module.css";
 import {
-  Arrow,
   Google,
   GoogleCalendar,
   GoogleMeet,
@@ -9,7 +8,6 @@ import {
 } from "@/views/components/icons";
 
 export default function PrimaryLink({
-  arrow = false,
   asButton = false,
   calendar = false,
   className = "",
@@ -41,7 +39,6 @@ export default function PrimaryLink({
       {meet ? <GoogleMeet className={styles.iconLeft} /> : null}
       {text}
       {plus ? <Plus className={styles.iconRight} /> : null}
-      {arrow ? <Arrow className={styles.iconRight} /> : null}
     </button>
   ) : (
     <Link
@@ -54,7 +51,6 @@ export default function PrimaryLink({
       {google ? <Google className={styles.iconLeft} /> : null}
       {meet ? <GoogleMeet className={styles.iconLeft} /> : null}
       {text} {plus ? <Plus className={styles.iconRight} /> : null}
-      {arrow ? <Arrow className={styles.iconRight} /> : null}
     </Link>
   );
 }

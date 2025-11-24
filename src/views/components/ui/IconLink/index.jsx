@@ -9,6 +9,7 @@ const IconLink = ({
   dark = false,
   disabled = false,
   fill = "#fff",
+  filled,
   google = false,
   icon,
   onClick,
@@ -38,7 +39,7 @@ const IconLink = ({
     >
       {IconComponent && (
         <span className={spinning ? styles.spinning : ""}>
-          <IconComponent fill={fill} />
+          <IconComponent fill={fill} filled={filled} />
         </span>
       )}
       {text && <span className={styles.text}>{text}</span>}
@@ -47,7 +48,7 @@ const IconLink = ({
     <Link className={classes.join(" ")} {...props}>
       {IconComponent && (
         <span className={spinning ? styles.spinning : ""}>
-          <IconComponent fill={fill} />
+          <IconComponent fill={fill} filled={filled} />
         </span>
       )}
       {text && <span className={styles.text}>{text}</span>}

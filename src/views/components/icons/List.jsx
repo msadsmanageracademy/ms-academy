@@ -1,5 +1,5 @@
 export const List = ({
-  fill = "currentColor",
+  fill = "#fff",
   filled,
   size,
   height,
@@ -13,6 +13,7 @@ export const List = ({
       height={size || height || 24}
       viewBox="0 0 24 24"
       fill={filled ? fill : "none"}
+      stroke={fill}
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >

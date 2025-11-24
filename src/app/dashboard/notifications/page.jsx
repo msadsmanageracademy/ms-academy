@@ -100,11 +100,12 @@ const NotificationsPage = () => {
 
       if (!res.ok) throw new Error("Error deleting notification");
 
-      setNotifications(notifications.filter((n) => n._id !== id));
       // Only decrement if the deleted notification was unread
       if (notification && !notification.read) {
         decrementCount();
       }
+
+      await fetchNotifications(pagination?.page || 1);
     } catch (err) {
       console.error("Error deleting notification:", err);
       toastError(3000, "Error", "No se pudo eliminar la notificación");
@@ -119,7 +120,7 @@ const NotificationsPage = () => {
 
       if (!res.ok) throw new Error("Error deleting notifications");
 
-      setNotifications(notifications.filter((n) => !n.read));
+      await fetchNotifications(pagination?.page || 1);
     } catch (err) {
       console.error("Error deleting notifications:", err);
       toastError(3000, "Error", "No se pudieron eliminar las notificaciones");

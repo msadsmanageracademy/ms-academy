@@ -10,7 +10,6 @@ import { useSession } from "next-auth/react";
 import { useNotifications } from "@/providers/NotificationProvider";
 import {
   closeLoading,
-  confirmDelete,
   confirmUnenroll,
   toastError,
   toastLoading,
@@ -24,7 +23,6 @@ const ClassesPage = () => {
   const { incrementCount } = useNotifications();
   const [addingToCalendar, setAddingToCalendar] = useState(null);
   const [classes, setClasses] = useState([]);
-  const [editingClass, setEditingClass] = useState(null);
   const [hasCalendarAccess, setHasCalendarAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -63,46 +61,6 @@ const ClassesPage = () => {
     }
   }, []);
 
-  const handleDelete = async (id) => {
-    const result = await confirmDelete(
-      "¿Eliminar clase?",
-      "Esta acción no se puede deshacer"
-    );
-
-    if (!result.isConfirmed) return;
-
-    toastLoading(
-      "Eliminando clase...",
-      "Se eliminará la clase y su evento de Google Calendar si existe"
-    );
-
-    try {
-      const res = await fetch(`/api/classes/${id}`, {
-        method: "DELETE",
-      });
-
-      closeLoading();
-
-      if (!res.ok) throw new Error("Error deleting class");
-
-      setClasses(classes.filter((c) => c._id !== id));
-      toastSuccess(
-        3000,
-        "Operación exitosa",
-        "La clase se eliminó correctamente"
-      );
-    } catch (err) {
-      console.error("Error deleting class:", err);
-      closeLoading();
-      toastError(3000, "Ha habido un error", "No se pudo eliminar la clase");
-    }
-  };
-
-  const handleEdit = (classItem) => {
-    setEditingClass(classItem);
-    setShowCreateForm(false);
-  };
-
   const handleUnenroll = async (classId) => {
     const result = await confirmUnenroll(
       "¿Cancelar inscripción?",
@@ -111,7 +69,7 @@ const ClassesPage = () => {
 
     if (!result.isConfirmed) return;
 
-    toastLoading("Cancelando inscripción...", "Procesando tu solicitud");
+    toastLoading("Procesando tu solicitud", "Cancelando inscripción...");
 
     try {
       const res = await fetch(
@@ -229,14 +187,8 @@ const ClassesPage = () => {
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingClass(null);
-  };
-
   const handleFormSuccess = () => {
     setShowCreateForm(false);
-    setEditingClass(null);
-    // Refresh the list
     if (session) {
       fetchClasses();
     }
@@ -328,9 +280,8 @@ const ClassesPage = () => {
                             : `$${classItem.price}`}
                         </td>
                         <td>
-                          {!classItem.max_participants
-                            ? "Sin límite"
-                            : `${classItem.participants?.length} / ${classItem.max_participants}`}
+                          {classItem.participants?.length || 0} /{" "}
+                          {classItem.max_participants || "∞"}
                         </td>
                         {hasCalendarAccess && (
                           <td>
@@ -373,16 +324,9 @@ const ClassesPage = () => {
                         <td>
                           <div className={styles.actionButtons}>
                             <IconLink
-                              asButton
-                              warning
-                              icon={"Pencil"}
-                              onClick={() => handleEdit(classItem)}
-                            />
-                            <IconLink
-                              asButton
-                              danger
-                              icon={"Delete"}
-                              onClick={() => handleDelete(classItem._id)}
+                              fill={"var(--color-4)"}
+                              href={`/dashboard/classes/${classItem._id}`}
+                              icon={"Eye"}
                             />
                           </div>
                         </td>
@@ -397,28 +341,14 @@ const ClassesPage = () => {
               text={showCreateForm ? "Cancelar" : "+ Nueva Clase"}
               onClick={() => {
                 setShowCreateForm(!showCreateForm);
-                setEditingClass(null);
               }}
             />
           </div>
-
           {showCreateForm && (
             <div className={styles.formSection}>
               <h2>Crear Nueva Clase</h2>
               <ClassForm
                 onSuccess={handleFormSuccess}
-                hasCalendarAccess={hasCalendarAccess}
-              />
-            </div>
-          )}
-
-          {editingClass && (
-            <div className={styles.formSection}>
-              <h2>Editar Clase</h2>
-              <ClassForm
-                classData={editingClass}
-                onSuccess={handleFormSuccess}
-                onCancel={handleCancelEdit}
                 hasCalendarAccess={hasCalendarAccess}
               />
             </div>

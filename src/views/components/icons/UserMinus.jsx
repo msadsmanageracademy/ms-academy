@@ -9,13 +9,14 @@ export const UserMinus = ({
 }) => {
   return (
     <svg
+      fill={filled ? fill : "none"}
       height={size || height || 24}
       viewBox="0 0 24 24"
       width={size || width || 24}
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      <circle cx="10" cy="6" r="4" stroke={fill} stroke-width="1.5" />
+      <circle cx="10" cy="6" r="4" stroke={fill} strokeWidth="1.5" />
       <path
         d="M21 10H19H17"
         stroke={fill}

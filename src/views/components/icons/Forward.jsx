@@ -1,4 +1,4 @@
-export const Arrow = ({
+export const Forward = ({
   fill = "currentColor",
   filled,
   size,
