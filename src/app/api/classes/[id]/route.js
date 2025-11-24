@@ -333,10 +333,12 @@ export async function DELETE(req, { params }) {
     }
 
     // Notify all enrolled users about class cancellation
+    const notifications = db.collection("notifications");
+    const notificationsToCreate = [];
+
     if (classItem.participants && classItem.participants.length > 0) {
-      const notifications = db.collection("notifications");
-      const notificationsToCreate = classItem.participants.map(
-        (participantId) => ({
+      classItem.participants.forEach((participantId) => {
+        notificationsToCreate.push({
           userId: new ObjectId(participantId),
           type: "class_cancelled",
           title: "Clase cancelada",
@@ -349,12 +351,30 @@ export async function DELETE(req, { params }) {
             classTitle: classItem.title,
             startDate: classItem.start_date,
           },
-        })
-      );
+        });
+      });
+    }
 
-      if (notificationsToCreate.length > 0) {
-        await notifications.insertMany(notificationsToCreate);
-      }
+    // Notify admin about class deletion
+    if (classItem.createdBy) {
+      notificationsToCreate.push({
+        userId: new ObjectId(classItem.createdBy),
+        type: "class_cancelled",
+        title: "Clase eliminada",
+        message: `Has eliminado la clase "${classItem.title}"`,
+        relatedId: new ObjectId(id),
+        relatedType: "class",
+        read: false,
+        createdAt: new Date(),
+        metadata: {
+          classTitle: classItem.title,
+          startDate: classItem.start_date,
+        },
+      });
+    }
+
+    if (notificationsToCreate.length > 0) {
+      await notifications.insertMany(notificationsToCreate);
     }
 
     return Response.json(

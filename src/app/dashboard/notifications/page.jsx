@@ -3,6 +3,7 @@
 import * as Icons from "@/views/components/icons";
 import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
+import Pagination from "@/views/components/ui/Pagination";
 import { es } from "date-fns/locale";
 import { format } from "date-fns";
 import styles from "./styles.module.css";
@@ -18,6 +19,7 @@ const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [pagination, setPagination] = useState(null);
 
   useEffect(() => {
     if (session) {
@@ -25,13 +27,14 @@ const NotificationsPage = () => {
     }
   }, [session]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (page = 1) => {
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch(`/api/notifications?page=${page}`);
       if (!res.ok) throw new Error("Error fetching notifications");
 
       const data = await res.json();
       setNotifications(data.data || []);
+      setPagination(data.pagination);
       // Update context with fresh unread count
       await fetchUnreadCount();
     } catch (err) {
@@ -46,6 +49,12 @@ const NotificationsPage = () => {
     setRefreshing(true);
     await Promise.all([fetchNotifications(), fetchUnreadCount()]);
     setTimeout(() => setRefreshing(false), 500);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (pagination && newPage >= 1 && newPage <= pagination.pages) {
+      fetchNotifications(newPage);
+    }
   };
 
   const handleMarkAsRead = async (id) => {
@@ -238,6 +247,11 @@ const NotificationsPage = () => {
           ))}
         </div>
       )}
+      <Pagination
+        currentPage={pagination?.page}
+        totalPages={pagination?.pages}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 };

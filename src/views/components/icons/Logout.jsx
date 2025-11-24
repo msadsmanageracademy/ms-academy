@@ -1,6 +1,5 @@
 export const Logout = ({
-  fill = "currentColor",
-  filled,
+  fill = "#fff",
   size,
   height,
   width,
@@ -9,12 +8,12 @@ export const Logout = ({
 }) => {
   return (
     <svg
-      width={size || width || 24}
+      fill="none"
       height={size || height || 24}
+      stroke={fill}
       viewBox="0 0 24 24"
-      fill={filled ? fill : "none"}
+      width={size || width || 24}
       xmlns="http://www.w3.org/2000/svg"
-      stroke="#fff"
       {...props}
     >
       <path

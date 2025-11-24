@@ -25,7 +25,7 @@ const SIDEBAR_MENU = [
   },
   {
     href: "/dashboard/courses",
-    iconKey: "NavbarDashboard",
+    iconKey: "Courses",
     label: "Cursos",
     roles: ["user", "admin"],
   },

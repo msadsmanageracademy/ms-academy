@@ -1,10 +1,10 @@
 export const UserId = ({
-  fill = "currentColor",
+  fill = "#fff",
   filled,
-  size,
   height,
-  width,
   label,
+  size,
+  width,
   ...props
 }) => {
   return (
@@ -14,7 +14,7 @@ export const UserId = ({
       viewBox="0 0 24 24"
       fill={filled ? fill : "none"}
       xmlns="http://www.w3.org/2000/svg"
-      stroke="#fff"
+      stroke={fill}
       {...props}
     >
       <circle cx="9" cy="9" r="2" strokeWidth="1.5" />

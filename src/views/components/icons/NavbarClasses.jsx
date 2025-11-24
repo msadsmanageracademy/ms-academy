@@ -1,9 +1,9 @@
 export const NavbarClasses = ({
   fill = "#fff",
-  size,
   height,
-  width,
   label,
+  size,
+  width,
   ...props
 }) => {
   return (

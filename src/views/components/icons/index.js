@@ -4,6 +4,7 @@ export { Bell } from "@/views/components/icons/Bell";
 export { Calendar } from "@/views/components/icons/Calendar";
 export { CheckCircle } from "@/views/components/icons/CheckCircle";
 export { Clock } from "@/views/components/icons/Clock";
+export { Courses } from "@/views/components/icons/Courses";
 export { Cross } from "@/views/components/icons/Cross";
 export { Delete } from "@/views/components/icons/Delete";
 export { Dialogue } from "@/views/components/icons/Dialogue";

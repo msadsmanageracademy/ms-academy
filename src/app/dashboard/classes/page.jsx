@@ -442,6 +442,7 @@ const ClassesPage = () => {
                     <th>Hora</th>
                     <th>Duración</th>
                     <th>Precio</th>
+                    <th>Google</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -466,11 +467,25 @@ const ClassesPage = () => {
                           : `$${classItem.price}`}
                       </td>
                       <td>
+                        {classItem.googleEventId ? (
+                          <div className={styles.calendarStatus}>
+                            <IconLink
+                              href={classItem.googleMeetLink}
+                              icon={"GoogleMeet"}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                            />
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td>
                         <div className={styles.actionButtons}>
-                          <PrimaryLink
+                          <IconLink
                             asButton
                             danger
-                            text={"Cancelar inscripción"}
+                            icon="Delete"
                             onClick={() => handleUnenroll(classItem._id)}
                           />
                         </div>

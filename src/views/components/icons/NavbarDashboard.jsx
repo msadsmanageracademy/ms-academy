@@ -1,6 +1,5 @@
 export const NavbarDashboard = ({
-  fill,
-  filled,
+  fill = "#fff",
   height,
   label,
   size,
@@ -9,7 +8,7 @@ export const NavbarDashboard = ({
 }) => {
   return (
     <svg
-      fill="none"
+      fill="transparent"
       height={size || height || 24}
       viewBox="0 0 24 24"
       width={size || width || 24}
@@ -17,42 +16,24 @@ export const NavbarDashboard = ({
       {...props}
     >
       <path
-        d="M16 4.00195C18.175 4.01406 19.3529 4.11051 20.1213 4.87889C21 5.75757 21 7.17179 21 10.0002V16.0002C21 18.8286 21 20.2429 20.1213 21.1215C19.2426 22.0002 17.8284 22.0002 15 22.0002H9C6.17157 22.0002 4.75736 22.0002 3.87868 21.1215C3 20.2429 3 18.8286 3 16.0002V10.0002C3 7.17179 3 5.75757 3.87868 4.87889C4.64706 4.11051 5.82497 4.01406 8 4.00195"
+        d="M16 4.00171C18.175 4.01382 19.3529 4.11027 20.1213 4.87865C21 5.75733 21 7.17154 21 9.99997V16C21 18.8284 21 20.2426 20.1213 21.1213C19.2426 22 17.8284 22 15 22H9C6.17157 22 4.75736 22 3.87868 21.1213C3 20.2426 3 18.8284 3 16V9.99997C3 7.17154 3 5.75733 3.87868 4.87865C4.64706 4.11027 5.82497 4.01382 8 4.00171"
         stroke={fill}
-        strokeWidth="1.5"
+        stroke-width="1.5"
       />
       <path
-        d="M10.5 14L17 14"
-        stroke={fill}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M7 14H7.5"
+        d="M8 14H16"
         stroke={fill}
         strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
-        d="M7 10.5H7.5"
+        d="M7 10.5H17"
         stroke={fill}
         strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
-        d="M7 17.5H7.5"
-        stroke={fill}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10.5 10.5H17"
-        stroke={fill}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10.5 17.5H17"
+        d="M9 17.5H15"
         stroke={fill}
         strokeWidth="1.5"
         strokeLinecap="round"

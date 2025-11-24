@@ -6,7 +6,7 @@ export async function middleware(req) {
 
   // Si no hay token y la ruta es protegida, redirigir al login
   if (!token) {
-    const loginUrl = new URL("/auth/login", req.url);
+    const loginUrl = new URL("/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -18,7 +18,7 @@ export async function middleware(req) {
 
   // Si no hay token y la ruta es protegida, redirigir al login
   if (protectedRoutes.some((route) => path.startsWith(route)) && !token) {
-    const loginUrl = new URL("/auth/login", req.url);
+    const loginUrl = new URL("/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
 

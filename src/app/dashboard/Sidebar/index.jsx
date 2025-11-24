@@ -8,9 +8,9 @@ import { usePathname } from "next/navigation";
 import withReactContent from "sweetalert2-react-content";
 import {
   Bell,
+  Courses,
   Logout,
   NavbarClasses,
-  NavbarDashboard,
   Pencil,
   User,
   UserId,
@@ -19,11 +19,11 @@ import { signOut, useSession } from "next-auth/react";
 
 const ICONS = {
   Bell,
+  Courses,
+  NavbarClasses,
+  Pencil,
   User,
   UserId,
-  NavbarClasses,
-  NavbarDashboard,
-  Pencil,
 };
 
 const Sidebar = () => {
@@ -70,16 +70,25 @@ const Sidebar = () => {
           const active = isActive(item.href);
 
           return (
-            <li key={item.href}>
-              <Link href={item.href} className={active ? styles.active : ""}>
-                <Icon size={28} stroke={active ? "#f4a462" : "#fff"} />
-                <span>{label}</span>
+            <li className={styles.item} key={item.href}>
+              <Link
+                href={item.href}
+                className={`${styles.link} ${active ? styles.active : ""}`}
+              >
+                <Icon
+                  fill={active ? "var(--color-2)" : "rgba(255, 255, 255, 0.7)"}
+                  size={28}
+                />
+                <span className={styles.label}>{label}</span>
               </Link>
             </li>
           );
         })}
-        <li className={styles.logoutContainer} onClick={() => handleLogout()}>
-          <Logout size={28} />
+        <li
+          className={`${styles.item} ${styles.logoutContainer}`}
+          onClick={() => handleLogout()}
+        >
+          <Logout fill={"rgba(255, 255, 255, 0.7)"} size={28} />
           <span>Cerrar sesión</span>
         </li>
       </ul>
