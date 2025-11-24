@@ -179,6 +179,22 @@ export async function DELETE(req, { params }) {
     const notifications = db.collection("notifications");
     const notificationsToCreate = [];
 
+    // Notify user about successful unenrollment
+    notificationsToCreate.push({
+      userId: new ObjectId(userId),
+      type: "user_unenroll",
+      title: "Inscripción cancelada",
+      message: `Has cancelado tu inscripción en la clase "${classItem.title}"`,
+      relatedId: new ObjectId(id),
+      relatedType: "class",
+      read: false,
+      createdAt: new Date(),
+      metadata: {
+        classTitle: classItem.title,
+        startDate: classItem.start_date,
+      },
+    });
+
     // Notify admin about unenrollment
     if (classItem.createdBy) {
       notificationsToCreate.push({

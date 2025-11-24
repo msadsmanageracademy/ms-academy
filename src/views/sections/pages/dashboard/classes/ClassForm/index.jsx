@@ -69,13 +69,13 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
   }) => {
     try {
       if (isEditMode) {
-        toastLoading("Actualizando clase...", "Guardando cambios");
+        toastLoading("Procesando tu solicitud", "Actualizando clase...");
       } else {
         toastLoading(
-          "Creando clase...",
+          "Procesando tu solicitud",
           addToCalendar
             ? "Creando clase y evento de Google Calendar"
-            : "Guardando nueva clase"
+            : "Creando clase"
         );
       }
 

@@ -123,7 +123,7 @@ const ClassDetailPage = ({ params }) => {
 
     if (!result.isConfirmed) return;
 
-    toastLoading("Removiendo participante...", "Procesando solicitud");
+    toastLoading("Procesando solicitud", "Removiendo participante...");
 
     try {
       const res = await fetch(

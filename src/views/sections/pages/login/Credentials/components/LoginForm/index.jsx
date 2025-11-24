@@ -1,11 +1,11 @@
 "use client";
 
-import OvalSpinner from "@/views/components/ui/OvalSpinner";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { signIn } from "next-auth/react";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { closeLoading, toastLoading } from "@/utils/alerts";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -16,8 +16,9 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Limpiar el error antes de cada intento
-    setLoading(true); // Establecer el estado de carga
+    setError("");
+    setLoading(true);
+    toastLoading("Procesando tu solicitud", "Iniciando sesión");
 
     try {
       const res = await signIn("credentials", {
@@ -26,15 +27,18 @@ const LoginPage = () => {
         redirect: false,
       });
 
+      closeLoading();
+
       if (res.error) {
         setError("Credenciales incorrectas");
       } else {
-        router.push("/dashboard"); // Redirigir después del login exitoso
+        router.push("/dashboard");
       }
     } catch (error) {
+      closeLoading();
       setError("Error en el servidor. Inténtalo de nuevo.");
     } finally {
-      setLoading(false); // Detener la carga una vez que haya terminado
+      setLoading(false);
     }
   };
 
@@ -60,16 +64,12 @@ const LoginPage = () => {
             required
           />
         </div>
-        {loading ? (
-          <OvalSpinner />
-        ) : (
-          <PrimaryLink
-            asButton
-            disabled={loading}
-            text={"ingresar"}
-            type="submit"
-          />
-        )}
+        <PrimaryLink
+          asButton
+          disabled={loading}
+          text={"ingresar"}
+          type="submit"
+        />
       </form>
       {error && (
         <p style={{ color: "red", fontSize: "0.975rem", marginTop: "1rem" }}>

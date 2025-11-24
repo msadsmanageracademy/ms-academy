@@ -88,6 +88,9 @@ const ClassesPage = () => {
       }
 
       setClasses(classes.filter((c) => c._id !== classId));
+
+      incrementCount();
+
       toastSuccess(
         3000,
         "Operación exitosa",
@@ -132,10 +135,7 @@ const ClassesPage = () => {
   const handleAddToCalendar = async (classId) => {
     setAddingToCalendar(classId);
 
-    toastLoading(
-      "Agregando a Google Calendar...",
-      "Creando el evento y el link de Meet"
-    );
+    toastLoading("Procesando tu solicitud", "Agregando a Google Calendar");
 
     try {
       const res = await fetch(`/api/classes/${classId}/add-to-calendar`, {

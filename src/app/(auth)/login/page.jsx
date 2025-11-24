@@ -5,6 +5,7 @@ import Hero from "@/views/sections/pages/login/Hero";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PageWrapper from "@/views/components/layout/PageWrapper";
 import { signIn } from "next-auth/react";
+import { toastLoading } from "@/utils/alerts";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -13,6 +14,7 @@ const LoginPage = () => {
   const router = useRouter();
 
   const handleGoogleLogin = async () => {
+    toastLoading("Procesando tu solicitud", "Iniciando sesión con Google...");
     await signIn("google", { callbackUrl: "/dashboard" });
   };
 
