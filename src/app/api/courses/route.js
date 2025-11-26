@@ -7,10 +7,8 @@ export async function GET() {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
 
-    const currentDate = new Date();
-
     const courses = await coursesCollection
-      .find({ start_date: { $gt: currentDate } })
+      .find({})
       .sort({ start_date: 1 }) // Ascendente
       .toArray();
 
