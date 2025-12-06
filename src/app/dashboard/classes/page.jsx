@@ -148,6 +148,28 @@ const ClassesPage = () => {
 
       if (!res.ok) {
         setAddingToCalendar(null);
+
+        // If token was revoked, offer to re-authorize
+        if (data.requiresReauth) {
+          const result = await Swal.fire({
+            icon: "warning",
+            title: "Autorización expirada",
+            text: data.message,
+            showCancelButton: true,
+            confirmButtonText: "Volver a autorizar",
+            cancelButtonText: "Cancelar",
+          });
+
+          if (result.isConfirmed) {
+            // Update state to show "Connect Google Calendar" button
+            setHasCalendarAccess(false);
+            // Redirect to Google authorization
+            const authUrl = `/api/google-calendar?userId=${session.user.id}`;
+            window.location.href = authUrl;
+          }
+          return;
+        }
+
         return toastError(3000, "Ha habido un error", data.message);
       }
 
@@ -230,16 +252,6 @@ const ClassesPage = () => {
           <div className={styles.listSection}>
             <div className={styles.headerActions}>
               <h2>Todas las Clases</h2>
-              {!hasCalendarAccess && (
-                <PrimaryLink
-                  asButton
-                  google
-                  text={"Conectar Google Calendar"}
-                  onClick={handleConnectCalendar}
-                >
-                  Conectar Google Calendar
-                </PrimaryLink>
-              )}
             </div>
             {classes.length === 0 ? (
               <p className={styles.noClasses}>No hay clases disponibles</p>
@@ -254,7 +266,7 @@ const ClassesPage = () => {
                       <th>Duración</th>
                       <th>Precio</th>
                       <th>Participantes</th>
-                      {hasCalendarAccess && <th>Google</th>}
+                      <th>Google</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -283,44 +295,51 @@ const ClassesPage = () => {
                           {classItem.participants?.length || 0} /{" "}
                           {classItem.max_participants || "∞"}
                         </td>
-                        {hasCalendarAccess && (
-                          <td>
-                            {classItem.googleEventId ? (
-                              <div className={styles.calendarStatus}>
+                        <td>
+                          {!hasCalendarAccess ? (
+                            <div className={styles.calendarButton}>
+                              <IconLink
+                                asButton
+                                icon={"GoogleCalendar"}
+                                onClick={handleConnectCalendar}
+                                text={"Conectar"}
+                              />
+                            </div>
+                          ) : classItem.googleEventId ? (
+                            <div className={styles.calendarStatus}>
+                              <IconLink
+                                href={classItem.calendarEventLink}
+                                icon={"GoogleCalendar"}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              />
+                              {classItem.googleMeetLink && (
                                 <IconLink
-                                  href={classItem.calendarEventLink}
-                                  icon={"GoogleCalendar"}
+                                  href={classItem.googleMeetLink}
+                                  icon={"GoogleMeet"}
                                   rel="noopener noreferrer"
                                   target="_blank"
                                 />
-                                {classItem.googleMeetLink && (
-                                  <IconLink
-                                    href={classItem.googleMeetLink}
-                                    icon={"GoogleMeet"}
-                                    rel="noopener noreferrer"
-                                    target="_blank"
-                                  />
-                                )}
-                              </div>
-                            ) : (
-                              <div className={styles.calendarButton}>
-                                <IconLink
-                                  asButton
-                                  disabled={addingToCalendar === classItem._id}
-                                  icon={"GoogleCalendar"}
-                                  onClick={() =>
-                                    handleAddToCalendar(classItem._id)
-                                  }
-                                  text={
-                                    addingToCalendar === classItem._id
-                                      ? "Aguarde..."
-                                      : "Agregar"
-                                  }
-                                />
-                              </div>
-                            )}
-                          </td>
-                        )}
+                              )}
+                            </div>
+                          ) : (
+                            <div className={styles.calendarButton}>
+                              <IconLink
+                                asButton
+                                disabled={addingToCalendar === classItem._id}
+                                icon={"GoogleCalendar"}
+                                onClick={() =>
+                                  handleAddToCalendar(classItem._id)
+                                }
+                                text={
+                                  addingToCalendar === classItem._id
+                                    ? "Aguarde..."
+                                    : "Agregar"
+                                }
+                              />
+                            </div>
+                          )}
+                        </td>
                         <td>
                           <div className={styles.actionButtons}>
                             <IconLink

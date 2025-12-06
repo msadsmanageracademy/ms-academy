@@ -1,6 +1,6 @@
-import { google } from "googleapis";
-import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import clientPromise from "@/lib/db";
+import { google } from "googleapis";
 
 // Initialize OAuth2 client
 const oauth2Client = new google.auth.OAuth2(
@@ -62,6 +62,7 @@ export async function GET(req) {
             token_type: tokens.token_type,
             scope: tokens.scope,
           },
+          updatedAt: new Date(),
         },
       }
     );

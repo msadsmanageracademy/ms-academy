@@ -50,10 +50,11 @@ export const ClassFormSchema = z.object({
     .number({ message: "Debe ingresar un número" })
     .positive({ message: "Debe ingresar 1 o mayor" }),
   start_date: z.date({ message: "Debe seleccionar una fecha de inicio" }),
-  participants: z.array(z.string()).default([]),
   max_participants: z
     .number({ message: "Debe ingresar un número" })
-    .nonnegative({ message: "Debe ingresar 0 o mayor" }),
+    .nonnegative({ message: "Debe ingresar 0 o mayor" })
+    .nullable()
+    .default(null),
   price: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" }),
@@ -74,13 +75,14 @@ export const CourseFormSchema = z.object({
     .positive({ message: "Debe ingresar 1 o mayor" }),
   start_date: z.date({ message: "Debe seleccionar una fecha de inicio" }),
   end_date: z.date({ message: "Debe seleccionar una fecha de finalización" }),
-  participants: z.array(z.string()).default([]),
   amount_of_classes: z
     .number({ message: "Debe ingresar un número" })
     .min(2, { message: "Debe haber al menos 2 clases" }),
   max_participants: z
     .number({ message: "Debe ingresar un número" })
-    .nonnegative({ message: "Debe ingresar 0 o mayor" }),
+    .nonnegative({ message: "Debe ingresar 0 o mayor" })
+    .nullable()
+    .default(null),
   price: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" }),

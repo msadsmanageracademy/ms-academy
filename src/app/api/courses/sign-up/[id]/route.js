@@ -1,5 +1,5 @@
-import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import clientPromise from "@/lib/db";
 
 export async function PATCH(req, { params }) {
   try {
@@ -33,6 +33,7 @@ export async function PATCH(req, { params }) {
       { _id: new ObjectId(id) },
       {
         $addToSet: { participants: new ObjectId(userId) },
+        $set: { updatedAt: new Date() },
       }
     );
 
@@ -85,6 +86,7 @@ export async function DELETE(req, { params }) {
       { _id: new ObjectId(id) },
       {
         $pull: { participants: new ObjectId(userId) },
+        $set: { updatedAt: new Date() },
       }
     );
 

@@ -2,6 +2,7 @@ import { RegisterFormSchema } from "@/utils/validation";
 import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/db";
 import { config } from "@/config";
+import { prepareUserForDB } from "@/models/schemas";
 
 export async function POST(req) {
   try {
@@ -41,10 +42,7 @@ export async function POST(req) {
 
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
-    const newUser = {
-      ...body,
-      password: hashedPassword,
-    };
+    const newUser = prepareUserForDB(body, hashedPassword);
 
     const result = await usersCollection.insertOne(newUser);
 

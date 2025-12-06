@@ -1,6 +1,7 @@
-import clientPromise from "@/lib/db";
-import { ObjectId } from "mongodb";
 import { CourseFormSchema } from "@/utils/validation";
+import { ObjectId } from "mongodb";
+import { addTimestampToUpdate } from "@/models/schemas";
+import clientPromise from "@/lib/db";
 
 export async function GET(req, { params }) {
   try {
@@ -80,9 +81,15 @@ export async function PATCH(req, { params }) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
 
+    const updateData = addTimestampToUpdate({
+      ...body,
+      max_participants:
+        body.max_participants === 0 ? null : body.max_participants,
+    });
+
     const result = await coursesCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: body }
+      { $set: updateData }
     );
 
     if (result.matchedCount === 0) {

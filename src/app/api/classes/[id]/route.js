@@ -1,5 +1,6 @@
 import { ClassFormSchema } from "@/utils/validation";
 import { ObjectId } from "mongodb";
+import { addTimestampToUpdate } from "@/models/schemas";
 import clientPromise from "@/lib/db";
 import { google } from "googleapis";
 
@@ -97,10 +98,15 @@ export async function PATCH(req, { params }) {
       );
     }
 
-    // Update the class in database
+    const updateData = addTimestampToUpdate({
+      ...body,
+      max_participants:
+        body.max_participants === 0 ? null : body.max_participants,
+    });
+
     const result = await classesCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: body }
+      { $set: updateData }
     );
 
     if (result.matchedCount === 0) {

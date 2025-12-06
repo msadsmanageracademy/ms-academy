@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
+import { prepareNotificationForDB } from "@/models/schemas";
 
 export async function PATCH(req, { params }) {
   try {
@@ -51,6 +52,7 @@ export async function PATCH(req, { params }) {
       { _id: new ObjectId(id) },
       {
         $addToSet: { participants: new ObjectId(userId) },
+        $set: { updatedAt: new Date() },
       }
     );
 
@@ -66,39 +68,41 @@ export async function PATCH(req, { params }) {
     const notificationsToCreate = [];
 
     // Notify user about signup
-    notificationsToCreate.push({
-      userId: new ObjectId(userId),
-      type: "user_signup",
-      title: "Inscripción exitosa",
-      message: `Te has inscrito en la clase "${classItem.title}"`,
-      relatedId: new ObjectId(id),
-      relatedType: "class",
-      read: false,
-      createdAt: new Date(),
-      metadata: {
-        classTitle: classItem.title,
-        startDate: classItem.start_date,
-      },
-    });
+    notificationsToCreate.push(
+      prepareNotificationForDB({
+        userId: new ObjectId(userId),
+        type: "user_signup",
+        title: "Inscripción exitosa",
+        message: `Te has inscrito en la clase "${classItem.title}"`,
+        relatedId: new ObjectId(id),
+        relatedType: "class",
+        metadata: {
+          classTitle: classItem.title,
+          startDate: classItem.start_date,
+        },
+      })
+    );
 
     // Notify admin about new signup
     if (classItem.createdBy) {
-      notificationsToCreate.push({
-        userId: new ObjectId(classItem.createdBy),
-        type: "user_signup",
-        title: "Nuevo participante",
-        message: `${user?.first_name || "Un usuario"} ${
-          user?.last_name || ""
-        } se ha inscrito en "${classItem.title}"`,
-        relatedId: new ObjectId(id),
-        relatedType: "class",
-        read: false,
-        createdAt: new Date(),
-        metadata: {
-          classTitle: classItem.title,
-          userName: `${user?.first_name || ""} ${user?.last_name || ""}`.trim(),
-        },
-      });
+      notificationsToCreate.push(
+        prepareNotificationForDB({
+          userId: new ObjectId(classItem.createdBy),
+          type: "user_signup",
+          title: "Nuevo participante",
+          message: `${user?.first_name || "Un usuario"} ${
+            user?.last_name || ""
+          } se ha inscrito en "${classItem.title}"`,
+          relatedId: new ObjectId(id),
+          relatedType: "class",
+          metadata: {
+            classTitle: classItem.title,
+            userName: `${user?.first_name || ""} ${
+              user?.last_name || ""
+            }`.trim(),
+          },
+        })
+      );
     }
 
     if (notificationsToCreate.length > 0) {
@@ -165,6 +169,7 @@ export async function DELETE(req, { params }) {
       { _id: new ObjectId(id) },
       {
         $pull: { participants: new ObjectId(userId) },
+        $set: { updatedAt: new Date() },
       }
     );
 
@@ -180,39 +185,41 @@ export async function DELETE(req, { params }) {
     const notificationsToCreate = [];
 
     // Notify user about successful unenrollment
-    notificationsToCreate.push({
-      userId: new ObjectId(userId),
-      type: "user_unenroll",
-      title: "Inscripción cancelada",
-      message: `Has cancelado tu inscripción en la clase "${classItem.title}"`,
-      relatedId: new ObjectId(id),
-      relatedType: "class",
-      read: false,
-      createdAt: new Date(),
-      metadata: {
-        classTitle: classItem.title,
-        startDate: classItem.start_date,
-      },
-    });
+    notificationsToCreate.push(
+      prepareNotificationForDB({
+        userId: new ObjectId(userId),
+        type: "user_unenroll",
+        title: "Inscripción cancelada",
+        message: `Has cancelado tu inscripción en la clase "${classItem.title}"`,
+        relatedId: new ObjectId(id),
+        relatedType: "class",
+        metadata: {
+          classTitle: classItem.title,
+          startDate: classItem.start_date,
+        },
+      })
+    );
 
     // Notify admin about unenrollment
     if (classItem.createdBy) {
-      notificationsToCreate.push({
-        userId: new ObjectId(classItem.createdBy),
-        type: "user_unenroll",
-        title: "Cancelación de inscripción",
-        message: `${user?.first_name || "Un usuario"} ${
-          user?.last_name || ""
-        } ha cancelado su inscripción en "${classItem.title}"`,
-        relatedId: new ObjectId(id),
-        relatedType: "class",
-        read: false,
-        createdAt: new Date(),
-        metadata: {
-          classTitle: classItem.title,
-          userName: `${user?.first_name || ""} ${user?.last_name || ""}`.trim(),
-        },
-      });
+      notificationsToCreate.push(
+        prepareNotificationForDB({
+          userId: new ObjectId(classItem.createdBy),
+          type: "user_unenroll",
+          title: "Cancelación de inscripción",
+          message: `${user?.first_name || "Un usuario"} ${
+            user?.last_name || ""
+          } ha cancelado su inscripción en "${classItem.title}"`,
+          relatedId: new ObjectId(id),
+          relatedType: "class",
+          metadata: {
+            classTitle: classItem.title,
+            userName: `${user?.first_name || ""} ${
+              user?.last_name || ""
+            }`.trim(),
+          },
+        })
+      );
     }
 
     if (notificationsToCreate.length > 0) {

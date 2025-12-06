@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/db";
 import { getServerSession } from "next-auth";
+import { prepareClassForDB, prepareNotificationForDB } from "@/models/schemas";
 
 export async function GET() {
   try {
@@ -43,14 +44,6 @@ export async function POST(req) {
     if (body.start_date) body.start_date = new Date(body.start_date);
     if (body.end_date) body.end_date = new Date(body.end_date);
 
-    // Set type to class
-    body.type = "class";
-
-    // Set createdBy if session exists
-    if (session?.user?.id) {
-      body.createdBy = session.user.id;
-    }
-
     const parsedBody = ClassFormSchema.safeParse(body);
 
     if (!parsedBody.success) {
@@ -68,25 +61,29 @@ export async function POST(req) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
 
-    const result = await classesCollection.insertOne(body);
+    const classData = prepareClassForDB(
+      body,
+      session?.user?.id ? new ObjectId(session.user.id) : undefined
+    );
+
+    const result = await classesCollection.insertOne(classData);
 
     // Create notification for admin
     if (session?.user?.id) {
       const notifications = db.collection("notifications");
-      await notifications.insertOne({
+      const notification = prepareNotificationForDB({
         userId: new ObjectId(session.user.id),
         type: "class_created",
         title: "Nueva clase creada",
         message: `Has creado la clase "${body.title}"`,
         relatedId: result.insertedId,
         relatedType: "class",
-        read: false,
-        createdAt: new Date(),
         metadata: {
           classTitle: body.title,
           startDate: body.start_date,
         },
       });
+      await notifications.insertOne(notification);
     }
 
     return Response.json(

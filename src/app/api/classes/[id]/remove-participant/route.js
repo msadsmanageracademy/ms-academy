@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
+import { prepareNotificationForDB } from "@/models/schemas";
 
 export async function DELETE(req, { params }) {
   try {
@@ -83,6 +84,7 @@ export async function DELETE(req, { params }) {
       { _id: new ObjectId(id) },
       {
         $pull: { participants: new ObjectId(userId) },
+        $set: { updatedAt: new Date() },
       }
     );
 
@@ -101,38 +103,38 @@ export async function DELETE(req, { params }) {
     const notificationsToCreate = [];
 
     // Notification for the removed user
-    notificationsToCreate.push({
-      userId: new ObjectId(userId),
-      type: "user_unenroll",
-      title: "Suscripción anulada",
-      message: `Has sido dado de baja de la clase "${classItem.title}" por un administrador`,
-      relatedId: new ObjectId(id),
-      relatedType: "class",
-      read: false,
-      createdAt: new Date(),
-      metadata: {
-        classTitle: classItem.title,
-        startDate: classItem.start_date,
-        removedBy: "admin",
-      },
-    });
-
-    // Notification for the admin
-    if (classItem.createdBy) {
-      notificationsToCreate.push({
-        userId: new ObjectId(classItem.createdBy),
+    notificationsToCreate.push(
+      prepareNotificationForDB({
+        userId: new ObjectId(userId),
         type: "user_unenroll",
-        title: "Participante removido",
-        message: `Has removido a un usuario de la clase "${classItem.title}"`,
+        title: "Suscripción anulada",
+        message: `Has sido dado de baja de la clase "${classItem.title}" por un administrador`,
         relatedId: new ObjectId(id),
         relatedType: "class",
-        read: false,
-        createdAt: new Date(),
         metadata: {
           classTitle: classItem.title,
           startDate: classItem.start_date,
+          removedBy: "admin",
         },
-      });
+      })
+    );
+
+    // Notification for the admin
+    if (classItem.createdBy) {
+      notificationsToCreate.push(
+        prepareNotificationForDB({
+          userId: new ObjectId(classItem.createdBy),
+          type: "user_unenroll",
+          title: "Participante removido",
+          message: `Has removido a un usuario de la clase "${classItem.title}"`,
+          relatedId: new ObjectId(id),
+          relatedType: "class",
+          metadata: {
+            classTitle: classItem.title,
+            startDate: classItem.start_date,
+          },
+        })
+      );
     }
 
     if (notificationsToCreate.length > 0) {

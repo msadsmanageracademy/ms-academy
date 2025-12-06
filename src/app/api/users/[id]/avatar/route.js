@@ -1,5 +1,6 @@
-import clientPromise from "@/lib/db";
 import { ObjectId } from "mongodb";
+import { addTimestampToUpdate } from "@/models/schemas";
+import clientPromise from "@/lib/db";
 
 export async function PATCH(req, { params }) {
   try {
@@ -20,7 +21,12 @@ export async function PATCH(req, { params }) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const usersCollection = db.collection("users");
 
-    await usersCollection.updateOne({ _id: new ObjectId(id) }, { $set: body });
+    const updateData = addTimestampToUpdate(body);
+
+    await usersCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
 
     return Response.json(
       { success: true, message: "Información actualizada con éxito" },

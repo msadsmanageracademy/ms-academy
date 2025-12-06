@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { google } from "googleapis";
+import { prepareNotificationForDB } from "@/models/schemas";
 
 // Initialize OAuth2 client
 const oauth2Client = new google.auth.OAuth2(
@@ -20,35 +21,62 @@ async function getValidTokens(userId) {
   const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
 
   if (!user?.googleCalendarTokens) {
-    throw new Error("No hay tokens de Google Calendar disponibles");
+    throw new Error("CALENDAR_NOT_AUTHORIZED");
   }
 
   const tokens = user.googleCalendarTokens;
+
+  // Check if we have a refresh token
+  if (!tokens.refresh_token) {
+    // Clear invalid tokens from DB
+    await usersCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      {
+        $unset: { googleCalendarTokens: "" },
+        $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
+      }
+    );
+    throw new Error("CALENDAR_NOT_AUTHORIZED");
+  }
 
   // Check if token is expired or about to expire (within 5 minutes)
   const now = Date.now();
   const expiryBuffer = 5 * 60 * 1000; // 5 minutes
 
   if (tokens.expiry_date && tokens.expiry_date < now + expiryBuffer) {
-    // Token expired or about to expire, refresh it
-    oauth2Client.setCredentials({
-      refresh_token: tokens.refresh_token,
-    });
+    try {
+      // Token expired or about to expire, refresh it
+      oauth2Client.setCredentials({
+        refresh_token: tokens.refresh_token,
+      });
 
-    const { credentials } = await oauth2Client.refreshAccessToken();
+      const { credentials } = await oauth2Client.refreshAccessToken();
 
-    // Update tokens in database
-    await usersCollection.updateOne(
-      { _id: new ObjectId(userId) },
-      {
-        $set: {
-          "googleCalendarTokens.access_token": credentials.access_token,
-          "googleCalendarTokens.expiry_date": credentials.expiry_date,
-        },
-      }
-    );
+      // Update tokens in database
+      await usersCollection.updateOne(
+        { _id: new ObjectId(userId) },
+        {
+          $set: {
+            "googleCalendarTokens.access_token": credentials.access_token,
+            "googleCalendarTokens.expiry_date": credentials.expiry_date,
+            updatedAt: new Date(),
+          },
+        }
+      );
 
-    return credentials;
+      return credentials;
+    } catch (refreshError) {
+      // Refresh token is invalid/revoked - clear from DB
+      console.error("Failed to refresh token:", refreshError.message);
+      await usersCollection.updateOne(
+        { _id: new ObjectId(userId) },
+        {
+          $unset: { googleCalendarTokens: "" },
+          $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
+        }
+      );
+      throw new Error("CALENDAR_TOKEN_REVOKED");
+    }
   }
 
   return tokens;
@@ -144,11 +172,29 @@ export async function POST(req, { params }) {
     };
 
     // Insert event with conference data
-    const response = await calendar.events.insert({
-      calendarId: "primary",
-      resource: event,
-      conferenceDataVersion: 1,
-    });
+    let response;
+    try {
+      response = await calendar.events.insert({
+        calendarId: "primary",
+        resource: event,
+        conferenceDataVersion: 1,
+      });
+    } catch (calendarError) {
+      // If Google Calendar API fails, it's likely due to invalid/revoked token
+      console.error("Google Calendar API error:", calendarError.message);
+
+      // Clear invalid tokens from DB
+      const usersCollection = db.collection("users");
+      await usersCollection.updateOne(
+        { _id: new ObjectId(session.user.id) },
+        {
+          $unset: { googleCalendarTokens: "" },
+          $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
+        }
+      );
+
+      throw new Error("CALENDAR_TOKEN_REVOKED");
+    }
 
     const googleMeetLink = response.data.conferenceData?.entryPoints?.find(
       (entry) => entry.entryPointType === "video"
@@ -162,27 +208,26 @@ export async function POST(req, { params }) {
           googleEventId: response.data.id,
           googleMeetLink: googleMeetLink || null,
           calendarEventLink: response.data.htmlLink,
-          createdBy: session.user.id,
+          updatedAt: new Date(),
         },
       }
     );
 
     // Create notification for admin
     const notifications = db.collection("notifications");
-    await notifications.insertOne({
+    const notification = prepareNotificationForDB({
       userId: new ObjectId(session.user.id),
       type: "class_added_to_calendar",
       title: "Clase agregada a Calendar",
       message: `La clase "${classData.title}" se agregó a Google Calendar`,
       relatedId: new ObjectId(id),
       relatedType: "class",
-      read: false,
-      createdAt: new Date(),
       metadata: {
         classTitle: classData.title,
         googleMeetLink,
       },
     });
+    await notifications.insertOne(notification);
 
     return Response.json(
       {
@@ -196,12 +241,29 @@ export async function POST(req, { params }) {
     );
   } catch (error) {
     console.error("Error adding to Google Calendar:", error);
+
+    // Handle specific error cases
+    if (
+      error.message === "CALENDAR_NOT_AUTHORIZED" ||
+      error.message === "CALENDAR_TOKEN_REVOKED"
+    ) {
+      return Response.json(
+        {
+          success: false,
+          requiresReauth: true,
+          message:
+            "Tu autorización de Google Calendar ha expirado o fue revocada. Por favor, vuelve a autorizar el acceso.",
+        },
+        { status: 401 }
+      );
+    }
+
     return Response.json(
       {
         success: false,
         error: error.message,
         message:
-          "Error al agregar la clase a Google Calendar. Verifica que hayas autorizado el acceso.",
+          "Error al agregar la clase a Google Calendar. Intenta nuevamente.",
       },
       { status: 500 }
     );
