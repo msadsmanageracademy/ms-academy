@@ -70,15 +70,38 @@ export const CourseDBSchema = z.object({
 // ==================== NOTIFICATION SCHEMAS ====================
 
 export const NotificationDBSchema = z.object({
-  userId: z.instanceof(Object),
-  type: z.string(),
+  userId: z.instanceof(Object), // ObjectId - Who receives the notification
+  type: z.enum([
+    // Class - User notifications
+    "class.enrolled",
+    "class.unenrolled",
+    "class.removed_by_admin",
+    "class.updated",
+    // Class - Admin notifications
+    "class.created",
+    "class.participant_joined",
+    "class.participant_left",
+    "class.participant_removed",
+    "class.added_to_calendar",
+    // Course - User notifications
+    "course.enrolled",
+    "course.unenrolled",
+    "course.removed_by_admin",
+    "course.updated",
+    // Course - Admin notifications
+    "course.created",
+    "course.participant_joined",
+    "course.participant_left",
+    "course.participant_removed",
+  ]),
   title: z.string(),
   message: z.string(),
-  relatedId: z.instanceof(Object).optional(),
-  relatedType: z.string().optional(),
+  relatedId: z.instanceof(Object).optional(), // ObjectId - Reference to class/course/user
+  relatedType: z.enum(["class", "course", "user"]).optional(),
+  actorId: z.instanceof(Object).optional(), // ObjectId - Who performed the action
   read: z.boolean().default(false),
   createdAt: z.date(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional(), // Only for truly dynamic/extra data
 });
 
 // ==================== HELPER FUNCTIONS ====================

@@ -73,15 +73,12 @@ export async function POST(req) {
       const notifications = db.collection("notifications");
       const notification = prepareNotificationForDB({
         userId: new ObjectId(session.user.id),
-        type: "class_created",
+        type: "class.created",
         title: "Nueva clase creada",
         message: `Has creado la clase "${body.title}"`,
         relatedId: result.insertedId,
         relatedType: "class",
-        metadata: {
-          classTitle: body.title,
-          startDate: body.start_date,
-        },
+        actorId: new ObjectId(session.user.id),
       });
       await notifications.insertOne(notification);
     }

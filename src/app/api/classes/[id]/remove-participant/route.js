@@ -106,16 +106,12 @@ export async function DELETE(req, { params }) {
     notificationsToCreate.push(
       prepareNotificationForDB({
         userId: new ObjectId(userId),
-        type: "user_unenroll",
+        type: "class.removed_by_admin",
         title: "Suscripción anulada",
         message: `Has sido dado de baja de la clase "${classItem.title}" por un administrador`,
         relatedId: new ObjectId(id),
         relatedType: "class",
-        metadata: {
-          classTitle: classItem.title,
-          startDate: classItem.start_date,
-          removedBy: "admin",
-        },
+        actorId: new ObjectId(classItem.createdBy),
       })
     );
 
@@ -124,15 +120,14 @@ export async function DELETE(req, { params }) {
       notificationsToCreate.push(
         prepareNotificationForDB({
           userId: new ObjectId(classItem.createdBy),
-          type: "user_unenroll",
+          type: "class.participant_removed",
           title: "Participante removido",
-          message: `Has removido a un usuario de la clase "${classItem.title}"`,
+          message: `Has removido a ${user?.first_name || "un usuario"} ${
+            user?.last_name || ""
+          } de la clase "${classItem.title}"`,
           relatedId: new ObjectId(id),
           relatedType: "class",
-          metadata: {
-            classTitle: classItem.title,
-            startDate: classItem.start_date,
-          },
+          actorId: new ObjectId(classItem.createdBy),
         })
       );
     }

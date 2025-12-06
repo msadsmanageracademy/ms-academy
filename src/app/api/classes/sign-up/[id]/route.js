@@ -71,15 +71,12 @@ export async function PATCH(req, { params }) {
     notificationsToCreate.push(
       prepareNotificationForDB({
         userId: new ObjectId(userId),
-        type: "user_signup",
+        type: "class.enrolled",
         title: "Inscripción exitosa",
         message: `Te has inscrito en la clase "${classItem.title}"`,
         relatedId: new ObjectId(id),
         relatedType: "class",
-        metadata: {
-          classTitle: classItem.title,
-          startDate: classItem.start_date,
-        },
+        actorId: new ObjectId(userId),
       })
     );
 
@@ -88,19 +85,14 @@ export async function PATCH(req, { params }) {
       notificationsToCreate.push(
         prepareNotificationForDB({
           userId: new ObjectId(classItem.createdBy),
-          type: "user_signup",
+          type: "class.participant_joined",
           title: "Nuevo participante",
           message: `${user?.first_name || "Un usuario"} ${
             user?.last_name || ""
           } se ha inscrito en "${classItem.title}"`,
           relatedId: new ObjectId(id),
           relatedType: "class",
-          metadata: {
-            classTitle: classItem.title,
-            userName: `${user?.first_name || ""} ${
-              user?.last_name || ""
-            }`.trim(),
-          },
+          actorId: new ObjectId(userId),
         })
       );
     }
@@ -188,15 +180,12 @@ export async function DELETE(req, { params }) {
     notificationsToCreate.push(
       prepareNotificationForDB({
         userId: new ObjectId(userId),
-        type: "user_unenroll",
+        type: "class.unenrolled",
         title: "Inscripción cancelada",
         message: `Has cancelado tu inscripción en la clase "${classItem.title}"`,
         relatedId: new ObjectId(id),
         relatedType: "class",
-        metadata: {
-          classTitle: classItem.title,
-          startDate: classItem.start_date,
-        },
+        actorId: new ObjectId(userId),
       })
     );
 
@@ -205,19 +194,14 @@ export async function DELETE(req, { params }) {
       notificationsToCreate.push(
         prepareNotificationForDB({
           userId: new ObjectId(classItem.createdBy),
-          type: "user_unenroll",
+          type: "class.participant_left",
           title: "Cancelación de inscripción",
           message: `${user?.first_name || "Un usuario"} ${
             user?.last_name || ""
           } ha cancelado su inscripción en "${classItem.title}"`,
           relatedId: new ObjectId(id),
           relatedType: "class",
-          metadata: {
-            classTitle: classItem.title,
-            userName: `${user?.first_name || ""} ${
-              user?.last_name || ""
-            }`.trim(),
-          },
+          actorId: new ObjectId(userId),
         })
       );
     }

@@ -129,18 +129,54 @@ const NotificationsPage = () => {
 
   const getNotificationIcon = (type) => {
     switch (type) {
-      case "class_created":
+      // Class notifications
+      case "class.created":
         return "Plus";
-      case "class_modified":
-        return "Pencil";
-      case "class_cancelled":
-        return "Cross";
-      case "user_signup":
+      case "class.enrolled":
         return "UserPlus";
-      case "user_unenroll":
+      case "class.unenrolled":
         return "UserMinus";
-      case "class_added_to_calendar":
+      case "class.removed_by_admin":
+        return "UserMinus";
+      case "class.participant_joined":
+        return "UserPlus";
+      case "class.participant_left":
+        return "UserMinus";
+      case "class.participant_removed":
+        return "UserMinus";
+      case "class.added_to_calendar":
         return "GoogleCalendar";
+      case "class.updated":
+        return "Pencil";
+      case "class.cancelled":
+        return "Cross";
+
+      // Course notifications
+      case "course.created":
+        return "Plus";
+      case "course.enrolled":
+        return "UserPlus";
+      case "course.unenrolled":
+        return "UserMinus";
+      case "course.removed_by_admin":
+        return "UserMinus";
+      case "course.participant_joined":
+        return "UserPlus";
+      case "course.participant_left":
+        return "UserMinus";
+      case "course.participant_removed":
+        return "UserMinus";
+      case "course.updated":
+        return "Pencil";
+      case "course.cancelled":
+        return "Cross";
+
+      // User notifications
+      case "user.role_changed":
+        return "User";
+      case "user.profile_updated":
+        return "Pencil";
+
       default:
         return "Bell";
     }

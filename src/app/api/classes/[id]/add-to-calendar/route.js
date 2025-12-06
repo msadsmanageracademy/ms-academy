@@ -217,13 +217,13 @@ export async function POST(req, { params }) {
     const notifications = db.collection("notifications");
     const notification = prepareNotificationForDB({
       userId: new ObjectId(session.user.id),
-      type: "class_added_to_calendar",
+      type: "class.added_to_calendar",
       title: "Clase agregada a Calendar",
       message: `La clase "${classData.title}" se agregó a Google Calendar`,
       relatedId: new ObjectId(id),
       relatedType: "class",
+      actorId: new ObjectId(session.user.id),
       metadata: {
-        classTitle: classData.title,
         googleMeetLink,
       },
     });
