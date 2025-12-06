@@ -57,6 +57,18 @@ export async function POST(req) {
       );
     }
 
+    const now = new Date();
+    if (body.start_date <= now) {
+      return Response.json(
+        {
+          success: false,
+          message:
+            "No se pueden crear clases con fechas pasadas. Solo se permiten eventos futuros.",
+        },
+        { status: 400 }
+      );
+    }
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
