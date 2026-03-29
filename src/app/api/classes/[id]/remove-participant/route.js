@@ -4,7 +4,7 @@ import { prepareNotificationForDB } from "@/models/schemas";
 
 export async function DELETE(req, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
 
@@ -14,7 +14,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "ID de clase inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -24,7 +24,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "ID de usuario inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -44,7 +44,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "Clase no encontrada",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -59,14 +59,14 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "Usuario no encontrado",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Check if user is actually enrolled (participants are stored as ObjectId in MongoDB)
     const participantIds = classItem.participants || [];
     const isEnrolled = participantIds.some(
-      (participantId) => participantId.toString() === userId
+      (participantId) => participantId.toString() === userId,
     );
 
     if (!isEnrolled) {
@@ -75,7 +75,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "El usuario no está inscrito en esta clase",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -85,7 +85,7 @@ export async function DELETE(req, { params }) {
       {
         $pull: { participants: new ObjectId(userId) },
         $set: { updatedAt: new Date() },
-      }
+      },
     );
 
     if (result.modifiedCount === 0) {
@@ -94,7 +94,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "No se pudo remover el participante",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -112,7 +112,7 @@ export async function DELETE(req, { params }) {
         relatedId: new ObjectId(id),
         relatedType: "class",
         actorId: new ObjectId(classItem.createdBy),
-      })
+      }),
     );
 
     // Notification for the admin
@@ -128,7 +128,7 @@ export async function DELETE(req, { params }) {
           relatedId: new ObjectId(id),
           relatedType: "class",
           actorId: new ObjectId(classItem.createdBy),
-        })
+        }),
       );
     }
 
@@ -141,7 +141,7 @@ export async function DELETE(req, { params }) {
         success: true,
         message: "Participante removido con éxito",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al remover participante:", error);

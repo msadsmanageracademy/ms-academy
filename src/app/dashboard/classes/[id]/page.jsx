@@ -8,7 +8,7 @@ import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import { useNotifications } from "@/providers/NotificationProvider";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   closeLoading,
   confirmDelete,
@@ -20,7 +20,8 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 
-const ClassDetailPage = ({ params }) => {
+const ClassDetailPage = () => {
+  const { id } = useParams();
   const { data: session } = useSession();
 
   const { incrementCount } = useNotifications();
@@ -41,11 +42,11 @@ const ClassDetailPage = ({ params }) => {
       fetchClassDetails();
       setHasCalendarAccess(session.user.hasAuthorizedCalendar || false);
     }
-  }, [session, params.id]);
+  }, [session, id]);
 
   const fetchClassDetails = async () => {
     try {
-      const res = await fetch(`/api/classes/${params.id}`);
+      const res = await fetch(`/api/classes/${id}`);
       if (!res.ok) throw new Error("Error fetching class");
 
       const data = await res.json();
@@ -111,7 +112,7 @@ const ClassDetailPage = ({ params }) => {
     );
 
     try {
-      const res = await fetch(`/api/classes/${params.id}`, {
+      const res = await fetch(`/api/classes/${id}`, {
         method: "DELETE",
       });
 
@@ -144,7 +145,7 @@ const ClassDetailPage = ({ params }) => {
 
     try {
       const res = await fetch(
-        `/api/classes/${params.id}/remove-participant?userId=${participantId}`,
+        `/api/classes/${id}/remove-participant?userId=${participantId}`,
         {
           method: "DELETE",
         },

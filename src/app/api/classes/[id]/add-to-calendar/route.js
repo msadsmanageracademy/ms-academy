@@ -9,7 +9,7 @@ import { prepareNotificationForDB } from "@/models/schemas";
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`
+  `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`,
 );
 
 // Helper function to refresh token if expired
@@ -34,7 +34,7 @@ async function getValidTokens(userId) {
       {
         $unset: { googleCalendarTokens: "" },
         $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
-      }
+      },
     );
     throw new Error("CALENDAR_NOT_AUTHORIZED");
   }
@@ -61,7 +61,7 @@ async function getValidTokens(userId) {
             "googleCalendarTokens.expiry_date": credentials.expiry_date,
             updatedAt: new Date(),
           },
-        }
+        },
       );
 
       return credentials;
@@ -73,7 +73,7 @@ async function getValidTokens(userId) {
         {
           $unset: { googleCalendarTokens: "" },
           $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
-        }
+        },
       );
       throw new Error("CALENDAR_TOKEN_REVOKED");
     }
@@ -89,16 +89,16 @@ export async function POST(req, { params }) {
     if (!session || session.user.role !== "admin") {
       return Response.json(
         { success: false, message: "No autorizado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!ObjectId.isValid(id)) {
       return Response.json(
         { success: false, message: "ID de clase inválido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -114,7 +114,7 @@ export async function POST(req, { params }) {
     if (!classData) {
       return Response.json(
         { success: false, message: "Clase no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -126,7 +126,7 @@ export async function POST(req, { params }) {
           message: "Esta clase ya tiene un evento de Google Calendar",
           googleMeetLink: classData.googleMeetLink,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -190,14 +190,14 @@ export async function POST(req, { params }) {
         {
           $unset: { googleCalendarTokens: "" },
           $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
-        }
+        },
       );
 
       throw new Error("CALENDAR_TOKEN_REVOKED");
     }
 
     const googleMeetLink = response.data.conferenceData?.entryPoints?.find(
-      (entry) => entry.entryPointType === "video"
+      (entry) => entry.entryPointType === "video",
     )?.uri;
 
     // Update class with Google event ID and Meet link
@@ -210,7 +210,7 @@ export async function POST(req, { params }) {
           calendarEventLink: response.data.htmlLink,
           updatedAt: new Date(),
         },
-      }
+      },
     );
 
     // Create notification for admin
@@ -237,7 +237,7 @@ export async function POST(req, { params }) {
         googleMeetLink,
         calendarEventLink: response.data.htmlLink,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error adding to Google Calendar:", error);
@@ -254,7 +254,7 @@ export async function POST(req, { params }) {
           message:
             "Tu autorización de Google Calendar ha expirado o fue revocada. Por favor, vuelve a autorizar el acceso.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -265,7 +265,7 @@ export async function POST(req, { params }) {
         message:
           "Error al agregar la clase a Google Calendar. Intenta nuevamente.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

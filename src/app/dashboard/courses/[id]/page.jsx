@@ -7,7 +7,7 @@ import StatusBadge from "@/views/components/ui/StatusBadge";
 import styles from "./styles.module.css";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   closeLoading,
   confirmDelete,
@@ -18,7 +18,8 @@ import {
 } from "@/utils/alerts";
 import { useEffect, useState } from "react";
 
-const CourseDetailPage = ({ params }) => {
+const CourseDetailPage = () => {
+  const { id } = useParams();
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -32,18 +33,18 @@ const CourseDetailPage = ({ params }) => {
     if (session) {
       fetchCourseDetails();
     }
-  }, [session, params.id]);
+  }, [session, id]);
 
   const fetchCourseDetails = async () => {
     try {
-      const res = await fetch(`/api/courses/${params.id}`);
+      const res = await fetch(`/api/courses/${id}`);
       if (!res.ok) throw new Error("Error fetching course");
 
       const data = await res.json();
       setCourseData(data.data);
 
       // Fetch classes belonging to this course
-      const classesRes = await fetch(`/api/classes?courseId=${params.id}`);
+      const classesRes = await fetch(`/api/classes?courseId=${id}`);
       if (classesRes.ok) {
         const classesData = await classesRes.json();
         setClasses(classesData.data || []);
@@ -90,7 +91,7 @@ const CourseDetailPage = ({ params }) => {
     toastLoading("Eliminando curso...", "Se eliminará el curso y sus datos");
 
     try {
-      const res = await fetch(`/api/courses/${params.id}`, {
+      const res = await fetch(`/api/courses/${id}`, {
         method: "DELETE",
       });
 
@@ -123,7 +124,7 @@ const CourseDetailPage = ({ params }) => {
 
     try {
       const res = await fetch(
-        `/api/courses/${params.id}/remove-participant?userId=${participantId}`,
+        `/api/courses/${id}/remove-participant?userId=${participantId}`,
         {
           method: "DELETE",
         },

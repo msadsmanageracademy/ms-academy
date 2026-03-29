@@ -9,7 +9,7 @@ export async function GET(req, { params }) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const usersCollection = db.collection("users");
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!ObjectId.isValid(id))
       return Response.json(
@@ -17,18 +17,18 @@ export async function GET(req, { params }) {
           success: false,
           message: "ID de usuario inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const user = await usersCollection.findOne(
       { _id: new ObjectId(id) },
-      { projection: { password: 0 } } // No traigo la contraseña del user
+      { projection: { password: 0 } }, // No traigo la contraseña del user
     );
 
     if (!user) {
       return Response.json(
         { success: false, message: "Usuario no encontrado" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -41,7 +41,7 @@ export async function GET(req, { params }) {
 
 export async function PATCH(req, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!ObjectId.isValid(id))
       return Response.json(
@@ -49,7 +49,7 @@ export async function PATCH(req, { params }) {
           success: false,
           message: "ID de usuario inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const body = await req.json();
@@ -63,7 +63,7 @@ export async function PATCH(req, { params }) {
           message: "El formato de los datos es inválido",
           details: parsedBody.error.errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -75,7 +75,7 @@ export async function PATCH(req, { params }) {
 
     await usersCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateData }
+      { $set: updateData },
     );
 
     return Response.json(
@@ -84,14 +84,14 @@ export async function PATCH(req, { params }) {
         message: "Información actualizada con éxito",
         name: body.first_name, // Envío al FE para actualizar la sesión de next-auth
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     return Response.json(
       {
         error: error.message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

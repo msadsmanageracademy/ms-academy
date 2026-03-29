@@ -13,12 +13,12 @@ export async function PATCH(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: "Invalid notification ID" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,13 +33,13 @@ export async function PATCH(req, { params }) {
       },
       {
         $set: { read: true },
-      }
+      },
     );
 
     if (result.matchedCount === 0) {
       return NextResponse.json(
         { error: "Notification not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -48,7 +48,7 @@ export async function PATCH(req, { params }) {
     console.error("Error marking notification as read:", error);
     return NextResponse.json(
       { error: "Failed to mark notification as read" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -62,12 +62,12 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: "Invalid notification ID" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -83,7 +83,7 @@ export async function DELETE(req, { params }) {
     if (result.deletedCount === 0) {
       return NextResponse.json(
         { error: "Notification not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -92,7 +92,7 @@ export async function DELETE(req, { params }) {
     console.error("Error deleting notification:", error);
     return NextResponse.json(
       { error: "Failed to delete notification" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
