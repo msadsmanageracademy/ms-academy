@@ -6,7 +6,13 @@ import PageWrapper from "@/views/components/layout/PageWrapper";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { confirmSignUp, toastError, toastSuccess } from "@/utils/alerts";
+import {
+  closeLoading,
+  confirmSignUp,
+  toastError,
+  toastLoading,
+  toastSuccess,
+} from "@/utils/alerts";
 import { useEffect, useState } from "react";
 
 const ContentPage = () => {
@@ -54,16 +60,18 @@ const ContentPage = () => {
         return toastError(
           3000,
           "Acción no permitida",
-          "Admins no pueden inscribirse a clases"
+          "Admins no pueden inscribirse a clases",
         );
       }
 
       const result = await confirmSignUp(
         "¿Inscribirse a esta clase?",
-        "Confirma que deseas inscribirte a esta clase gratuita"
+        "Confirma que deseas inscribirte a esta clase gratuita",
       );
 
       if (!result.isConfirmed) return;
+
+      toastLoading("Procesando tu solicitud", "Inscribiéndote a la clase...");
 
       const response = await fetch(`/api/classes/sign-up/${id}`, {
         method: "PATCH",
@@ -73,6 +81,8 @@ const ContentPage = () => {
 
       const responseData = await response.json();
 
+      closeLoading();
+
       if (!response.ok)
         return toastError(3000, "Ha habido un error", responseData.message);
 
@@ -81,10 +91,11 @@ const ContentPage = () => {
       incrementCount();
       router.push("dashboard/classes");
     } catch (error) {
+      closeLoading();
       return toastError(
         3000,
         "Ha habido un error",
-        "Problema inesperado al procesar tu inscripción"
+        "Problema inesperado al procesar tu inscripción",
       );
     }
   };

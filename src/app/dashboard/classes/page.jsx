@@ -12,6 +12,7 @@ import { useNotifications } from "@/providers/NotificationProvider";
 import {
   closeLoading,
   confirmReauth,
+  confirmToggleStatus,
   confirmUnenroll,
   toastError,
   toastLoading,
@@ -25,6 +26,7 @@ const ClassesPage = () => {
   const { incrementCount } = useNotifications();
   const [addingToCalendar, setAddingToCalendar] = useState(null);
   const [classes, setClasses] = useState([]);
+  const [courseFilter, setCourseFilter] = useState("all");
   const [hasCalendarAccess, setHasCalendarAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -216,6 +218,9 @@ const ClassesPage = () => {
 
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "published" ? "draft" : "published";
+    const result = await confirmToggleStatus(newStatus, "clase");
+    if (!result.isConfirmed) return;
+    toastLoading("Procesando tu solicitud", "Cambiando estado...");
     try {
       const res = await fetch(`/api/classes/${id}`, {
         method: "PATCH",
@@ -223,6 +228,7 @@ const ClassesPage = () => {
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
+      closeLoading();
       if (!res.ok) {
         return toastError(3000, "Ha habido un error", data.message);
       }
@@ -236,6 +242,7 @@ const ClassesPage = () => {
       );
     } catch (err) {
       console.error("Error toggling class status:", err);
+      closeLoading();
       toastError(3000, "Ha habido un error", "No se pudo cambiar el estado");
     }
   };
@@ -265,6 +272,25 @@ const ClassesPage = () => {
 
   if (loading) return <PageLoader />;
 
+  // Build unique course options from class list
+  const courseOptions = [
+    ...new Map(
+      classes
+        .filter((c) => c.courseId)
+        .map((c) => [
+          c.courseId,
+          { id: c.courseId, title: c.courseTitle || c.courseId },
+        ]),
+    ).values(),
+  ];
+
+  const filteredClasses =
+    courseFilter === "all"
+      ? classes
+      : courseFilter === "none"
+        ? classes.filter((c) => !c.courseId)
+        : classes.filter((c) => c.courseId === courseFilter);
+
   return (
     <div className={styles.container}>
       <h1>
@@ -276,6 +302,21 @@ const ClassesPage = () => {
           <div className={styles.listSection}>
             <div className={styles.headerActions}>
               <h2>Todas las Clases</h2>
+              <select
+                className={styles.filterSelect}
+                value={courseFilter}
+                onChange={(e) => setCourseFilter(e.target.value)}
+              >
+                <option value="all">Todos los cursos</option>
+                {courseOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+                {classes.some((c) => !c.courseId) && (
+                  <option value="none">Sin curso</option>
+                )}
+              </select>
             </div>
             {classes.length === 0 ? (
               <p className={styles.noClasses}>No hay clases disponibles</p>
@@ -297,7 +338,7 @@ const ClassesPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {classes.map((classItem) => (
+                    {filteredClasses.map((classItem) => (
                       <tr key={classItem._id}>
                         <td>{classItem.title}</td>
                         <td>{classItem.courseTitle || "—"}</td>
@@ -430,7 +471,26 @@ const ClassesPage = () => {
         </>
       ) : (
         <div className={styles.listSection}>
-          <h2>Clases Inscritas</h2>
+          <div className={styles.headerActions}>
+            <h2>Clases Inscritas</h2>
+            {classes.length > 0 && (
+              <select
+                className={styles.filterSelect}
+                value={courseFilter}
+                onChange={(e) => setCourseFilter(e.target.value)}
+              >
+                <option value="all">Todos los cursos</option>
+                {courseOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+                {classes.some((c) => !c.courseId) && (
+                  <option value="none">Sin curso</option>
+                )}
+              </select>
+            )}
+          </div>
           {classes.length === 0 ? (
             <div className={styles.noInscriptions}>
               <p>No estás inscrito en ninguna clase</p>
@@ -452,7 +512,7 @@ const ClassesPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {classes.map((classItem) => (
+                  {filteredClasses.map((classItem) => (
                     <tr key={classItem._id}>
                       <td>{classItem.title}</td>
                       <td>{classItem.courseTitle || "—"}</td>

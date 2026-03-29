@@ -28,6 +28,7 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
     handleSubmit,
     register,
     reset,
+    setValue,
   } = useForm({
     resolver: zodResolver(ClassFormSchema),
     defaultValues: classData
@@ -62,6 +63,12 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
     };
     fetchCourses();
   }, []);
+
+  useEffect(() => {
+    if (isEditMode && classData?.courseId && courses.length > 0) {
+      setValue("courseId", classData.courseId.toString());
+    }
+  }, [courses, isEditMode]);
 
   useEffect(() => {
     if (classData) {

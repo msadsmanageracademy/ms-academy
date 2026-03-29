@@ -6,7 +6,13 @@ import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { format } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
-import { confirmSignUp, toastError, toastSuccess } from "@/utils/alerts";
+import {
+  closeLoading,
+  confirmSignUp,
+  toastError,
+  toastLoading,
+  toastSuccess,
+} from "@/utils/alerts";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -43,7 +49,7 @@ const CourseDetail = () => {
         return toastError(
           3000,
           "Ha habido un error",
-          "Para inscribirse, primero debe iniciar sesión"
+          "Para inscribirse, primero debe iniciar sesión",
         );
       }
 
@@ -51,16 +57,18 @@ const CourseDetail = () => {
         return toastError(
           3000,
           "Acción no permitida",
-          "Admins no pueden inscribirse a cursos"
+          "Admins no pueden inscribirse a cursos",
         );
       }
 
       const result = await confirmSignUp(
         "¿Inscribirse a este curso?",
-        "Confirma que deseas inscribirte a este curso"
+        "Confirma que deseas inscribirte a este curso",
       );
 
       if (!result.isConfirmed) return;
+
+      toastLoading("Procesando tu solicitud", "Inscribiéndote al curso...");
 
       const response = await fetch(`/api/courses/sign-up/${id}`, {
         method: "PATCH",
@@ -70,16 +78,19 @@ const CourseDetail = () => {
 
       const responseData = await response.json();
 
+      closeLoading();
+
       if (!response.ok)
         return toastError(3000, "Ha habido un error", responseData.message);
 
       toastSuccess(3000, "Inscripción exitosa", responseData.message);
       router.push("/dashboard/courses");
     } catch (error) {
+      closeLoading();
       return toastError(
         3000,
         "Ha habido un error",
-        "Problema inesperado al procesar tu inscripción"
+        "Problema inesperado al procesar tu inscripción",
       );
     }
   };
@@ -152,6 +163,10 @@ const CourseDetail = () => {
         <div className={styles.actionsContainer}>
           {session?.user?.role === "admin" ? (
             <PrimaryLink href={`/dashboard/courses`} text={"Ir a Cursos"} />
+          ) : course.participants?.some(
+              (p) => p.toString() === session?.user?.id,
+            ) ? (
+            <PrimaryLink disabled text={"Ya estás inscripto"} />
           ) : (
             <PrimaryLink
               asButton

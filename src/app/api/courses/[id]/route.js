@@ -1,6 +1,9 @@
 import { CourseFormSchema } from "@/utils/validation";
 import { ObjectId } from "mongodb";
-import { addTimestampToUpdate } from "@/models/schemas";
+import {
+  addTimestampToUpdate,
+  prepareNotificationForDB,
+} from "@/models/schemas";
 import clientPromise from "@/lib/db";
 
 const courseAggregationPipeline = (matchStage) => [
@@ -112,6 +115,96 @@ export async function PATCH(req, { params }) {
           );
         }
       }
+      // When reverting to draft, remove all participants from the course and its classes
+      if (body.status === "draft") {
+        const classesCollection = db.collection("classes");
+
+        // Fetch course participants and affected class participants before clearing
+        const course = await db
+          .collection("courses")
+          .findOne(
+            { _id: new ObjectId(id) },
+            { projection: { participants: 1 } },
+          );
+
+        const affectedClasses = await classesCollection
+          .find(
+            { courseId: new ObjectId(id), "participants.0": { $exists: true } },
+            { projection: { _id: 1, title: 1, participants: 1 } },
+          )
+          .toArray();
+
+        // Clear participants from all assigned classes
+        await classesCollection.updateMany(
+          { courseId: new ObjectId(id) },
+          { $set: { participants: [], updatedAt: new Date() } },
+        );
+
+        // Build notifications
+        const notificationsToCreate = [];
+
+        // Track participants already notified via course to avoid duplicates
+        const notifiedViaClass = new Set();
+
+        for (const classItem of affectedClasses) {
+          for (const participantId of classItem.participants) {
+            notifiedViaClass.add(participantId.toString());
+            notificationsToCreate.push(
+              prepareNotificationForDB({
+                userId: participantId,
+                type: "class.removed_by_admin",
+                title: "Suscripción anulada",
+                message: `Has sido dado de baja de la clase "${classItem.title}" porque el curso al que pertenecía fue movido a borrador`,
+                relatedId: classItem._id,
+                relatedType: "class",
+              }),
+            );
+          }
+        }
+
+        if (course?.participants?.length > 0) {
+          for (const participantId of course.participants) {
+            if (!notifiedViaClass.has(participantId.toString())) {
+              notificationsToCreate.push(
+                prepareNotificationForDB({
+                  userId: participantId,
+                  type: "course.removed_by_admin",
+                  title: "Suscripción anulada",
+                  message: `Has sido dado de baja del curso porque fue movido a borrador`,
+                  relatedId: new ObjectId(id),
+                  relatedType: "course",
+                }),
+              );
+            }
+          }
+        }
+
+        if (notificationsToCreate.length > 0) {
+          await db
+            .collection("notifications")
+            .insertMany(notificationsToCreate);
+        }
+
+        // Clear course participants
+        await db
+          .collection("courses")
+          .updateOne(
+            { _id: new ObjectId(id) },
+            {
+              $set: {
+                participants: [],
+                status: "draft",
+                updatedAt: new Date(),
+              },
+            },
+          );
+
+        return Response.json(
+          { success: true, message: "Estado actualizado" },
+          { status: 200 },
+        );
+      }
+
       const result = await db
         .collection("courses")
         .updateOne(
@@ -237,14 +330,47 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    // Unassign all classes from this course and revert them to draft
+    // Find all classes associated with this course that have participants
+    const affectedClasses = await classesCollection
+      .find(
+        { courseId: new ObjectId(id), "participants.0": { $exists: true } },
+        { projection: { _id: 1, title: 1, participants: 1 } },
+      )
+      .toArray();
+
+    // Unassign all classes from this course, revert to draft, and clear participants
     await classesCollection.updateMany(
       { courseId: new ObjectId(id) },
       {
         $unset: { courseId: "" },
-        $set: { status: "draft", updatedAt: new Date() },
+        $set: { status: "draft", participants: [], updatedAt: new Date() },
       },
     );
+
+    // Notify each participant removed from their class
+    if (affectedClasses.length > 0) {
+      const notificationsCollection = db.collection("notifications");
+      const notificationsToCreate = [];
+
+      for (const classItem of affectedClasses) {
+        for (const participantId of classItem.participants) {
+          notificationsToCreate.push(
+            prepareNotificationForDB({
+              userId: participantId,
+              type: "class.removed_by_admin",
+              title: "Suscripción anulada",
+              message: `Has sido dado de baja de la clase "${classItem.title}" porque el curso al que pertenecía fue eliminado`,
+              relatedId: classItem._id,
+              relatedType: "class",
+            }),
+          );
+        }
+      }
+
+      if (notificationsToCreate.length > 0) {
+        await notificationsCollection.insertMany(notificationsToCreate);
+      }
+    }
 
     await coursesCollection.deleteOne({ _id: new ObjectId(id) });
 

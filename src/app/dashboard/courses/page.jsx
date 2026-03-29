@@ -8,7 +8,14 @@ import { format } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import IconLink from "@/views/components/ui/IconLink";
-import { confirmUnenroll, toastError, toastSuccess } from "@/utils/alerts";
+import {
+  closeLoading,
+  confirmToggleStatus,
+  confirmUnenroll,
+  toastError,
+  toastLoading,
+  toastSuccess,
+} from "@/utils/alerts";
 import { useEffect, useState } from "react";
 
 const CoursesPage = () => {
@@ -31,6 +38,8 @@ const CoursesPage = () => {
 
     if (!result.isConfirmed) return;
 
+    toastLoading("Procesando tu solicitud", "Cancelando inscripción...");
+
     try {
       const res = await fetch(
         `/api/courses/sign-up/${courseId}?userId=${session.user.id}`,
@@ -40,6 +49,8 @@ const CoursesPage = () => {
       );
 
       const data = await res.json();
+
+      closeLoading();
 
       if (!res.ok) {
         return toastError(3000, "Ha habido un error", data.message);
@@ -53,6 +64,7 @@ const CoursesPage = () => {
       );
     } catch (err) {
       console.error("Error unenrolling from course:", err);
+      closeLoading();
       toastError(
         3000,
         "Ha habido un error",
@@ -63,6 +75,9 @@ const CoursesPage = () => {
 
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "published" ? "draft" : "published";
+    const result = await confirmToggleStatus(newStatus, "curso");
+    if (!result.isConfirmed) return;
+    toastLoading("Procesando tu solicitud", "Cambiando estado...");
     try {
       const res = await fetch(`/api/courses/${id}`, {
         method: "PATCH",
@@ -70,11 +85,20 @@ const CoursesPage = () => {
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
+      closeLoading();
       if (!res.ok) {
         return toastError(3000, "Ha habido un error", data.message);
       }
       setCourses(
-        courses.map((c) => (c._id === id ? { ...c, status: newStatus } : c)),
+        courses.map((c) =>
+          c._id === id
+            ? {
+                ...c,
+                status: newStatus,
+                ...(newStatus === "draft" && { participants: [] }),
+              }
+            : c,
+        ),
       );
       toastSuccess(
         3000,
@@ -83,6 +107,7 @@ const CoursesPage = () => {
       );
     } catch (err) {
       console.error("Error toggling course status:", err);
+      closeLoading();
       toastError(3000, "Ha habido un error", "No se pudo cambiar el estado");
     }
   };

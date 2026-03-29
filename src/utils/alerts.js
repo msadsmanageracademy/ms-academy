@@ -38,8 +38,6 @@ export const toastLoading = (title, text) => {
     timer: false,
     title,
     toast: true,
-    allowEscapeKey: false,
-    allowOutsideClick: false,
     didOpen: () => {
       Swal.showLoading();
     },
@@ -106,6 +104,22 @@ export const confirmUnenroll = (title, text) => {
     cancelButtonColor: "#6b7280",
     confirmButtonText: "Sí, cancelar inscripción",
     cancelButtonText: "No, mantener inscripción",
+  });
+};
+
+export const confirmToggleStatus = (newStatus, type) => {
+  const toPublish = newStatus === "published";
+  return Swal.fire({
+    title: toPublish ? `¿Publicar ${type}?` : `¿Mover ${type} a borrador?`,
+    text: toPublish
+      ? `El ${type} será visible para los usuarios`
+      : `El ${type} dejará de estar visible y se eliminarán las inscripciones`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: toPublish ? "var(--success)" : "var(--danger)",
+    cancelButtonColor: "#6b7280",
+    confirmButtonText: toPublish ? "Sí, publicar" : "Sí, mover a borrador",
+    cancelButtonText: "Cancelar",
   });
 };
 
