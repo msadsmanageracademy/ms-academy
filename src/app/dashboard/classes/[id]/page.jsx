@@ -3,6 +3,7 @@
 import ClassForm from "@/views/sections/pages/dashboard/classes/ClassForm";
 import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
+import StatusBadge from "@/views/components/ui/StatusBadge";
 import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
@@ -27,6 +28,7 @@ const ClassDetailPage = ({ params }) => {
   const router = useRouter();
 
   const [classData, setClassData] = useState(null);
+  const [courseTitle, setCourseTitle] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [hasCalendarAccess, setHasCalendarAccess] = useState(false);
   const [listDownloadState, setListDownloadState] = useState(false);
@@ -49,6 +51,21 @@ const ClassDetailPage = ({ params }) => {
       const data = await res.json();
       setClassData(data.data);
 
+      // Fetch course title if the class belongs to one
+      if (data.data.courseId) {
+        try {
+          const courseRes = await fetch(`/api/courses/${data.data.courseId}`);
+          if (courseRes.ok) {
+            const courseData = await courseRes.json();
+            setCourseTitle(courseData.data?.title ?? null);
+          }
+        } catch {
+          // non-blocking — course title stays null
+        }
+      } else {
+        setCourseTitle(null);
+      }
+
       // Fetch participant details
       if (data.data.participants && data.data.participants.length > 0) {
         const participantsData = await Promise.all(
@@ -64,7 +81,7 @@ const ClassDetailPage = ({ params }) => {
               console.error("Error fetching participant:", err);
               return null;
             }
-          })
+          }),
         );
         setParticipants(participantsData.filter((p) => p !== null));
       }
@@ -73,7 +90,7 @@ const ClassDetailPage = ({ params }) => {
       toastError(
         3000,
         "Ha habido un error",
-        "No se pudo cargar la información de la clase"
+        "No se pudo cargar la información de la clase",
       );
     } finally {
       setLoading(false);
@@ -83,14 +100,14 @@ const ClassDetailPage = ({ params }) => {
   const handleDelete = async () => {
     const result = await confirmDelete(
       "¿Eliminar clase?",
-      "Esta acción no se puede deshacer"
+      "Esta acción no se puede deshacer",
     );
 
     if (!result.isConfirmed) return;
 
     toastLoading(
       "Eliminando clase...",
-      "Se eliminará la clase y su evento de Google Calendar si existe"
+      "Se eliminará la clase y su evento de Google Calendar si existe",
     );
 
     try {
@@ -105,7 +122,7 @@ const ClassDetailPage = ({ params }) => {
       toastSuccess(
         3000,
         "Operación exitosa",
-        "La clase se eliminó correctamente"
+        "La clase se eliminó correctamente",
       );
       router.push("/dashboard/classes");
     } catch (err) {
@@ -118,7 +135,7 @@ const ClassDetailPage = ({ params }) => {
   const handleRemoveParticipant = async (participantId) => {
     const result = await confirmUnenroll(
       "¿Remover participante?",
-      "El usuario será dado de baja de esta clase"
+      "El usuario será dado de baja de esta clase",
     );
 
     if (!result.isConfirmed) return;
@@ -130,7 +147,7 @@ const ClassDetailPage = ({ params }) => {
         `/api/classes/${params.id}/remove-participant?userId=${participantId}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       const data = await res.json();
@@ -145,7 +162,7 @@ const ClassDetailPage = ({ params }) => {
       setClassData({
         ...classData,
         participants: classData.participants.filter(
-          (id) => id !== participantId
+          (id) => id !== participantId,
         ),
       });
 
@@ -154,7 +171,7 @@ const ClassDetailPage = ({ params }) => {
       toastSuccess(
         3000,
         "Operación exitosa",
-        "Participante removido correctamente"
+        "Participante removido correctamente",
       );
     } catch (err) {
       console.error("Error removing participant:", err);
@@ -162,7 +179,7 @@ const ClassDetailPage = ({ params }) => {
       toastError(
         3000,
         "Ha habido un error",
-        "No se pudo remover el participante"
+        "No se pudo remover el participante",
       );
     }
   };
@@ -180,7 +197,7 @@ const ClassDetailPage = ({ params }) => {
       return toastError(
         2000,
         "Sin participantes",
-        "No hay participantes para exportar"
+        "No hay participantes para exportar",
       );
     }
 
@@ -194,7 +211,7 @@ const ClassDetailPage = ({ params }) => {
           classData.participants.includes(p._id.toString())
             ? new Date().toLocaleDateString()
             : "",
-        ].join(",")
+        ].join(","),
       ),
     ].join("\n");
 
@@ -208,7 +225,7 @@ const ClassDetailPage = ({ params }) => {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `${classData.title.replace(/\s/g, "_")}_participantes.csv`
+      `${classData.title.replace(/\s/g, "_")}_participantes.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -290,7 +307,7 @@ const ClassDetailPage = ({ params }) => {
                 <span className={styles.value}>
                   {format(
                     new Date(classData.start_date),
-                    "dd/MM/yyyy 'a las' h:mm a"
+                    "dd/MM/yyyy 'a las' h:mm a",
                   )}
                   <span className={styles.relative}>
                     (
@@ -312,8 +329,19 @@ const ClassDetailPage = ({ params }) => {
               <div className={styles.infoItem}>
                 <span className={styles.label}>Precio:</span>
                 <span className={styles.value}>
-                  {classData.price === 0 ? "Sin costo" : `$${classData.price}`}
+                  {classData.price === 0 ? "Gratis" : `$${classData.price}`}
                 </span>
+              </div>
+
+              <div className={styles.infoItem}>
+                <span className={styles.label}>Estado:</span>
+                <StatusBadge status={classData.status}>
+                  {classData.status === "enrolled"
+                    ? "Asociada"
+                    : classData.status === "published"
+                      ? "Publicada"
+                      : "Borrador"}
+                </StatusBadge>
               </div>
 
               <div className={styles.infoItem}>
@@ -324,6 +352,24 @@ const ClassDetailPage = ({ params }) => {
                     : `${classData.participants?.length ?? 0} / ${
                         classData.max_participants
                       }`}
+                </span>
+              </div>
+
+              <div className={styles.infoItem}>
+                <span className={styles.label}>Curso:</span>
+                <span className={styles.value}>
+                  {courseTitle ? (
+                    <span className={styles.linkedValue}>
+                      {courseTitle}
+                      <IconLink
+                        href={`/dashboard/courses/${classData.courseId}`}
+                        fill={"var(--color-4)"}
+                        icon={"Eye"}
+                      />
+                    </span>
+                  ) : (
+                    "Clase independiente"
+                  )}
                 </span>
               </div>
 
@@ -360,105 +406,112 @@ const ClassDetailPage = ({ params }) => {
               )}
             </div>
           </section>
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2>
-                Participantes ({participants.length}
-                {classData.max_participants > 0 &&
-                  ` / ${classData.max_participants}`}
-                )
-              </h2>
-            </div>
-            {classData.max_participants > 0 && (
-              <div className={styles.capacityBar}>
-                <div
-                  className={styles.capacityFill}
-                  style={{
-                    width: `${Math.min(
-                      (participants.length / classData.max_participants) * 100,
-                      100
-                    )}%`,
-                  }}
-                />
-              </div>
-            )}
-            {participants.length === 0 ? (
-              <p className={styles.noParticipants}>
-                No hay participantes inscritos
-              </p>
-            ) : (
-              <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Nombre</th>
-                      <th>Apellido</th>
-                      <th>Email</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {participants.map((participant) => (
-                      <tr key={participant._id}>
-                        <td>{participant.first_name}</td>
-                        <td>{participant.last_name || "-"}</td>
-                        <td>{participant.email}</td>
-                        <td>
-                          <div className={styles.actionButtons}>
-                            <IconLink
-                              asButton
-                              disabled
-                              fill={"var(--color-4)"}
-                              icon="Mailbox"
-                            />
-                            <IconLink
-                              asButton
-                              danger
-                              icon="UserMinus"
-                              onClick={() =>
-                                handleRemoveParticipant(participant._id)
-                              }
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2>Acciones Rápidas</h2>
-            </div>
+          {classData.status !== "enrolled" && (
+            <>
+              <section className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <h2>
+                    Participantes ({participants.length}
+                    {classData.max_participants > 0 &&
+                      ` / ${classData.max_participants}`}
+                    )
+                  </h2>
+                </div>
+                {classData.max_participants > 0 && (
+                  <div className={styles.capacityBar}>
+                    <div
+                      className={styles.capacityFill}
+                      style={{
+                        width: `${Math.min(
+                          (participants.length / classData.max_participants) *
+                            100,
+                          100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                )}
+                {participants.length === 0 ? (
+                  <p className={styles.noParticipants}>
+                    No hay participantes inscritos
+                  </p>
+                ) : (
+                  <div className={styles.tableContainer}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Nombre</th>
+                          <th>Apellido</th>
+                          <th>Email</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {participants.map((participant) => (
+                          <tr key={participant._id}>
+                            <td>{participant.first_name}</td>
+                            <td>{participant.last_name || "-"}</td>
+                            <td>{participant.email}</td>
+                            <td>
+                              <div className={styles.actionButtons}>
+                                <IconLink
+                                  asButton
+                                  disabled
+                                  fill={"var(--color-4)"}
+                                  icon="Mailbox"
+                                />
+                                <IconLink
+                                  asButton
+                                  danger
+                                  icon="UserMinus"
+                                  onClick={() =>
+                                    handleRemoveParticipant(participant._id)
+                                  }
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+              <section className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <h2>Acciones Rápidas</h2>
+                </div>
 
-            <div className={styles.quickActions}>
-              <IconLink
-                asButton
-                disabled={meetLinkState || !classData.googleMeetLink}
-                fill={meetLinkState && "var(--success)"}
-                icon={!meetLinkState ? "GoogleMeet" : "CheckCircle"}
-                text={!meetLinkState ? "Copiar" : "Copiado"}
-                onClick={handleCopyMeetLink}
-              />
-              <IconLink
-                asButton
-                disabled={listDownloadState || participants.length === 0}
-                fill={!listDownloadState ? "var(--color-4)" : "var(--success)"}
-                icon={!listDownloadState ? "ListCheck" : "CheckCircle"}
-                text={!listDownloadState ? "Exportar (CSV)" : "Descargado"}
-                onClick={handleExportParticipants}
-              />
-              <IconLink
-                asButton
-                disabled
-                fill={"var(--color-4)"}
-                icon="Mailbox"
-                text="Notificar participantes"
-              />
-            </div>
-          </section>
+                <div className={styles.quickActions}>
+                  <IconLink
+                    asButton
+                    disabled={meetLinkState || !classData.googleMeetLink}
+                    fill={meetLinkState && "var(--success)"}
+                    icon={!meetLinkState ? "GoogleMeet" : "CheckCircle"}
+                    text={!meetLinkState ? "Copiar" : "Copiado"}
+                    onClick={handleCopyMeetLink}
+                  />
+                  <IconLink
+                    asButton
+                    disabled={listDownloadState || participants.length === 0}
+                    fill={
+                      !listDownloadState ? "var(--color-4)" : "var(--success)"
+                    }
+                    icon={!listDownloadState ? "ListCheck" : "CheckCircle"}
+                    text={!listDownloadState ? "Exportar (CSV)" : "Descargado"}
+                    onClick={handleExportParticipants}
+                  />
+                  <IconLink
+                    asButton
+                    disabled
+                    fill={"var(--color-4)"}
+                    icon="Mailbox"
+                    text="Notificar participantes"
+                  />
+                </div>
+              </section>
+            </>
+          )}
         </>
       ) : (
         <section className={styles.section}>

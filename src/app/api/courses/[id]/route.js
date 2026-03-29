@@ -3,6 +3,30 @@ import { ObjectId } from "mongodb";
 import { addTimestampToUpdate } from "@/models/schemas";
 import clientPromise from "@/lib/db";
 
+const courseAggregationPipeline = (matchStage) => [
+  { $match: matchStage },
+  {
+    $lookup: {
+      from: "classes",
+      let: { courseId: "$_id" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$courseId", "$$courseId"] } } },
+        { $sort: { start_date: 1 } },
+      ],
+      as: "assignedClasses",
+    },
+  },
+  {
+    $addFields: {
+      amount_of_classes: { $size: "$assignedClasses" },
+      start_date: { $min: "$assignedClasses.start_date" },
+      end_date: { $max: "$assignedClasses.start_date" },
+      total_duration: { $sum: "$assignedClasses.duration" },
+    },
+  },
+  { $unset: "assignedClasses" },
+];
+
 export async function GET(req, { params }) {
   try {
     const { id } = params;
@@ -13,16 +37,18 @@ export async function GET(req, { params }) {
           success: false,
           message: "ID de curso inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
 
-    const course = await coursesCollection.findOne({
-      _id: new ObjectId(id),
-    });
+    const results = await coursesCollection
+      .aggregate(courseAggregationPipeline({ _id: new ObjectId(id) }))
+      .toArray();
+
+    const course = results[0];
 
     if (!course) {
       return Response.json(
@@ -30,7 +56,7 @@ export async function GET(req, { params }) {
           success: false,
           message: "Curso no encontrado",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -39,7 +65,7 @@ export async function GET(req, { params }) {
         success: true,
         data: course,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al obtener el curso:", error);
@@ -58,11 +84,51 @@ export async function PATCH(req, { params }) {
           success: false,
           message: "ID de curso inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
-    if (body.start_date) body.start_date = new Date(body.start_date);
-    if (body.end_date) body.end_date = new Date(body.end_date);
+    // Status-only toggle — skip full form validation
+    if (Object.keys(body).length === 1 && "status" in body) {
+      if (!["draft", "published"].includes(body.status)) {
+        return Response.json(
+          { success: false, message: "Estado inválido" },
+          { status: 400 },
+        );
+      }
+      const client = await clientPromise;
+      const db = client.db(process.env.MONGODB_DB_NAME);
+      if (body.status === "published") {
+        const classCount = await db
+          .collection("classes")
+          .countDocuments({ courseId: new ObjectId(id) });
+        if (classCount === 0) {
+          return Response.json(
+            {
+              success: false,
+              message:
+                "No se puede publicar un curso sin clases asignadas. Asignale al menos una clase primero.",
+            },
+            { status: 400 },
+          );
+        }
+      }
+      const result = await db
+        .collection("courses")
+        .updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: body.status, updatedAt: new Date() } },
+        );
+      if (result.matchedCount === 0) {
+        return Response.json(
+          { success: false, message: "Curso no encontrado" },
+          { status: 404 },
+        );
+      }
+      return Response.json(
+        { success: true, message: "Estado actualizado" },
+        { status: 200 },
+      );
+    }
 
     const parsedBody = CourseFormSchema.safeParse(body);
 
@@ -73,23 +139,49 @@ export async function PATCH(req, { params }) {
           message: "El formato de los datos es inválido",
           details: parsedBody.error.errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
+    const classesCollection = db.collection("classes");
+
+    // If trying to publish, require at least one assigned class
+    if (parsedBody.data.status === "published") {
+      const classCount = await classesCollection.countDocuments({
+        courseId: new ObjectId(id),
+      });
+      if (classCount === 0) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "No se puede publicar un curso sin clases asignadas. Asignale al menos una clase primero.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const { status, ...fieldsToUpdate } = parsedBody.data;
 
     const updateData = addTimestampToUpdate({
-      ...body,
+      ...fieldsToUpdate,
       max_participants:
-        body.max_participants === 0 ? null : body.max_participants,
+        fieldsToUpdate.max_participants === 0
+          ? null
+          : fieldsToUpdate.max_participants,
     });
+
+    if (status !== undefined) {
+      updateData.status = status;
+    }
 
     const result = await coursesCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateData }
+      { $set: updateData },
     );
 
     if (result.matchedCount === 0) {
@@ -98,7 +190,7 @@ export async function PATCH(req, { params }) {
           success: false,
           message: "Curso no encontrado",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -107,7 +199,7 @@ export async function PATCH(req, { params }) {
         success: true,
         message: "Curso actualizado con éxito",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al actualizar el curso:", error);
@@ -125,33 +217,43 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "ID de curso inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
+    const classesCollection = db.collection("classes");
 
-    const result = await coursesCollection.deleteOne({
-      _id: new ObjectId(id),
-    });
-
-    if (result.deletedCount === 0) {
+    // Verify the course exists before deleting
+    const course = await coursesCollection.findOne({ _id: new ObjectId(id) });
+    if (!course) {
       return Response.json(
         {
           success: false,
           message: "Curso no encontrado",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
+
+    // Unassign all classes from this course and revert them to draft
+    await classesCollection.updateMany(
+      { courseId: new ObjectId(id) },
+      {
+        $unset: { courseId: "" },
+        $set: { status: "draft", updatedAt: new Date() },
+      },
+    );
+
+    await coursesCollection.deleteOne({ _id: new ObjectId(id) });
 
     return Response.json(
       {
         success: true,
         message: "Curso eliminado con éxito",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al eliminar el curso:", error);

@@ -1,6 +1,9 @@
-import { ClassFormSchema } from "@/utils/validation";
+﻿import { ClassFormSchema } from "@/utils/validation";
 import { ObjectId } from "mongodb";
-import { addTimestampToUpdate } from "@/models/schemas";
+import {
+  addTimestampToUpdate,
+  prepareNotificationForDB,
+} from "@/models/schemas";
 import clientPromise from "@/lib/db";
 import { google } from "googleapis";
 
@@ -12,9 +15,9 @@ export async function GET(req, { params }) {
       return Response.json(
         {
           success: false,
-          message: "ID de clase inválido",
+          message: "ID de clase invÃ¡lido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const client = await clientPromise;
@@ -31,7 +34,7 @@ export async function GET(req, { params }) {
           success: false,
           message: "Clase no encontrada",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -40,7 +43,7 @@ export async function GET(req, { params }) {
         success: true,
         data: classItem,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al obtener la clase:", error);
@@ -57,10 +60,60 @@ export async function PATCH(req, { params }) {
       return Response.json(
         {
           success: false,
-          message: "ID de clase inválido",
+          message: "ID de clase invÃ¡lido",
         },
-        { status: 400 }
+        { status: 400 },
       );
+
+    // Status-only toggle â€” skip full form validation
+    if (Object.keys(body).length === 1 && "status" in body) {
+      if (!["draft", "published"].includes(body.status)) {
+        return Response.json(
+          { success: false, message: "Estado invÃ¡lido" },
+          { status: 400 },
+        );
+      }
+      const client = await clientPromise;
+      const db = client.db(process.env.MONGODB_DB_NAME);
+      const result = await db
+        .collection("classes")
+        .updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: body.status, updatedAt: new Date() } },
+        );
+      if (result.matchedCount === 0) {
+        return Response.json(
+          { success: false, message: "Clase no encontrada" },
+          { status: 404 },
+        );
+      }
+      // Notify admin about status change
+      const classForNotif = await db
+        .collection("classes")
+        .findOne(
+          { _id: new ObjectId(id) },
+          { projection: { title: 1, createdBy: 1 } },
+        );
+      if (classForNotif?.createdBy) {
+        const statusLabel =
+          body.status === "published" ? "publicada" : "movida a borrador";
+        await db.collection("notifications").insertOne(
+          prepareNotificationForDB({
+            userId: classForNotif.createdBy,
+            type: "class.status_changed",
+            title: "Estado de clase actualizado",
+            message: `La clase "${classForNotif.title}" fue ${statusLabel}`,
+            relatedId: new ObjectId(id),
+            relatedType: "class",
+            actorId: classForNotif.createdBy,
+          }),
+        );
+      }
+      return Response.json(
+        { success: true, message: "Estado actualizado" },
+        { status: 200 },
+      );
+    }
 
     if (body.start_date) body.start_date = new Date(body.start_date);
     if (body.end_date) body.end_date = new Date(body.end_date);
@@ -71,10 +124,10 @@ export async function PATCH(req, { params }) {
       return Response.json(
         {
           success: false,
-          message: "El formato de los datos es inválido",
+          message: "El formato de los datos es invÃ¡lido",
           details: parsedBody.error.errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -82,8 +135,9 @@ export async function PATCH(req, { params }) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
     const usersCollection = db.collection("users");
+    const coursesCollection = db.collection("courses");
 
-    // Get the existing class to check if it has a calendar event
+    // Get the existing class to check calendar event and current courseId
     const existingClass = await classesCollection.findOne({
       _id: new ObjectId(id),
     });
@@ -94,19 +148,39 @@ export async function PATCH(req, { params }) {
           success: false,
           message: "Clase no encontrada",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    const updateData = addTimestampToUpdate({
-      ...body,
+    // Separate courseId from the rest of the body before building update
+    const { courseId: courseIdRaw, ...bodyWithoutCourseId } = body;
+
+    const setData = addTimestampToUpdate({
+      ...bodyWithoutCourseId,
       max_participants:
-        body.max_participants === 0 ? null : body.max_participants,
+        bodyWithoutCourseId.max_participants === 0
+          ? null
+          : bodyWithoutCourseId.max_participants,
     });
+
+    const updateOp = { $set: setData };
+
+    // Handle courseId assignment / unassignment
+    const isRemovingCourse =
+      "courseId" in body && (courseIdRaw === null || courseIdRaw === "");
+    const isAssigningCourse = courseIdRaw && ObjectId.isValid(courseIdRaw);
+
+    if (isRemovingCourse) {
+      updateOp.$unset = { courseId: "" };
+      setData.status = "draft";
+    } else if (isAssigningCourse) {
+      setData.courseId = new ObjectId(courseIdRaw);
+      setData.status = "enrolled";
+    }
 
     const result = await classesCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateData }
+      updateOp,
     );
 
     if (result.matchedCount === 0) {
@@ -115,52 +189,105 @@ export async function PATCH(req, { params }) {
           success: false,
           message: "Clase no encontrada",
         },
-        { status: 404 }
+        { status: 404 },
       );
+    }
+
+    // If a class was removed from a published course, check if it's now empty and revert to draft
+    if (isRemovingCourse && existingClass.courseId) {
+      const remainingClasses = await classesCollection.countDocuments({
+        courseId: existingClass.courseId,
+      });
+      if (remainingClasses === 0) {
+        const formerCourse = await coursesCollection.findOne({
+          _id: existingClass.courseId,
+        });
+        if (formerCourse?.status === "published") {
+          await coursesCollection.updateOne(
+            { _id: existingClass.courseId },
+            { $set: { status: "draft", updatedAt: new Date() } },
+          );
+        }
+      }
     }
 
     // Create notifications
     const notifications = db.collection("notifications");
     const notificationsToCreate = [];
+    const classTitle = bodyWithoutCourseId.title || existingClass.title;
 
-    // Notify admin about modification
-    if (existingClass.createdBy) {
-      notificationsToCreate.push({
-        userId: new ObjectId(existingClass.createdBy),
-        type: "class_modified",
-        title: "Clase modificada",
-        message: `Has modificado la clase "${
-          body.title || existingClass.title
-        }"`,
-        relatedId: new ObjectId(id),
-        relatedType: "class",
-        read: false,
-        createdAt: new Date(),
-        metadata: {
-          classTitle: body.title || existingClass.title,
-        },
-      });
-    }
-
-    // Notify all enrolled users about modification
-    if (existingClass.participants && existingClass.participants.length > 0) {
-      existingClass.participants.forEach((participantId) => {
-        notificationsToCreate.push({
-          userId: new ObjectId(participantId),
-          type: "class_modified",
-          title: "Clase modificada",
-          message: `La clase "${
-            body.title || existingClass.title
-          }" ha sido modificada`,
-          relatedId: new ObjectId(id),
-          relatedType: "class",
-          read: false,
-          createdAt: new Date(),
-          metadata: {
-            classTitle: body.title || existingClass.title,
-          },
-        });
-      });
+    if (isAssigningCourse) {
+      // Admin notification: class assigned to course
+      if (existingClass.createdBy) {
+        const assignedCourse = await coursesCollection.findOne(
+          { _id: new ObjectId(courseIdRaw) },
+          { projection: { title: 1, participants: 1 } },
+        );
+        const courseTitle = assignedCourse?.title || "";
+        notificationsToCreate.push(
+          prepareNotificationForDB({
+            userId: existingClass.createdBy,
+            type: "class.status_changed",
+            title: "Clase asignada a curso",
+            message: `La clase "${classTitle}" fue asignada al curso "${courseTitle}"`,
+            relatedId: new ObjectId(id),
+            relatedType: "class",
+            actorId: existingClass.createdBy,
+          }),
+        );
+        // Notify course participants
+        if (assignedCourse?.participants?.length > 0) {
+          assignedCourse.participants.forEach((participantId) => {
+            notificationsToCreate.push(
+              prepareNotificationForDB({
+                userId: participantId,
+                type: "class.added_to_course",
+                title: "Nueva clase en tu curso",
+                message: `Se agregó la clase "${classTitle}" al curso "${courseTitle}"`,
+                relatedId: new ObjectId(id),
+                relatedType: "class",
+                actorId: existingClass.createdBy,
+              }),
+            );
+          });
+        }
+      }
+    } else if (isRemovingCourse && existingClass.courseId) {
+      // Admin notification: class removed from course
+      if (existingClass.createdBy) {
+        const removedCourse = await coursesCollection.findOne(
+          { _id: existingClass.courseId },
+          { projection: { title: 1, participants: 1 } },
+        );
+        const courseTitle = removedCourse?.title || "";
+        notificationsToCreate.push(
+          prepareNotificationForDB({
+            userId: existingClass.createdBy,
+            type: "class.status_changed",
+            title: "Clase removida de curso",
+            message: `La clase "${classTitle}" fue eliminada del curso "${courseTitle}"`,
+            relatedId: new ObjectId(id),
+            relatedType: "class",
+            actorId: existingClass.createdBy,
+          }),
+        );
+        // Notify former course participants
+        if (removedCourse?.participants?.length > 0) {
+          removedCourse.participants.forEach((participantId) => {
+            notificationsToCreate.push(
+              prepareNotificationForDB({
+                userId: participantId,
+                type: "class.removed_from_course",
+                title: "Clase removida de tu curso",
+                message: `La clase "${classTitle}" fue eliminada del curso "${courseTitle}"`,
+                relatedId: new ObjectId(id),
+                relatedType: "class",
+                actorId: existingClass.createdBy,
+              }),
+            );
+          });
+        }
+      }
     }
 
     if (notificationsToCreate.length > 0) {
@@ -169,13 +296,16 @@ export async function PATCH(req, { params }) {
 
     // If class has a Google Calendar event, update it only if relevant fields changed
     const relevantFieldsChanged =
-      (body.title && body.title !== existingClass.title) ||
-      (body.short_description &&
-        body.short_description !== existingClass.short_description) ||
-      (body.start_date &&
-        new Date(body.start_date).getTime() !==
+      (bodyWithoutCourseId.title &&
+        bodyWithoutCourseId.title !== existingClass.title) ||
+      (bodyWithoutCourseId.short_description &&
+        bodyWithoutCourseId.short_description !==
+          existingClass.short_description) ||
+      (bodyWithoutCourseId.start_date &&
+        new Date(bodyWithoutCourseId.start_date).getTime() !==
           new Date(existingClass.start_date).getTime()) ||
-      (body.duration && body.duration !== existingClass.duration);
+      (bodyWithoutCourseId.duration &&
+        bodyWithoutCourseId.duration !== existingClass.duration);
 
     if (
       existingClass.googleEventId &&
@@ -192,7 +322,7 @@ export async function PATCH(req, { params }) {
           const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
-            `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`
+            `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`,
           );
 
           oauth2Client.setCredentials(adminUser.googleCalendarTokens);
@@ -204,10 +334,11 @@ export async function PATCH(req, { params }) {
 
           // Calculate end time (start time + duration in minutes)
           const startDate = new Date(
-            body.start_date || existingClass.start_date
+            bodyWithoutCourseId.start_date || existingClass.start_date,
           );
           const endDate = new Date(startDate);
-          const duration = body.duration || existingClass.duration;
+          const duration =
+            bodyWithoutCourseId.duration || existingClass.duration;
           endDate.setMinutes(endDate.getMinutes() + duration);
 
           // Update the event in Google Calendar
@@ -215,9 +346,11 @@ export async function PATCH(req, { params }) {
             calendarId: "primary",
             eventId: existingClass.googleEventId,
             resource: {
-              summary: body.title || existingClass.title,
+              summary: bodyWithoutCourseId.title || existingClass.title,
               description:
-                body.short_description || existingClass.short_description || "",
+                bodyWithoutCourseId.short_description ||
+                existingClass.short_description ||
+                "",
               start: {
                 dateTime: startDate.toISOString(),
                 timeZone: "America/Argentina/Buenos_Aires",
@@ -230,7 +363,7 @@ export async function PATCH(req, { params }) {
           });
 
           console.log(
-            `Updated Google Calendar event: ${existingClass.googleEventId}`
+            `Updated Google Calendar event: ${existingClass.googleEventId}`,
           );
         }
       } catch (calendarError) {
@@ -242,9 +375,9 @@ export async function PATCH(req, { params }) {
     return Response.json(
       {
         success: true,
-        message: "Clase actualizada con éxito",
+        message: "Clase actualizada con Ã©xito",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al actualizar la clase:", error);
@@ -260,9 +393,9 @@ export async function DELETE(req, { params }) {
       return Response.json(
         {
           success: false,
-          message: "ID de clase inválido",
+          message: "ID de clase invÃ¡lido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const client = await clientPromise;
@@ -281,7 +414,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "Clase no encontrada",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -297,7 +430,7 @@ export async function DELETE(req, { params }) {
           const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
-            `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`
+            `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`,
           );
 
           oauth2Client.setCredentials(adminUser.googleCalendarTokens);
@@ -314,7 +447,7 @@ export async function DELETE(req, { params }) {
           });
 
           console.log(
-            `Deleted Google Calendar event: ${classItem.googleEventId}`
+            `Deleted Google Calendar event: ${classItem.googleEventId}`,
           );
         }
       } catch (calendarError) {
@@ -334,7 +467,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "Clase no encontrada",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -386,9 +519,9 @@ export async function DELETE(req, { params }) {
     return Response.json(
       {
         success: true,
-        message: "Clase eliminada con éxito",
+        message: "Clase eliminada con Ã©xito",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al eliminar la clase:", error);

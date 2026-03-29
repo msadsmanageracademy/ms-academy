@@ -66,7 +66,7 @@ const NotificationsPage = () => {
       if (!res.ok) throw new Error("Error marking as read");
 
       setNotifications(
-        notifications.map((n) => (n._id === id ? { ...n, read: true } : n))
+        notifications.map((n) => (n._id === id ? { ...n, read: true } : n)),
       );
       markAsRead();
     } catch (err) {
@@ -146,6 +146,12 @@ const NotificationsPage = () => {
         return "UserMinus";
       case "class.added_to_calendar":
         return "GoogleCalendar";
+      case "class.added_to_course":
+        return "Plus";
+      case "class.removed_from_course":
+        return "UserMinus";
+      case "class.status_changed":
+        return "Pencil";
       case "class.updated":
         return "Pencil";
       case "class.cancelled":
@@ -167,6 +173,8 @@ const NotificationsPage = () => {
       case "course.participant_removed":
         return "UserMinus";
       case "course.updated":
+        return "Pencil";
+      case "course.status_changed":
         return "Pencil";
       case "course.cancelled":
         return "Cross";
@@ -248,7 +256,7 @@ const NotificationsPage = () => {
                 {Icons[getNotificationIcon(notification.type)] &&
                   React.createElement(
                     Icons[getNotificationIcon(notification.type)],
-                    { size: 24, fill: "var(--color-6)" }
+                    { size: 24, fill: "var(--color-6)" },
                   )}
               </div>
               <div className={styles.content}>
@@ -258,7 +266,7 @@ const NotificationsPage = () => {
                   {format(
                     new Date(notification.createdAt),
                     "dd/MM/yyyy, h:mm a",
-                    { locale: es }
+                    { locale: es },
                   )}
                 </span>
               </div>

@@ -5,32 +5,111 @@ import clientPromise from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { prepareClassForDB, prepareNotificationForDB } from "@/models/schemas";
 
-export async function GET() {
+export async function GET(req) {
   try {
+    const { searchParams } = new URL(req.url);
+    const showAll = searchParams.get("showAll") === "true";
+    const courseId = searchParams.get("courseId");
+    const myClasses = searchParams.get("myClasses") === "true";
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
 
+    // When filtering by courseId, return all classes for that course (admin use)
+    if (courseId) {
+      const classes = await classesCollection
+        .find({ courseId: new ObjectId(courseId) })
+        .sort({ start_date: 1 })
+        .toArray();
+
+      return Response.json({ success: true, data: classes }, { status: 200 });
+    }
+
+    // User's own classes (enrolled or participant, any status)
+    if (myClasses) {
+      const session = await getServerSession(authOptions);
+      if (!session) {
+        return Response.json(
+          { success: false, message: "No autorizado" },
+          { status: 401 },
+        );
+      }
+      const classes = await classesCollection
+        .aggregate([
+          { $match: { participants: new ObjectId(session.user.id) } },
+          {
+            $lookup: {
+              from: "courses",
+              localField: "courseId",
+              foreignField: "_id",
+              as: "courseData",
+            },
+          },
+          {
+            $addFields: {
+              courseTitle: { $arrayElemAt: ["$courseData.title", 0] },
+            },
+          },
+          { $unset: "courseData" },
+          { $sort: { start_date: 1 } },
+        ])
+        .toArray();
+
+      return Response.json({ success: true, data: classes }, { status: 200 });
+    }
+
     const currentDate = new Date();
 
-    const classes = await classesCollection
-      .find({ start_date: { $gt: currentDate } })
-      .sort({ start_date: 1 }) // Ascendente
-      .toArray();
+    const baseFilter = { start_date: { $gt: currentDate } };
+    if (!showAll) {
+      // Public view: only standalone published classes
+      baseFilter.status = "published";
+    }
+
+    let classes;
+    if (showAll) {
+      // Admin view: include courseTitle via lookup
+      classes = await classesCollection
+        .aggregate([
+          { $match: baseFilter },
+          {
+            $lookup: {
+              from: "courses",
+              localField: "courseId",
+              foreignField: "_id",
+              as: "courseData",
+            },
+          },
+          {
+            $addFields: {
+              courseTitle: { $arrayElemAt: ["$courseData.title", 0] },
+            },
+          },
+          { $unset: "courseData" },
+          { $sort: { start_date: 1 } },
+        ])
+        .toArray();
+    } else {
+      classes = await classesCollection
+        .find(baseFilter)
+        .sort({ start_date: 1 })
+        .toArray();
+    }
 
     return Response.json(
       {
         success: true,
         data: classes,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     return Response.json(
       {
         error: error.message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -44,6 +123,9 @@ export async function POST(req) {
     if (body.start_date) body.start_date = new Date(body.start_date);
     if (body.end_date) body.end_date = new Date(body.end_date);
 
+    // Extract courseId before validation so it doesn't interfere with form schema
+    const { courseId: courseIdRaw, ...bodyWithoutCourseId } = body;
+
     const parsedBody = ClassFormSchema.safeParse(body);
 
     if (!parsedBody.success) {
@@ -53,7 +135,7 @@ export async function POST(req) {
           message: "El formato de los datos es inválido",
           details: parsedBody.error.errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -65,7 +147,7 @@ export async function POST(req) {
           message:
             "No se pueden crear clases con fechas pasadas. Solo se permiten eventos futuros.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -74,9 +156,15 @@ export async function POST(req) {
     const classesCollection = db.collection("classes");
 
     const classData = prepareClassForDB(
-      body,
-      session?.user?.id ? new ObjectId(session.user.id) : undefined
+      bodyWithoutCourseId,
+      session?.user?.id ? new ObjectId(session.user.id) : undefined,
     );
+
+    // Assign to course if a valid courseId was provided
+    if (courseIdRaw && ObjectId.isValid(courseIdRaw)) {
+      classData.courseId = new ObjectId(courseIdRaw);
+      classData.status = "enrolled";
+    }
 
     const result = await classesCollection.insertOne(classData);
 
@@ -103,7 +191,7 @@ export async function POST(req) {
           _id: result.insertedId.toString(),
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error al crear la clase:", error);

@@ -1,0 +1,23 @@
+.badge {
+  border-radius: 0.25rem;
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  max-width: fit-content;
+  padding: 0.2rem 0.55rem;
+}
+
+.draft {
+  background: rgba(158, 158, 158, 0.15);
+  color: #666;
+}
+
+.published {
+  background: rgba(40, 167, 69, 0.15);
+  color: #1a6b2f;
+}
+
+.enrolled {
+  background: rgba(13, 110, 253, 0.12);
+  color: #0a58ca;
+}

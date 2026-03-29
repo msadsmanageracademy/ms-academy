@@ -47,6 +47,13 @@
 .actionButtons {
   display: flex;
   gap: 0.5rem;
+  justify-content: center;
+}
+
+.titleCell {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .infoGrid {
@@ -61,6 +68,10 @@
   gap: 0.25rem;
 }
 
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
 .label {
   color: var(--color-5);
   font-size: 0.875rem;
@@ -73,17 +84,6 @@
   font-size: 1rem;
 }
 
-.linkedValue {
-  align-items: center;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.relative {
-  color: var(--color-7);
-  font-weight: 600;
-  margin-left: 0.5rem;
-}
 
 .capacityBar {
   background: var(--color-1);
@@ -135,19 +135,6 @@
   text-align: center;
 }
 
-.actionButtons {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
-.quickActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-
 .formTitle {
   margin-bottom: 2rem;
 }
@@ -165,12 +152,6 @@
     padding: 2rem;
   }
 
-  .infoGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 768px) {
   .infoGrid {
     grid-template-columns: repeat(2, 1fr);
   }

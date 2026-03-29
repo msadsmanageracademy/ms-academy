@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+﻿import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
 
 export async function PATCH(req, { params }) {
@@ -9,44 +9,57 @@ export async function PATCH(req, { params }) {
 
     if (!ObjectId.isValid(id))
       return Response.json(
-        {
-          success: false,
-          message: "ID de curso inválido",
-        },
-        { status: 400 }
+        { success: false, message: "ID de curso inválido" },
+        { status: 400 },
       );
 
     if (!ObjectId.isValid(userId))
       return Response.json(
-        {
-          success: false,
-          message: "ID de usuario inválido",
-        },
-        { status: 400 }
+        { success: false, message: "ID de usuario inválido" },
+        { status: 400 },
       );
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
 
+    // Fetch course details before updating
+    const course = await coursesCollection.findOne({ _id: new ObjectId(id) });
+    if (!course) {
+      return Response.json(
+        { success: false, message: "Curso no encontrado" },
+        { status: 404 },
+      );
+    }
+
     const result = await coursesCollection.updateOne(
       { _id: new ObjectId(id) },
       {
         $addToSet: { participants: new ObjectId(userId) },
         $set: { updatedAt: new Date() },
-      }
+      },
     );
 
     if (result.modifiedCount === 0) {
       return Response.json(
         { success: false, message: "Ya estás inscripto en este curso" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
+    // Also enroll the user in all classes linked to this course
+    const classesCollection = db.collection("classes");
+    await classesCollection.updateMany(
+      { courseId: new ObjectId(id) },
+      {
+        $addToSet: { participants: new ObjectId(userId) },
+        $set: { updatedAt: new Date() },
+      },
+    );
+
     return Response.json(
       { success: true, message: "Inscripción realizada con éxito" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error en la inscripción:", error);
@@ -62,44 +75,57 @@ export async function DELETE(req, { params }) {
 
     if (!ObjectId.isValid(id))
       return Response.json(
-        {
-          success: false,
-          message: "ID de curso inválido",
-        },
-        { status: 400 }
+        { success: false, message: "ID de curso inválido" },
+        { status: 400 },
       );
 
     if (!ObjectId.isValid(userId))
       return Response.json(
-        {
-          success: false,
-          message: "ID de usuario inválido",
-        },
-        { status: 400 }
+        { success: false, message: "ID de usuario inválido" },
+        { status: 400 },
       );
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
 
+    // Fetch course details before updating
+    const course = await coursesCollection.findOne({ _id: new ObjectId(id) });
+    if (!course) {
+      return Response.json(
+        { success: false, message: "Curso no encontrado" },
+        { status: 404 },
+      );
+    }
+
     const result = await coursesCollection.updateOne(
       { _id: new ObjectId(id) },
       {
         $pull: { participants: new ObjectId(userId) },
         $set: { updatedAt: new Date() },
-      }
+      },
     );
 
     if (result.modifiedCount === 0) {
       return Response.json(
         { success: false, message: "No estás inscrito en este curso" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
+    // Also remove the user from all classes linked to this course
+    const classesCollection = db.collection("classes");
+    await classesCollection.updateMany(
+      { courseId: new ObjectId(id) },
+      {
+        $pull: { participants: new ObjectId(userId) },
+        $set: { updatedAt: new Date() },
+      },
+    );
+
     return Response.json(
       { success: true, message: "Inscripción cancelada con éxito" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al cancelar inscripción:", error);

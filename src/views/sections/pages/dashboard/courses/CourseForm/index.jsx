@@ -1,11 +1,9 @@
-import "react-datepicker/dist/react-datepicker.css";
 import { CourseFormSchema } from "@/utils/validation";
-import DatePicker from "react-datepicker";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { toastError, toastSuccess } from "@/utils/alerts";
 
 const CourseForm = ({ courseData, onSuccess, onCancel }) => {
@@ -13,7 +11,6 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
 
   const {
     formState: { errors },
-    control,
     handleSubmit,
     register,
   } = useForm({
@@ -23,16 +20,11 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
           title: courseData.title,
           short_description: courseData.short_description,
           full_description: courseData.full_description,
-          start_date: new Date(courseData.start_date),
-          end_date: new Date(courseData.end_date),
-          amount_of_classes: courseData.amount_of_classes || 2,
-          duration: courseData.duration,
           max_participants: courseData.max_participants || 0,
           price: courseData.price || 0,
         }
       : {
           max_participants: 0,
-          amount_of_classes: 2,
           price: 0,
         },
   });
@@ -43,10 +35,6 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
     title,
     short_description,
     full_description,
-    start_date,
-    end_date,
-    amount_of_classes,
-    duration,
     max_participants,
     price,
   }) => {
@@ -56,20 +44,18 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
         : "/api/courses/";
       const method = isEditMode ? "PATCH" : "POST";
 
+      const body = {
+        title,
+        short_description,
+        full_description,
+        max_participants,
+        price,
+      };
+
       const response = await fetch(url, {
         headers: { "Content-Type": "application/json" },
         method,
-        body: JSON.stringify({
-          title,
-          short_description,
-          full_description,
-          start_date,
-          end_date,
-          amount_of_classes,
-          duration,
-          max_participants,
-          price,
-        }),
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
@@ -78,7 +64,7 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
         return toastError(
           3000,
           isEditMode ? "Error al actualizar curso" : "Error al crear curso",
-          result.message
+          result.message,
         );
       }
 
@@ -93,7 +79,7 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
       toastError(
         3000,
         isEditMode ? "Error al actualizar curso" : "Error al crear curso",
-        err.message
+        err.message,
       );
     }
   };
@@ -127,68 +113,6 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
       <div className={styles.formCustomError}>
         {errors?.full_description?.message}
       </div>
-
-      <div className={styles.formRow}>
-        <label>Fecha y hora de inicio</label>
-        <Controller
-          name="start_date"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              {...field}
-              selected={field.value}
-              onChange={(date) => field.onChange(date)}
-              timeInputLabel="Hora:"
-              dateFormat="dd/MM/yyyy hh:mm aa"
-              showTimeInput
-              className={`${styles.input}`}
-            />
-          )}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.start_date?.message}
-      </div>
-
-      <div className={styles.formRow}>
-        <label>Fecha y hora de finalización</label>
-        <Controller
-          name="end_date"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              {...field}
-              selected={field.value}
-              onChange={(date) => field.onChange(date)}
-              timeInputLabel="Hora:"
-              dateFormat="dd/MM/yyyy hh:mm aa"
-              showTimeInput
-              className={`${styles.input}`}
-            />
-          )}
-        />
-      </div>
-      <div className={styles.formCustomError}>{errors?.end_date?.message}</div>
-
-      <div className={styles.formRow}>
-        <label>Cantidad de clases (mínimo: 2)</label>
-        <input
-          {...register("amount_of_classes", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number}`}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.amount_of_classes?.message}
-      </div>
-
-      <div className={styles.formRow}>
-        <label>Duración (en minutos)</label>
-        <input
-          {...register("duration", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number}`}
-        />
-      </div>
-      <div className={styles.formCustomError}>{errors?.duration?.message}</div>
 
       <div className={styles.formRow}>
         <label>Máximo de participantes</label>

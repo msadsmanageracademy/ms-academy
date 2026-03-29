@@ -3,16 +3,12 @@
 import CourseForm from "@/views/sections/pages/dashboard/courses/CourseForm";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import StatusBadge from "@/views/components/ui/StatusBadge";
 import { format } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
-import { Delete, Pencil } from "@/views/components/icons";
-import {
-  confirmDelete,
-  confirmUnenroll,
-  toastError,
-  toastSuccess,
-} from "@/utils/alerts";
+import IconLink from "@/views/components/ui/IconLink";
+import { confirmUnenroll, toastError, toastSuccess } from "@/utils/alerts";
 import { useEffect, useState } from "react";
 
 const CoursesPage = () => {
@@ -20,7 +16,6 @@ const CoursesPage = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingCourse, setEditingCourse] = useState(null);
 
   useEffect(() => {
     if (session) {
@@ -28,38 +23,10 @@ const CoursesPage = () => {
     }
   }, [session]);
 
-  const handleDelete = async (id) => {
-    const result = await confirmDelete(
-      "¿Eliminar curso?",
-      "Esta acción no se puede deshacer"
-    );
-
-    if (!result.isConfirmed) return;
-
-    try {
-      const res = await fetch(`/api/courses/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error("Error deleting course");
-
-      setCourses(courses.filter((c) => c._id !== id));
-      toastSuccess(3000, "Operación exitosa", "El curso ha sido eliminado");
-    } catch (err) {
-      console.error("Error deleting course:", err);
-      toastError(3000, "Ha habido un error", "No se pudo eliminar el curso");
-    }
-  };
-
-  const handleEdit = (course) => {
-    setEditingCourse(course);
-    setShowCreateForm(false);
-  };
-
   const handleUnenroll = async (courseId) => {
     const result = await confirmUnenroll(
       "¿Cancelar inscripción?",
-      "Se eliminará tu inscripción a este curso"
+      "Se eliminará tu inscripción a este curso",
     );
 
     if (!result.isConfirmed) return;
@@ -69,7 +36,7 @@ const CoursesPage = () => {
         `/api/courses/sign-up/${courseId}?userId=${session.user.id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       const data = await res.json();
@@ -82,26 +49,46 @@ const CoursesPage = () => {
       toastSuccess(
         3000,
         "Operación exitosa",
-        "Tu inscripción ha sido cancelada"
+        "Tu inscripción ha sido cancelada",
       );
     } catch (err) {
       console.error("Error unenrolling from course:", err);
       toastError(
         3000,
         "Ha habido un error",
-        "No se pudo cancelar la inscripción"
+        "No se pudo cancelar la inscripción",
       );
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingCourse(null);
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === "published" ? "draft" : "published";
+    try {
+      const res = await fetch(`/api/courses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+      setCourses(
+        courses.map((c) => (c._id === id ? { ...c, status: newStatus } : c)),
+      );
+      toastSuccess(
+        3000,
+        "Operación exitosa",
+        newStatus === "published" ? "Curso publicado" : "Curso ocultado",
+      );
+    } catch (err) {
+      console.error("Error toggling course status:", err);
+      toastError(3000, "Ha habido un error", "No se pudo cambiar el estado");
+    }
   };
 
   const handleFormSuccess = () => {
     setShowCreateForm(false);
-    setEditingCourse(null);
-    // Refresh the list
     if (session) {
       fetchCourses();
     }
@@ -109,7 +96,10 @@ const CoursesPage = () => {
 
   const fetchCourses = async () => {
     try {
-      const res = await fetch("/api/courses");
+      const isAdmin = session?.user?.role === "admin";
+      const res = await fetch(
+        isAdmin ? "/api/courses?showAll=true" : "/api/courses",
+      );
       if (!res.ok) throw new Error("Error fetching courses");
 
       const data = await res.json();
@@ -117,7 +107,7 @@ const CoursesPage = () => {
       // Filter courses based on user role
       if (session?.user?.role === "user") {
         const userCourses = data.data.filter((course) =>
-          course.participants?.includes(session.user.id)
+          course.participants?.includes(session.user.id),
         );
         setCourses(userCourses);
       } else {
@@ -155,6 +145,7 @@ const CoursesPage = () => {
                       <th>Clases</th>
                       <th>Precio</th>
                       <th>Participantes</th>
+                      <th>Estado</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -163,35 +154,53 @@ const CoursesPage = () => {
                       <tr key={course._id}>
                         <td>{course.title}</td>
                         <td>
-                          {format(new Date(course.start_date), "dd/MM/yyyy")}
+                          {course.start_date
+                            ? format(new Date(course.start_date), "dd/MM/yyyy")
+                            : "—"}
                         </td>
                         <td>
                           {course.end_date
                             ? format(new Date(course.end_date), "dd/MM/yyyy")
-                            : "N/A"}
+                            : "—"}
                         </td>
-                        <td>{course.amount_of_classes}</td>
+                        <td>{course.amount_of_classes ?? 0}</td>
                         <td>${course.price}</td>
                         <td>
                           {course.participants?.length || 0} /{" "}
                           {course.max_participants || "∞"}
                         </td>
                         <td>
+                          <StatusBadge status={course.status}>
+                            {course.status === "published"
+                              ? "Publicado"
+                              : "Borrador"}
+                          </StatusBadge>
+                        </td>
+                        <td>
                           <div className={styles.actionButtons}>
-                            <button
-                              onClick={() => handleEdit(course)}
-                              className={styles.iconButton}
-                              title="Editar"
-                            >
-                              <Pencil size={20} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(course._id)}
-                              className={styles.iconButtonDanger}
-                              title="Eliminar"
-                            >
-                              <Delete size={20} />
-                            </button>
+                            <IconLink
+                              fill={"var(--color-4)"}
+                              href={`/dashboard/courses/${course._id}`}
+                              icon={"Eye"}
+                            />
+                            <IconLink
+                              asButton
+                              danger={course.status === "published"}
+                              icon={
+                                course.status === "published"
+                                  ? "Pin"
+                                  : "Confetti"
+                              }
+                              success={course.status !== "published"}
+                              onClick={() =>
+                                handleToggleStatus(course._id, course.status)
+                              }
+                              title={
+                                course.status === "published"
+                                  ? "Ocultar"
+                                  : "Publicar"
+                              }
+                            />
                           </div>
                         </td>
                       </tr>
@@ -203,27 +212,15 @@ const CoursesPage = () => {
             <PrimaryLink
               asButton
               text={showCreateForm ? "Cancelar" : "+ Nuevo Curso"}
-              onClick={() => {
-                setShowCreateForm(!showCreateForm);
-                setEditingCourse(null);
-              }}
+              onClick={() => setShowCreateForm(!showCreateForm)}
             />
           </div>
 
           {showCreateForm && (
             <div className={styles.formSection}>
-              <h2>Crear Nuevo Curso</h2>
-              <CourseForm onSuccess={handleFormSuccess} />
-            </div>
-          )}
-
-          {editingCourse && (
-            <div className={styles.formSection}>
-              <h2>Editar Curso</h2>
               <CourseForm
-                courseData={editingCourse}
                 onSuccess={handleFormSuccess}
-                onCancel={handleCancelEdit}
+                onCancel={() => setShowCreateForm(false)}
               />
             </div>
           )}
@@ -242,22 +239,23 @@ const CoursesPage = () => {
                 <div key={course._id} className={styles.courseCard}>
                   <h3>{course.title}</h3>
                   <p>{course.short_description}</p>
-                  <p>
-                    <strong>Inicio:</strong>{" "}
-                    {format(new Date(course.start_date), "dd/MM/yyyy")}
-                  </p>
-                  <p>
-                    <strong>Fin:</strong>{" "}
-                    {course.end_date
-                      ? format(new Date(course.end_date), "dd/MM/yyyy")
-                      : "N/A"}
-                  </p>
-                  <p>
-                    <strong>Clases:</strong> {course.amount_of_classes}
-                  </p>
-                  <p>
-                    <strong>Duración:</strong> {course.duration} minutos
-                  </p>
+                  {course.start_date && (
+                    <p>
+                      <strong>Inicio:</strong>{" "}
+                      {format(new Date(course.start_date), "dd/MM/yyyy")}
+                    </p>
+                  )}
+                  {course.end_date && (
+                    <p>
+                      <strong>Fin:</strong>{" "}
+                      {format(new Date(course.end_date), "dd/MM/yyyy")}
+                    </p>
+                  )}
+                  {course.amount_of_classes > 0 && (
+                    <p>
+                      <strong>Clases:</strong> {course.amount_of_classes}
+                    </p>
+                  )}
                   <p>
                     <strong>Precio:</strong> ${course.price}
                   </p>

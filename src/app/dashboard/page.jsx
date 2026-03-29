@@ -6,7 +6,7 @@ import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Clock, Money, NavbarClasses } from "@/views/components/icons";
+import { Clock, Courses, Money, NavbarClasses } from "@/views/components/icons";
 import { format, formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 
@@ -16,6 +16,11 @@ const DashboardPage = () => {
   const [stats, setStats] = useState({
     classes: 0,
     courses: 0,
+    publishedClasses: 0,
+    draftClasses: 0,
+    enrolledClasses: 0,
+    publishedCourses: 0,
+    draftCourses: 0,
   });
   const [nextClass, setNextClass] = useState(null);
   const [nextCourse, setNextCourse] = useState(null);
@@ -31,8 +36,16 @@ const DashboardPage = () => {
     const fetchStats = async () => {
       try {
         const [classesRes, coursesRes] = await Promise.all([
-          fetch("/api/classes"),
-          fetch("/api/courses"),
+          fetch(
+            session.user.role === "admin"
+              ? "/api/classes?showAll=true"
+              : "/api/classes?myClasses=true",
+          ),
+          fetch(
+            session.user.role === "admin"
+              ? "/api/courses?showAll=true"
+              : "/api/courses",
+          ),
         ]);
 
         const classesData = await classesRes.json();
@@ -43,21 +56,21 @@ const DashboardPage = () => {
         if (session.user.role === "admin") {
           // For admins: show next class and course from all available
           const upcomingClasses = classesData.data?.filter(
-            (c) => new Date(c.start_date) > now
+            (c) => new Date(c.start_date) > now && c.status === "published",
           );
           if (upcomingClasses?.length > 0) {
             upcomingClasses.sort(
-              (a, b) => new Date(a.start_date) - new Date(b.start_date)
+              (a, b) => new Date(a.start_date) - new Date(b.start_date),
             );
             setNextClass(upcomingClasses[0]);
           }
 
           const upcomingCourses = coursesData.data?.filter(
-            (c) => new Date(c.start_date) > now
+            (c) => new Date(c.start_date) > now && c.status === "published",
           );
           if (upcomingCourses?.length > 0) {
             upcomingCourses.sort(
-              (a, b) => new Date(a.start_date) - new Date(b.start_date)
+              (a, b) => new Date(a.start_date) - new Date(b.start_date),
             );
             setNextCourse(upcomingCourses[0]);
           }
@@ -65,40 +78,52 @@ const DashboardPage = () => {
           setStats({
             classes: classesData.data?.length || 0,
             courses: coursesData.data?.length || 0,
+            publishedClasses:
+              classesData.data?.filter((c) => c.status === "published")
+                .length || 0,
+            draftClasses:
+              classesData.data?.filter((c) => c.status === "draft").length || 0,
+            enrolledClasses:
+              classesData.data?.filter((c) => c.status === "enrolled").length ||
+              0,
+            publishedCourses:
+              coursesData.data?.filter((c) => c.status === "published")
+                .length || 0,
+            draftCourses:
+              coursesData.data?.filter((c) => c.status === "draft").length || 0,
           });
         } else {
-          const userClasses = classesData.data?.filter((c) =>
-            c.participants?.includes(session.user.id)
-          );
+          // myClasses API already filters by participant, coursesData still needs client-side filter
+          const userClasses = classesData.data ?? [];
           const userCourses = coursesData.data?.filter((c) =>
-            c.participants?.includes(session.user.id)
+            c.participants?.includes(session.user.id),
           );
 
           // Find next upcoming class for enrolled users
           const now = new Date();
-          const upcomingClasses = userClasses?.filter(
-            (c) => new Date(c.start_date) > now
+          const upcomingClasses = userClasses.filter(
+            (c) => new Date(c.start_date) > now,
           );
           if (upcomingClasses?.length > 0) {
             upcomingClasses.sort(
-              (a, b) => new Date(a.start_date) - new Date(b.start_date)
+              (a, b) => new Date(a.start_date) - new Date(b.start_date),
             );
             setNextClass(upcomingClasses[0]);
           }
 
           // Find next upcoming course for enrolled users
           const upcomingCourses = userCourses?.filter(
-            (c) => new Date(c.start_date) > now
+            (c) => new Date(c.start_date) > now,
           );
           if (upcomingCourses?.length > 0) {
             upcomingCourses.sort(
-              (a, b) => new Date(a.start_date) - new Date(b.start_date)
+              (a, b) => new Date(a.start_date) - new Date(b.start_date),
             );
             setNextCourse(upcomingCourses[0]);
           }
 
           setStats({
-            classes: userClasses?.length || 0,
+            classes: userClasses.length,
             courses: userCourses?.length || 0,
           });
         }
@@ -128,27 +153,66 @@ const DashboardPage = () => {
           <p>Rol: {isAdmin ? "Administrador" : "Usuario"}</p>
         </div>
 
-        <div className={styles.statsGrid}>
-          <div className={styles.statCard}>
-            <h3>{isAdmin ? "Total Clases" : "Mis Clases"}</h3>
-            <div className={styles.value}>{stats.classes}</div>
-            <div className={styles.label}>
-              {isAdmin ? "Clases creadas" : "Clases inscritas"}
+        <div className={styles.statsSection}>
+          {isAdmin ? (
+            <>
+              <div className={styles.statsGroup}>
+                <span className={styles.statsGroupLabel}>Clases</span>
+                <div className={styles.statsGrid}>
+                  <div className={styles.statCard}>
+                    <h3>En borrador</h3>
+                    <div className={styles.value}>{stats.draftClasses}</div>
+                    <div className={styles.label}>No visibles aún</div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <h3>Asociadas</h3>
+                    <div className={styles.value}>{stats.enrolledClasses}</div>
+                    <div className={styles.label}>Asignadas a un curso</div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <h3>Publicadas</h3>
+                    <div className={styles.value}>{stats.publishedClasses}</div>
+                    <div className={styles.label}>Visibles en el sitio</div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.statsGroup}>
+                <span className={styles.statsGroupLabel}>Cursos</span>
+                <div className={styles.statsGrid}>
+                  <div className={styles.statCard}>
+                    <h3>En borrador</h3>
+                    <div className={styles.value}>{stats.draftCourses}</div>
+                    <div className={styles.label}>No visibles aún</div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <h3>Publicados</h3>
+                    <div className={styles.value}>{stats.publishedCourses}</div>
+                    <div className={styles.label}>Visibles en el sitio</div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <h3>Mis Clases</h3>
+                <div className={styles.value}>{stats.classes}</div>
+                <div className={styles.label}>Clases inscritas</div>
+              </div>
+              <div className={styles.statCard}>
+                <h3>Mis Cursos</h3>
+                <div className={styles.value}>{stats.courses}</div>
+                <div className={styles.label}>Cursos inscritos</div>
+              </div>
             </div>
-          </div>
-
-          <div className={styles.statCard}>
-            <h3>{isAdmin ? "Total Cursos" : "Mis Cursos"}</h3>
-            <div className={styles.value}>{stats.courses}</div>
-            <div className={styles.label}>
-              {isAdmin ? "Cursos creados" : "Cursos inscritos"}
-            </div>
-          </div>
+          )}
         </div>
 
-        {(nextClass || nextCourse) && (
-          <div className={styles.upcomingSection}>
-            <h2>Próximas Actividades</h2>
+        <div className={styles.upcomingSection}>
+          <h2>Próximas Actividades</h2>
+          {!nextClass && !nextCourse ? (
+            <p>No hay actividades publicadas próximas.</p>
+          ) : (
             <div className={styles.upcomingGrid}>
               {nextClass && (
                 <div className={styles.upcomingCard}>
@@ -164,18 +228,19 @@ const DashboardPage = () => {
                     {format(
                       new Date(nextClass.start_date),
                       "EEEE, dd/MM/yyyy, h:mm a",
-                      { locale: es }
+                      { locale: es },
                     )}
                   </p>
                   <p className={styles.upcomingDescription}>
                     {nextClass.short_description}
                   </p>
                   <div className={styles.upcomingInfo}>
-                    <span>
-                      <Clock fill={"var(--color-4)"} size={28} />{" "}
-                      {nextClass.duration} min
-                    </span>
-                    {nextClass.price === 0 ? (
+                    {nextClass.courseTitle ? (
+                      <span>
+                        <Courses fill={"var(--color-4)"} size={28} />{" "}
+                        {nextClass.courseTitle}
+                      </span>
+                    ) : nextClass.price === 0 ? (
                       <span>
                         <Money fill={"var(--color-4)"} size={28} /> Gratis
                       </span>
@@ -185,6 +250,10 @@ const DashboardPage = () => {
                         {nextClass.price}
                       </span>
                     )}
+                    <span>
+                      <Clock fill={"var(--color-4)"} size={28} />{" "}
+                      {nextClass.duration} min
+                    </span>
                   </div>
                 </div>
               )}
@@ -203,8 +272,8 @@ const DashboardPage = () => {
                     Inicia:{" "}
                     {format(
                       new Date(nextCourse.start_date),
-                      "EEEE, dd/MM/yyyy",
-                      { locale: es }
+                      "EEEE, dd/MM/yyyy, h:mm a",
+                      { locale: es },
                     )}
                   </p>
                   <p className={styles.upcomingDescription}>
@@ -223,8 +292,8 @@ const DashboardPage = () => {
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className={styles.quickActions}>
           <h2>Accesos Rápidos</h2>

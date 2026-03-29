@@ -4,18 +4,20 @@ import ClassForm from "@/views/sections/pages/dashboard/classes/ClassForm";
 import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import StatusBadge from "@/views/components/ui/StatusBadge";
 import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import { useNotifications } from "@/providers/NotificationProvider";
 import {
   closeLoading,
+  confirmReauth,
   confirmUnenroll,
   toastError,
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { useEffect, useState } from "react";
 
 const ClassesPage = () => {
@@ -64,7 +66,7 @@ const ClassesPage = () => {
   const handleUnenroll = async (classId) => {
     const result = await confirmUnenroll(
       "¿Cancelar inscripción?",
-      "Se eliminará tu inscripción a esta clase"
+      "Se eliminará tu inscripción a esta clase",
     );
 
     if (!result.isConfirmed) return;
@@ -76,7 +78,7 @@ const ClassesPage = () => {
         `/api/classes/sign-up/${classId}?userId=${session.user.id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       const data = await res.json();
@@ -94,7 +96,7 @@ const ClassesPage = () => {
       toastSuccess(
         3000,
         "Operación exitosa",
-        "Tu inscripción ha sido cancelada"
+        "Tu inscripción ha sido cancelada",
       );
     } catch (err) {
       console.error("Error unenrolling from class:", err);
@@ -102,7 +104,7 @@ const ClassesPage = () => {
       toastError(
         3000,
         "Ha habido un error",
-        "No se pudo cancelar la inscripción"
+        "No se pudo cancelar la inscripción",
       );
     }
   };
@@ -116,7 +118,7 @@ const ClassesPage = () => {
         return toastError(
           3000,
           "Ha habido un error",
-          "No se pudo iniciar la autorización"
+          "No se pudo iniciar la autorización",
         );
       }
 
@@ -127,7 +129,7 @@ const ClassesPage = () => {
       toastError(
         3000,
         "Ha habido un error",
-        "No se pudo conectar con Google Calendar"
+        "No se pudo conectar con Google Calendar",
       );
     }
   };
@@ -151,21 +153,17 @@ const ClassesPage = () => {
 
         // If token was revoked, offer to re-authorize
         if (data.requiresReauth) {
-          const result = await Swal.fire({
-            icon: "warning",
-            title: "Autorización expirada",
-            text: data.message,
-            showCancelButton: true,
-            confirmButtonText: "Volver a autorizar",
-            cancelButtonText: "Cancelar",
-          });
+          const result = await confirmReauth(data.message);
 
           if (result.isConfirmed) {
-            // Update state to show "Connect Google Calendar" button
             setHasCalendarAccess(false);
-            // Redirect to Google authorization
-            const authUrl = `/api/google-calendar?userId=${session.user.id}`;
-            window.location.href = authUrl;
+            const authRes = await fetch(
+              `/api/google-calendar?userId=${session.user.id}`,
+            );
+            const authData = await authRes.json();
+            if (authData.authUrl) {
+              window.location.href = authData.authUrl;
+            }
           }
           return;
         }
@@ -183,14 +181,14 @@ const ClassesPage = () => {
                 googleMeetLink: data.googleMeetLink,
                 calendarEventLink: data.calendarEventLink,
               }
-            : c
-        )
+            : c,
+        ),
       );
 
       toastSuccess(
         4000,
         "Operación exitosa",
-        data.googleMeetLink ? "Clase creada con Google Meet" : "Clase creada"
+        data.googleMeetLink ? "Clase creada con Google Meet" : "Clase creada",
       );
 
       // Notification created for admin
@@ -203,7 +201,7 @@ const ClassesPage = () => {
       toastError(
         3000,
         "Ha habido un error",
-        "No se pudo agregar a Google Calendar"
+        "No se pudo agregar a Google Calendar",
       );
       setAddingToCalendar(null);
     }
@@ -216,9 +214,35 @@ const ClassesPage = () => {
     }
   };
 
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === "published" ? "draft" : "published";
+    try {
+      const res = await fetch(`/api/classes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+      setClasses(
+        classes.map((c) => (c._id === id ? { ...c, status: newStatus } : c)),
+      );
+      toastSuccess(
+        3000,
+        "Operación exitosa",
+        newStatus === "published" ? "Clase publicada" : "Clase ocultada",
+      );
+    } catch (err) {
+      console.error("Error toggling class status:", err);
+      toastError(3000, "Ha habido un error", "No se pudo cambiar el estado");
+    }
+  };
+
   const fetchClasses = async () => {
     try {
-      const res = await fetch("/api/classes");
+      const res = await fetch("/api/classes?showAll=true");
       if (!res.ok) throw new Error("Error fetching classes");
 
       const data = await res.json();
@@ -226,7 +250,7 @@ const ClassesPage = () => {
       // Filter classes based on user role
       if (session?.user?.role === "user") {
         const userClasses = data.data.filter((classItem) =>
-          classItem.participants?.includes(session.user.id)
+          classItem.participants?.includes(session.user.id),
         );
         setClasses(userClasses);
       } else {
@@ -261,11 +285,13 @@ const ClassesPage = () => {
                   <thead>
                     <tr>
                       <th>Título</th>
+                      <th>Curso</th>
                       <th>Fecha</th>
                       <th>Hora</th>
                       <th>Duración</th>
                       <th>Precio</th>
                       <th>Participantes</th>
+                      <th>Estado</th>
                       <th>Google</th>
                       <th>Acciones</th>
                     </tr>
@@ -274,13 +300,9 @@ const ClassesPage = () => {
                     {classes.map((classItem) => (
                       <tr key={classItem._id}>
                         <td>{classItem.title}</td>
+                        <td>{classItem.courseTitle || "—"}</td>
                         <td>
-                          {format(new Date(classItem.start_date), "dd/MM/yyyy")}{" "}
-                          (
-                          {formatDistanceToNow(new Date(classItem.start_date), {
-                            locale: es,
-                          })}
-                          )
+                          {format(new Date(classItem.start_date), "dd/MM/yyyy")}
                         </td>
                         <td>
                           {format(new Date(classItem.start_date), "h:mm a")}
@@ -288,12 +310,21 @@ const ClassesPage = () => {
                         <td>{classItem.duration} min</td>
                         <td>
                           {classItem.price === 0
-                            ? "Sin costo"
+                            ? "Gratis"
                             : `$${classItem.price}`}
                         </td>
                         <td>
                           {classItem.participants?.length || 0} /{" "}
                           {classItem.max_participants || "∞"}
+                        </td>
+                        <td>
+                          <StatusBadge status={classItem.status}>
+                            {classItem.status === "published"
+                              ? "Publicada"
+                              : classItem.status === "enrolled"
+                                ? "Asociada"
+                                : "Borrador"}
+                          </StatusBadge>
                         </td>
                         <td>
                           {!hasCalendarAccess ? (
@@ -346,7 +377,31 @@ const ClassesPage = () => {
                               fill={"var(--color-4)"}
                               href={`/dashboard/classes/${classItem._id}`}
                               icon={"Eye"}
+                              title={"Ver detalles"}
                             />
+                            {classItem.status !== "enrolled" && (
+                              <IconLink
+                                asButton
+                                danger={classItem.status === "published"}
+                                icon={
+                                  classItem.status === "published"
+                                    ? "Pin"
+                                    : "Confetti"
+                                }
+                                success={classItem.status !== "published"}
+                                onClick={() =>
+                                  handleToggleStatus(
+                                    classItem._id,
+                                    classItem.status,
+                                  )
+                                }
+                                title={
+                                  classItem.status === "published"
+                                    ? "Ocultar"
+                                    : "Publicar"
+                                }
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -387,6 +442,7 @@ const ClassesPage = () => {
                 <thead>
                   <tr>
                     <th>Título</th>
+                    <th>Curso</th>
                     <th>Fecha</th>
                     <th>Hora</th>
                     <th>Duración</th>
@@ -399,21 +455,20 @@ const ClassesPage = () => {
                   {classes.map((classItem) => (
                     <tr key={classItem._id}>
                       <td>{classItem.title}</td>
+                      <td>{classItem.courseTitle || "—"}</td>
                       <td>
-                        {format(new Date(classItem.start_date), "dd/MM/yyyy")} (
-                        {formatDistanceToNow(new Date(classItem.start_date), {
-                          locale: es,
-                        })}
-                        )
+                        {format(new Date(classItem.start_date), "dd/MM/yyyy")}
                       </td>
                       <td>
                         {format(new Date(classItem.start_date), "h:mm a")}
                       </td>
                       <td>{classItem.duration} min</td>
                       <td>
-                        {classItem.price === 0
-                          ? "Sin costo"
-                          : `$${classItem.price}`}
+                        {classItem.courseTitle
+                          ? "Incluido en el curso"
+                          : classItem.price === 0
+                            ? "Gratis"
+                            : `$${classItem.price}`}
                       </td>
                       <td>
                         {classItem.googleEventId ? (
@@ -434,6 +489,7 @@ const ClassesPage = () => {
                           <IconLink
                             asButton
                             danger
+                            disabled={classItem.status === "enrolled"}
                             icon="Delete"
                             onClick={() => handleUnenroll(classItem._id)}
                           />

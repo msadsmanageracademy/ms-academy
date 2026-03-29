@@ -112,3 +112,16 @@ export const confirmUnenroll = (title, text) => {
 export const closeLoading = () => {
   Swal.close();
 };
+
+export const confirmReauth = (message) => {
+  return Swal.fire({
+    icon: "warning",
+    title: "Autorización expirada",
+    text: message,
+    showCancelButton: true,
+    confirmButtonColor: "var(--success)",
+    cancelButtonColor: "#6b7280",
+    confirmButtonText: "Volver a autorizar",
+    cancelButtonText: "Cancelar",
+  });
+};

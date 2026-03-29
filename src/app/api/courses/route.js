@@ -5,15 +5,44 @@ import clientPromise from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { prepareCourseForDB } from "@/models/schemas";
 
-export async function GET() {
+const courseAggregationPipeline = (matchStage = {}) => [
+  { $match: matchStage },
+  {
+    $lookup: {
+      from: "classes",
+      let: { courseId: "$_id" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$courseId", "$$courseId"] } } },
+        { $sort: { start_date: 1 } },
+      ],
+      as: "assignedClasses",
+    },
+  },
+  {
+    $addFields: {
+      amount_of_classes: { $size: "$assignedClasses" },
+      start_date: { $min: "$assignedClasses.start_date" },
+      end_date: { $max: "$assignedClasses.start_date" },
+      total_duration: { $sum: "$assignedClasses.duration" },
+    },
+  },
+  { $unset: "assignedClasses" },
+  { $sort: { createdAt: -1 } },
+];
+
+export async function GET(req) {
   try {
+    const { searchParams } = new URL(req.url);
+    const showAll = searchParams.get("showAll") === "true";
+
+    const matchStage = showAll ? {} : { status: "published" };
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const coursesCollection = db.collection("courses");
 
     const courses = await coursesCollection
-      .find({})
-      .sort({ start_date: 1 }) // Ascendente
+      .aggregate(courseAggregationPipeline(matchStage))
       .toArray();
 
     return Response.json(
@@ -21,26 +50,24 @@ export async function GET() {
         success: true,
         data: courses,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     return Response.json(
       {
         error: error.message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
+
+export { courseAggregationPipeline };
 
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
     const body = await req.json();
-
-    // Dado que JSON convierte todo a string, vuelvo a darle el formato a la fechas
-    if (body.start_date) body.start_date = new Date(body.start_date);
-    if (body.end_date) body.end_date = new Date(body.end_date);
 
     const parsedBody = CourseFormSchema.safeParse(body);
 
@@ -51,19 +78,7 @@ export async function POST(req) {
           message: "El formato de los datos es inválido",
           details: parsedBody.error.errors,
         },
-        { status: 400 }
-      );
-    }
-
-    const now = new Date();
-    if (body.start_date <= now) {
-      return Response.json(
-        {
-          success: false,
-          message:
-            "No se pueden crear cursos con fechas pasadas. Solo se permiten eventos futuros.",
-        },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -73,18 +88,18 @@ export async function POST(req) {
 
     // Prepare data for DB with server-side fields
     const courseData = prepareCourseForDB(
-      body,
-      session?.user?.id ? new ObjectId(session.user.id) : undefined
+      parsedBody.data,
+      session?.user?.id ? new ObjectId(session.user.id) : undefined,
     );
 
-    await coursesCollection.insertOne(courseData);
+    const result = await coursesCollection.insertOne(courseData);
 
     return Response.json(
       {
         success: true,
         message: `Curso creado con éxito`,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error al crear el curso:", error);

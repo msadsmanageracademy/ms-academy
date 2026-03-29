@@ -35,12 +35,30 @@
   font-size: 1.1rem;
 }
 
+.statsSection {
+  margin-bottom: 2rem;
+  max-width: 1200px;
+}
+
+.statsGroup {
+  margin-bottom: 1.5rem;
+}
+
+.statsGroupLabel {
+  color: var(--color-4);
+  display: block;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
 .statsGrid {
   display: grid;
   gap: 1.5rem;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   margin-bottom: 2rem;
-  max-width: 1200px;
 }
 
 .statCard {
@@ -48,7 +66,9 @@
   border: 2px solid var(--color-2);
   border-radius: 0.5rem;
   padding: 1.5rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .statCard:hover {
@@ -121,7 +141,9 @@
   box-shadow: 0 4px 12px rgba(255, 159, 28, 0.15);
   padding: 1.5rem;
   position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .upcomingCard:hover {

@@ -62,6 +62,7 @@ export const ClassFormSchema = z.object({
   price: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" }),
+  courseId: z.string().optional(),
   googleEventId: z.string().optional(),
   googleEventUrl: z.string().optional(),
 });
@@ -74,22 +75,6 @@ export const CourseFormSchema = z.object({
   full_description: z
     .string()
     .min(10, { message: "Debe contener al menos 10 caracteres" }),
-  duration: z
-    .number({ message: "Debe ingresar un número" })
-    .positive({ message: "Debe ingresar 1 o mayor" }),
-  start_date: z
-    .date({ message: "Debe seleccionar una fecha de inicio" })
-    .refine((date) => date > new Date(), {
-      message: "Día/horario deben ser posteriores al actual",
-    }),
-  end_date: z
-    .date({ message: "Debe seleccionar una fecha de finalización" })
-    .refine((date) => date > new Date(), {
-      message: "Día/horario deben ser posteriores al actual",
-    }),
-  amount_of_classes: z
-    .number({ message: "Debe ingresar un número" })
-    .min(2, { message: "Debe haber al menos 2 clases" }),
   max_participants: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" })
@@ -98,8 +83,7 @@ export const CourseFormSchema = z.object({
   price: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" }),
-  googleEventId: z.string().optional(),
-  googleEventUrl: z.string().optional(),
+  status: z.enum(["draft", "published"]).optional(),
 });
 
 export const AddGoogleInformationToEvent = z.object({
