@@ -1,8 +1,7 @@
 import { ClassFormSchema } from "@/utils/validation";
 import { ObjectId } from "mongodb";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
-import { getServerSession } from "next-auth";
 import { prepareClassForDB, prepareNotificationForDB } from "@/models/schemas";
 
 export async function GET(req) {
@@ -28,7 +27,7 @@ export async function GET(req) {
 
     // User's own classes (enrolled or participant, any status)
     if (myClasses) {
-      const session = await getServerSession(authOptions);
+      const session = await auth();
       if (!session) {
         return Response.json(
           { success: false, message: "No autorizado" },
@@ -116,7 +115,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const body = await req.json();
 
     // Dado que JSON convierte todo a string, vuelvo a darle el formato a la fechas

@@ -1,16 +1,17 @@
-import CredentialsProvider from "next-auth/providers/credentials";
-import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
-import GoogleProvider from "next-auth/providers/google";
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
 import { compare } from "bcryptjs";
+import { authConfig } from "./auth.config";
 
-export const authOptions = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: MongoDBAdapter(clientPromise),
-  session: {
-    strategy: "jwt",
-  },
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -27,18 +28,18 @@ export const authOptions = {
         if (!user) throw new Error("Usuario no encontrado");
 
         const isValid = await compare(credentials.password, user.password);
-        if (!isValid) throw new Error("Contraseña incorrecta");
+        if (!isValid) throw new Error("Contrasena incorrecta");
 
         return {
-          name: user.first_name, // Estará si el usuario completó su perfil
-          id: user._id,
+          name: user.first_name,
+          id: user._id.toString(),
           email: user.email,
           role: user.role,
           hasAuthorizedCalendar: user.hasAuthorizedCalendar || false,
         };
       },
     }),
-    GoogleProvider({
+    Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
@@ -53,36 +54,26 @@ export const authOptions = {
   ],
   callbacks: {
     async jwt({ token, trigger, session, user, account }) {
-      /* Si trigger === "update", quiere decir que utilicé el método update() de next-auth (en el FE)
-        El objeto session es lo que paso como parámetro en update() en el FE
-        Actualizo la propiedad del token con la información que envío desde FE, esto me permite por ejemplo editar el perfil y actualizar la info de la session */
-
       if (trigger === "update" && session?.name) {
-        const updatedToken = { ...token, name: session.name };
-
-        return updatedToken;
+        return { ...token, name: session.name };
       }
-
-      // Acá decido qué guardo en el token, que luego puedo recuperar en la sesión
 
       if (user && account?.provider === "credentials") {
         return {
-          name: user.first_name, // Estará si el usuario completó su perfil
+          name: user.name,
           id: user.id,
           email: user.email,
           role: user.role,
+          hasAuthorizedCalendar: user.hasAuthorizedCalendar || false,
         };
       }
 
-      // Si el usuario inicia sesión con Google y ya tenía una sesión, fusiono la info
       if (user && account?.provider === "google") {
         const client = await clientPromise;
         const db = client.db(process.env.MONGODB_DB_NAME);
         const usersCollection = db.collection("users");
 
-        let existingUser = await usersCollection.findOne({
-          email: user.email,
-        });
+        let existingUser = await usersCollection.findOne({ email: user.email });
 
         if (!existingUser) {
           const newUser = {
@@ -91,18 +82,14 @@ export const authOptions = {
             role: "user",
           };
           const result = await usersCollection.insertOne(newUser);
-
           existingUser = { ...newUser, _id: result.insertedId };
         }
 
-        // En caso de loguearse con Google después de haber creado una cuenta regular, actualizo sus datos en la DB para incluir la imagen de Google
-
         if (existingUser && !existingUser.image) {
-          const result = await usersCollection.updateOne(
+          await usersCollection.updateOne(
             { _id: existingUser._id },
-            { $set: { image: user.image } }
+            { $set: { image: user.image } },
           );
-          if (!result) throw new Error("Usuario no encontrado");
         }
 
         return {
@@ -120,7 +107,6 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      // Fetch fresh hasAuthorizedCalendar status from database
       let hasAuthorizedCalendar = token.hasAuthorizedCalendar || false;
 
       if (token.id) {
@@ -128,16 +114,12 @@ export const authOptions = {
           const client = await clientPromise;
           const db = client.db(process.env.MONGODB_DB_NAME);
           const usersCollection = db.collection("users");
-          const { ObjectId } = require("mongodb");
 
           const user = await usersCollection.findOne(
             { _id: new ObjectId(token.id) },
-            { projection: { hasAuthorizedCalendar: 1 } }
+            { projection: { hasAuthorizedCalendar: 1 } },
           );
-
-          if (user) {
-            hasAuthorizedCalendar = user.hasAuthorizedCalendar || false;
-          }
+          if (user) hasAuthorizedCalendar = user.hasAuthorizedCalendar || false;
         } catch (error) {
           console.error("Error fetching calendar authorization status:", error);
         }
@@ -152,13 +134,9 @@ export const authOptions = {
         hasAuthorizedCalendar,
       };
       session.googleAccessToken = token.googleAccessToken || null;
-      session.googleScope = token.googleScope || null; // Pasamos el scope a la sesión
+      session.googleScope = token.googleScope || null;
 
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
-  // pages: {
-  //   signIn: "/dashboard",
-  // },
-};
+});

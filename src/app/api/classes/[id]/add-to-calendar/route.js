@@ -1,7 +1,6 @@
 import { ObjectId } from "mongodb";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
-import { getServerSession } from "next-auth";
 import { google } from "googleapis";
 import { prepareNotificationForDB } from "@/models/schemas";
 
@@ -84,7 +83,7 @@ async function getValidTokens(userId) {
 
 export async function POST(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session || session.user.role !== "admin") {
       return Response.json(

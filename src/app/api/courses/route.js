@@ -1,8 +1,7 @@
 import { CourseFormSchema } from "@/utils/validation";
 import { ObjectId } from "mongodb";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
-import { getServerSession } from "next-auth";
 import { prepareCourseForDB } from "@/models/schemas";
 
 const courseAggregationPipeline = (matchStage = {}) => [
@@ -66,7 +65,7 @@ export { courseAggregationPipeline };
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     const body = await req.json();
 
     const parsedBody = CourseFormSchema.safeParse(body);

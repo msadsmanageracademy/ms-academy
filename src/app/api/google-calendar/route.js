@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { google } from "googleapis";
 
 // Initialize OAuth2 client
@@ -17,7 +16,7 @@ const SCOPES = [
 
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session) {
       return Response.json(

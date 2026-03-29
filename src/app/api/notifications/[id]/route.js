@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
-import { getServerSession } from "next-auth";
 
 // PATCH /api/notifications/[id] - Mark single notification as read
 export async function PATCH(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -56,7 +55,7 @@ export async function PATCH(req, { params }) {
 // DELETE /api/notifications/[id] - Delete single notification
 export async function DELETE(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
