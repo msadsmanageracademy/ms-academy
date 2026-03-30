@@ -6,6 +6,7 @@ import PageLoader from "@/views/components/layout/PageLoader";
 import PageWrapper from "@/views/components/layout/PageWrapper";
 import { signIn } from "next-auth/react";
 import { toastLoading } from "@/utils/alerts";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -13,19 +14,20 @@ const LoginPage = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  useEffect(() => {
+    if (session) {
+      router.push("/dashboard");
+    }
+  }, [session, router]);
+
   const handleGoogleLogin = async () => {
     toastLoading("Procesando tu solicitud", "Iniciando sesión con Google...");
     await signIn("google", { callbackUrl: "/dashboard" });
   };
 
-  // Para casos en los que el usuario ya haya iniciado sesión pero acceda a /login
+  if (status === "loading") return <PageLoader />;
 
-  if (!session && status === "loading") return <PageLoader />;
-
-  if (session) {
-    router.push("/dashboard");
-    return null;
-  }
+  if (session) return null;
 
   return (
     <PageWrapper>

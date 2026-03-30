@@ -13,6 +13,7 @@ const IconLink = ({
   google = false,
   icon,
   onClick,
+  size = 20,
   spinning = false,
   success,
   text = "",
@@ -39,7 +40,7 @@ const IconLink = ({
     >
       {IconComponent && (
         <span className={spinning ? styles.spinning : ""}>
-          <IconComponent fill={fill} filled={filled} />
+          <IconComponent fill={fill} filled={filled} size={size} />
         </span>
       )}
       {text && <span className={styles.text}>{text}</span>}
@@ -48,7 +49,7 @@ const IconLink = ({
     <Link className={classes.join(" ")} {...props}>
       {IconComponent && (
         <span className={spinning ? styles.spinning : ""}>
-          <IconComponent fill={fill} filled={filled} />
+          <IconComponent fill={fill} filled={filled} size={size} />
         </span>
       )}
       {text && <span className={styles.text}>{text}</span>}

@@ -8,10 +8,9 @@ import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import { useNotifications } from "@/providers/NotificationProvider";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   closeLoading,
-  confirmDelete,
   confirmUnenroll,
   toastError,
   toastLoading,
@@ -25,8 +24,6 @@ const ClassDetailPage = () => {
   const { data: session } = useSession();
 
   const { incrementCount } = useNotifications();
-
-  const router = useRouter();
 
   const [classData, setClassData] = useState(null);
   const [courseTitle, setCourseTitle] = useState(null);
@@ -95,41 +92,6 @@ const ClassDetailPage = () => {
       );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    const result = await confirmDelete(
-      "¿Eliminar clase?",
-      "Esta acción no se puede deshacer",
-    );
-
-    if (!result.isConfirmed) return;
-
-    toastLoading(
-      "Eliminando clase...",
-      "Se eliminará la clase y su evento de Google Calendar si existe",
-    );
-
-    try {
-      const res = await fetch(`/api/classes/${id}`, {
-        method: "DELETE",
-      });
-
-      closeLoading();
-
-      if (!res.ok) throw new Error("Error deleting class");
-
-      toastSuccess(
-        3000,
-        "Operación exitosa",
-        "La clase se eliminó correctamente",
-      );
-      router.push("/dashboard/classes");
-    } catch (err) {
-      console.error("Error deleting class:", err);
-      closeLoading();
-      toastError(3000, "Ha habido un error", "No se pudo eliminar la clase");
     }
   };
 
@@ -282,12 +244,6 @@ const ClassDetailPage = () => {
                   icon="Pencil"
                   onClick={() => setEditMode(true)}
                 />
-                <IconLink
-                  asButton
-                  danger
-                  icon="Delete"
-                  onClick={handleDelete}
-                />
               </div>
             </div>
             <div className={styles.infoGrid}>
@@ -377,32 +333,28 @@ const ClassDetailPage = () => {
               {classData.googleEventId && (
                 <>
                   <div className={styles.infoItem}>
-                    <span className={styles.label}>Google Calendar:</span>
+                    <span className={styles.label}>Google:</span>
                     <span className={styles.value}>
-                      <IconLink
-                        href={classData.calendarEventLink}
-                        icon="GoogleCalendar"
-                        text="Ver evento"
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      />
-                    </span>
-                  </div>
-
-                  {classData.googleMeetLink && (
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>Google Meet:</span>
-                      <span className={styles.value}>
+                      {classData.googleMeetLink && (
                         <IconLink
                           href={classData.googleMeetLink}
                           icon="GoogleMeet"
-                          text="Abrir Meet"
                           rel="noopener noreferrer"
+                          size={24}
                           target="_blank"
                         />
-                      </span>
-                    </div>
-                  )}
+                      )}
+                      {classData.calendarEventLink && (
+                        <IconLink
+                          href={classData.calendarEventLink}
+                          icon="GoogleCalendar"
+                          rel="noopener noreferrer"
+                          size={24}
+                          target="_blank"
+                        />
+                      )}
+                    </span>
+                  </div>
                 </>
               )}
             </div>

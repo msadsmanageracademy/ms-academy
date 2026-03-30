@@ -75,42 +75,255 @@ export async function PATCH(req, { params }) {
       }
       const client = await clientPromise;
       const db = client.db(process.env.MONGODB_DB_NAME);
+      const classToToggle = await db.collection("classes").findOne(
+        { _id: new ObjectId(id) },
+        {
+          projection: { status: 1, participants: 1, title: 1, createdBy: 1 },
+        },
+      );
+      if (!classToToggle) {
+        return Response.json(
+          { success: false, message: "Clase no encontrada" },
+          { status: 404 },
+        );
+      }
+      if (classToToggle.status === "enrolled") {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "No se puede cambiar el estado de una clase asignada a un curso",
+          },
+          { status: 400 },
+        );
+      }
+
+      const revertingToDraft =
+        body.status === "draft" && classToToggle.participants?.length > 0;
+
+      const updateOp = revertingToDraft
+        ? { $set: { status: "draft", participants: [], updatedAt: new Date() } }
+        : { $set: { status: body.status, updatedAt: new Date() } };
+
       const result = await db
         .collection("classes")
-        .updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { status: body.status, updatedAt: new Date() } },
-        );
+        .updateOne({ _id: new ObjectId(id) }, updateOp);
       if (result.matchedCount === 0) {
         return Response.json(
           { success: false, message: "Clase no encontrada" },
           { status: 404 },
         );
       }
+
+      // Build notifications
+      const notificationsToCreate = [];
+
+      // Notify removed participants
+      if (revertingToDraft) {
+        for (const participantId of classToToggle.participants) {
+          notificationsToCreate.push(
+            prepareNotificationForDB({
+              userId: participantId,
+              type: "class.removed_by_admin",
+              title: "Suscripción anulada",
+              message: `Has sido dado de baja de la clase "${classToToggle.title}" porque fue movida a borrador`,
+              relatedId: new ObjectId(id),
+              relatedType: "class",
+            }),
+          );
+        }
+      }
+
       // Notify admin about status change
-      const classForNotif = await db
-        .collection("classes")
-        .findOne(
-          { _id: new ObjectId(id) },
-          { projection: { title: 1, createdBy: 1 } },
-        );
-      if (classForNotif?.createdBy) {
+      if (classToToggle.createdBy) {
         const statusLabel =
           body.status === "published" ? "publicada" : "movida a borrador";
-        await db.collection("notifications").insertOne(
+        notificationsToCreate.push(
           prepareNotificationForDB({
-            userId: classForNotif.createdBy,
+            userId: classToToggle.createdBy,
             type: "class.status_changed",
             title: "Estado de clase actualizado",
-            message: `La clase "${classForNotif.title}" fue ${statusLabel}`,
+            message: `La clase "${classToToggle.title}" fue ${statusLabel}`,
             relatedId: new ObjectId(id),
             relatedType: "class",
-            actorId: classForNotif.createdBy,
+            actorId: classToToggle.createdBy,
           }),
         );
       }
+
+      if (notificationsToCreate.length > 0) {
+        await db.collection("notifications").insertMany(notificationsToCreate);
+      }
+      const updatedClass = await db
+        .collection("classes")
+        .findOne(
+          { _id: new ObjectId(id) },
+          { projection: { status: 1, participants: 1 } },
+        );
       return Response.json(
-        { success: true, message: "Estado actualizado" },
+        { success: true, message: "Estado actualizado", data: updatedClass },
+        { status: 200 },
+      );
+    }
+
+    // courseId-only update — skip full form validation
+    if (Object.keys(body).length === 1 && "courseId" in body) {
+      const client = await clientPromise;
+      const db = client.db(process.env.MONGODB_DB_NAME);
+      const classesCollection = db.collection("classes");
+      const coursesCollection = db.collection("courses");
+
+      const existingClass = await classesCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      if (!existingClass) {
+        return Response.json(
+          { success: false, message: "Clase no encontrada" },
+          { status: 404 },
+        );
+      }
+
+      const courseIdRaw = body.courseId;
+      const isRemoving = courseIdRaw === null || courseIdRaw === "";
+      const isAssigning = courseIdRaw && ObjectId.isValid(courseIdRaw);
+
+      if (isAssigning && existingClass.status === "published") {
+        return Response.json(
+          {
+            success: false,
+            message: "No se puede vincular una clase publicada a un curso",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (!isRemoving && !isAssigning) {
+        return Response.json(
+          { success: false, message: "courseId inválido" },
+          { status: 400 },
+        );
+      }
+
+      const updateOp = isRemoving
+        ? {
+            $set: { status: "draft", updatedAt: new Date() },
+            $unset: { courseId: "" },
+          }
+        : {
+            $set: {
+              courseId: new ObjectId(courseIdRaw),
+              status: "enrolled",
+              updatedAt: new Date(),
+            },
+          };
+
+      await classesCollection.updateOne({ _id: new ObjectId(id) }, updateOp);
+
+      const notificationsToCreate = [];
+
+      if (isAssigning && existingClass.createdBy) {
+        const assignedCourse = await coursesCollection.findOne(
+          { _id: new ObjectId(courseIdRaw) },
+          { projection: { title: 1, participants: 1, status: 1 } },
+        );
+        const courseTitle = assignedCourse?.title || "";
+
+        // If course is published and has participants, add them to the class
+        if (
+          assignedCourse?.status === "published" &&
+          assignedCourse?.participants?.length > 0
+        ) {
+          const participantObjectIds = assignedCourse.participants.map(
+            (p) => new ObjectId(p),
+          );
+          await classesCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $addToSet: { participants: { $each: participantObjectIds } } },
+          );
+        }
+        notificationsToCreate.push(
+          prepareNotificationForDB({
+            userId: existingClass.createdBy,
+            type: "class.status_changed",
+            title: "Clase asignada a curso",
+            message: `La clase "${existingClass.title}" fue asignada al curso "${courseTitle}"`,
+            relatedId: new ObjectId(id),
+            relatedType: "class",
+            actorId: existingClass.createdBy,
+          }),
+        );
+        assignedCourse?.participants?.forEach((participantId) => {
+          notificationsToCreate.push(
+            prepareNotificationForDB({
+              userId: participantId,
+              type: "class.added_to_course",
+              title: "Nueva clase en tu curso",
+              message: `Se agregó la clase "${existingClass.title}" al curso "${courseTitle}"`,
+              relatedId: new ObjectId(id),
+              relatedType: "class",
+              actorId: existingClass.createdBy,
+            }),
+          );
+        });
+      } else if (
+        isRemoving &&
+        existingClass.courseId &&
+        existingClass.createdBy
+      ) {
+        const removedCourse = await coursesCollection.findOne(
+          { _id: existingClass.courseId },
+          { projection: { title: 1, participants: 1 } },
+        );
+        const courseTitle = removedCourse?.title || "";
+
+        // Remove course participants from the class
+        if (removedCourse?.participants?.length > 0) {
+          const participantObjectIds = removedCourse.participants.map(
+            (p) => new ObjectId(p),
+          );
+          await classesCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $pull: { participants: { $in: participantObjectIds } } },
+          );
+        }
+
+        notificationsToCreate.push(
+          prepareNotificationForDB({
+            userId: existingClass.createdBy,
+            type: "class.status_changed",
+            title: "Clase removida de curso",
+            message: `La clase "${existingClass.title}" fue eliminada del curso "${courseTitle}"`,
+            relatedId: new ObjectId(id),
+            relatedType: "class",
+            actorId: existingClass.createdBy,
+          }),
+        );
+        removedCourse?.participants?.forEach((participantId) => {
+          notificationsToCreate.push(
+            prepareNotificationForDB({
+              userId: participantId,
+              type: "class.removed_from_course",
+              title: "Clase removida de tu curso",
+              message: `La clase "${existingClass.title}" fue eliminada del curso "${courseTitle}"`,
+              relatedId: new ObjectId(id),
+              relatedType: "class",
+              actorId: existingClass.createdBy,
+            }),
+          );
+        });
+      }
+
+      if (notificationsToCreate.length > 0) {
+        await db.collection("notifications").insertMany(notificationsToCreate);
+      }
+
+      const updatedClass = await classesCollection.findOne(
+        { _id: new ObjectId(id) },
+        { projection: { courseId: 1, status: 1, participants: 1 } },
+      );
+
+      return Response.json(
+        { success: true, message: "Curso actualizado", data: updatedClass },
         { status: 200 },
       );
     }
@@ -415,6 +628,16 @@ export async function DELETE(req, { params }) {
           message: "Clase no encontrada",
         },
         { status: 404 },
+      );
+    }
+
+    if (classItem.status !== "draft") {
+      return Response.json(
+        {
+          success: false,
+          message: "Solo se pueden eliminar clases en estado borrador",
+        },
+        { status: 400 },
       );
     }
 

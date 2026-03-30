@@ -9,8 +9,8 @@ export const MinusSign = ({
 }) => {
   return (
     <svg
-      width={size || width || 48}
-      height={size || height || 48}
+      width={size || width || 24}
+      height={size || height || 24}
       viewBox="0 0 48 48"
       fill={filled ? fill : "none"}
       xmlns="http://www.w3.org/2000/svg"

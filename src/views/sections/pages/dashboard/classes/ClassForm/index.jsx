@@ -20,7 +20,6 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
   const isEditMode = !!classData;
   const { incrementCount } = useNotifications();
   const [addToCalendar, setAddToCalendar] = useState(false);
-  const [courses, setCourses] = useState([]);
 
   const {
     formState: { errors },
@@ -28,7 +27,6 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
     handleSubmit,
     register,
     reset,
-    setValue,
   } = useForm({
     resolver: zodResolver(ClassFormSchema),
     defaultValues: classData
@@ -39,36 +37,14 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
           duration: classData.duration,
           max_participants: classData.max_participants || 0,
           price: classData.price || 0,
-          courseId: classData.courseId?.toString() || "",
         }
       : {
           max_participants: 0,
           price: 0,
-          courseId: "",
         },
   });
 
   const router = useRouter();
-
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const res = await fetch("/api/courses?showAll=true");
-        if (!res.ok) return;
-        const data = await res.json();
-        setCourses(data.data || []);
-      } catch {
-        // Non-critical — course selector just won't populate
-      }
-    };
-    fetchCourses();
-  }, []);
-
-  useEffect(() => {
-    if (isEditMode && classData?.courseId && courses.length > 0) {
-      setValue("courseId", classData.courseId.toString());
-    }
-  }, [courses, isEditMode]);
 
   useEffect(() => {
     if (classData) {
@@ -79,7 +55,6 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
         duration: classData.duration,
         max_participants: classData.max_participants || 0,
         price: classData.price || 0,
-        courseId: classData.courseId?.toString() || "",
       });
     }
   }, [classData, reset]);
@@ -91,7 +66,6 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
     duration,
     max_participants,
     price,
-    courseId,
   }) => {
     try {
       if (isEditMode) {
@@ -120,7 +94,6 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
           duration,
           max_participants,
           price,
-          courseId: courseId || "",
         }),
       });
 
@@ -265,18 +238,6 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
         />
       </div>
       <div className={styles.formCustomError}>{errors?.price?.message}</div>
-
-      <div className={styles.formRow}>
-        <label>Curso (opcional)</label>
-        <select {...register("courseId")} className={styles.input}>
-          <option value="">Sin curso (clase independiente)</option>
-          {courses.map((course) => (
-            <option key={course._id} value={course._id}>
-              {course.title}
-            </option>
-          ))}
-        </select>
-      </div>
 
       {!isEditMode && hasCalendarAccess && (
         <div className={styles.checkboxRow}>

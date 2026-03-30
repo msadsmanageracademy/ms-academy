@@ -139,3 +139,42 @@ export const confirmReauth = (message) => {
     cancelButtonText: "Cancelar",
   });
 };
+
+export const confirmAddToCalendar = (title) => {
+  return Swal.fire({
+    title: "¿Agregar a Google Calendar?",
+    text: `Se creará un evento para "${title}" en tu Google Calendar`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "var(--success)",
+    cancelButtonColor: "#6b7280",
+    confirmButtonText: "Sí, agregar",
+    cancelButtonText: "Cancelar",
+  });
+};
+
+export const confirmUnlink = (classTitle, courseTitle) => {
+  return Swal.fire({
+    title: "¿Desvincular clase?",
+    text: `"${classTitle}" será desvinculada del curso "${courseTitle}"`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "var(--danger)",
+    cancelButtonColor: "#6b7280",
+    confirmButtonText: "Sí, desvincular",
+    cancelButtonText: "Cancelar",
+  });
+};
+
+export const confirmDeleteItem = (type, title) => {
+  return Swal.fire({
+    title: `¿Eliminar ${type}?`,
+    text: `"${title}" será eliminado de forma permanente`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "var(--danger)",
+    cancelButtonColor: "#6b7280",
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+  });
+};

@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import IconLink from "@/views/components/ui/IconLink";
 import {
   closeLoading,
+  confirmDeleteItem,
   confirmToggleStatus,
   confirmUnenroll,
   toastError,
@@ -70,6 +71,28 @@ const CoursesPage = () => {
         "Ha habido un error",
         "No se pudo cancelar la inscripción",
       );
+    }
+  };
+
+  const handleDeleteCourse = async (courseId, title) => {
+    const result = await confirmDeleteItem("curso", title);
+    if (!result.isConfirmed) return;
+
+    toastLoading("Procesando tu solicitud", "Eliminando curso...");
+
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, { method: "DELETE" });
+      const data = await res.json();
+      closeLoading();
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+      setCourses(courses.filter((c) => c._id !== courseId));
+      toastSuccess(3000, "Operación exitosa", "Curso eliminado");
+    } catch (err) {
+      console.error("Error deleting course:", err);
+      closeLoading();
+      toastError(3000, "Ha habido un error", "No se pudo eliminar el curso");
     }
   };
 
@@ -224,6 +247,20 @@ const CoursesPage = () => {
                                 course.status === "published"
                                   ? "Ocultar"
                                   : "Publicar"
+                              }
+                            />
+                            <IconLink
+                              asButton
+                              danger
+                              disabled={course.status !== "draft"}
+                              icon={"Delete"}
+                              onClick={() =>
+                                handleDeleteCourse(course._id, course.title)
+                              }
+                              title={
+                                course.status !== "draft"
+                                  ? "Solo se pueden eliminar cursos en borrador"
+                                  : "Eliminar"
                               }
                             />
                           </div>

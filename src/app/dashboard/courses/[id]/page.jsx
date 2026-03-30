@@ -7,10 +7,9 @@ import StatusBadge from "@/views/components/ui/StatusBadge";
 import styles from "./styles.module.css";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   closeLoading,
-  confirmDelete,
   confirmUnenroll,
   toastError,
   toastLoading,
@@ -21,7 +20,6 @@ import { useEffect, useState } from "react";
 const CourseDetailPage = () => {
   const { id } = useParams();
   const { data: session } = useSession();
-  const router = useRouter();
 
   const [courseData, setCourseData] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -77,38 +75,6 @@ const CourseDetailPage = () => {
       );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    const result = await confirmDelete(
-      "¿Eliminar curso?",
-      "Esta acción no se puede deshacer",
-    );
-
-    if (!result.isConfirmed) return;
-
-    toastLoading("Eliminando curso...", "Se eliminará el curso y sus datos");
-
-    try {
-      const res = await fetch(`/api/courses/${id}`, {
-        method: "DELETE",
-      });
-
-      closeLoading();
-
-      if (!res.ok) throw new Error("Error deleting course");
-
-      toastSuccess(
-        3000,
-        "Operación exitosa",
-        "El curso se eliminó correctamente",
-      );
-      router.push("/dashboard/courses");
-    } catch (err) {
-      console.error("Error deleting course:", err);
-      closeLoading();
-      toastError(3000, "Ha habido un error", "No se pudo eliminar el curso");
     }
   };
 
@@ -206,12 +172,6 @@ const CourseDetailPage = () => {
                   warning
                   icon="Pencil"
                   onClick={() => setEditMode(true)}
-                />
-                <IconLink
-                  asButton
-                  danger
-                  icon="Delete"
-                  onClick={handleDelete}
                 />
               </div>
             </div>

@@ -186,18 +186,16 @@ export async function PATCH(req, { params }) {
         }
 
         // Clear course participants
-        await db
-          .collection("courses")
-          .updateOne(
-            { _id: new ObjectId(id) },
-            {
-              $set: {
-                participants: [],
-                status: "draft",
-                updatedAt: new Date(),
-              },
+        await db.collection("courses").updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              participants: [],
+              status: "draft",
+              updatedAt: new Date(),
             },
-          );
+          },
+        );
 
         return Response.json(
           { success: true, message: "Estado actualizado" },
@@ -327,6 +325,16 @@ export async function DELETE(req, { params }) {
           message: "Curso no encontrado",
         },
         { status: 404 },
+      );
+    }
+
+    if (course.status !== "draft") {
+      return Response.json(
+        {
+          success: false,
+          message: "Solo se pueden eliminar cursos en estado borrador",
+        },
+        { status: 400 },
       );
     }
 
