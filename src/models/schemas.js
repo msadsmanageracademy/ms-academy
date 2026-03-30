@@ -117,11 +117,13 @@ export const NotificationDBSchema = z.object({
     "course.participant_removed",
     "course.payment_received",
     "course.status_changed",
+    // Contact
+    "contact.message",
   ]),
   title: z.string(),
   message: z.string(),
   relatedId: z.instanceof(Object).optional(), // ObjectId - Reference to class/course/user
-  relatedType: z.enum(["class", "course", "user"]).optional(),
+  relatedType: z.enum(["class", "course", "user", "contact"]).optional(),
   actorId: z.instanceof(Object).optional(), // ObjectId - Who performed the action
   read: z.boolean().default(false),
   createdAt: z.date(),

@@ -28,6 +28,22 @@ export const RegisterFormSchema = z.object({
   role: z.enum(["user", "admin"]),
 });
 
+export const ContactFormSchema = z.object({
+  name: z
+    .string()
+    .min(2, { message: "El nombre debe tener al menos 2 caracteres" })
+    .trim(),
+  email: z.string().email({ message: "Ingresá un email válido" }).trim(),
+  subject: z
+    .string()
+    .min(3, { message: "El asunto debe tener al menos 3 caracteres" })
+    .trim(),
+  message: z
+    .string()
+    .min(10, { message: "El mensaje debe tener al menos 10 caracteres" })
+    .trim(),
+});
+
 export const EditAccountFormSchema = RegisterFormSchema.omit({
   email: true,
   password: true,
