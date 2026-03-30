@@ -1,5 +1,17 @@
 import Swal from "sweetalert2";
 
+const confirmMixin = Swal.mixin({
+  background: "var(--color-7)",
+  cancelButtonColor: "#4b5563",
+  cancelButtonText: "Cancelar",
+  customClass: { popup: "confirm-popup" },
+  imageAlt: "MS Academy",
+  imageUrl: "/images/logo-2.png",
+  imageWidth: 80,
+  reverseButtons: true,
+  showCancelButton: true,
+});
+
 export const toastError = (timer, title, text) => {
   Swal.fire({
     background: `var(--color-7)`,
@@ -68,130 +80,91 @@ export const toastSuccess = (timer, title, text) => {
   });
 };
 
+export const closeLoading = () => {
+  Swal.close();
+};
+
 export const confirmDelete = (title, text) => {
-  return Swal.fire({
+  return confirmMixin.fire({
     title,
     text,
-    icon: "warning",
-    showCancelButton: true,
     confirmButtonColor: "var(--danger)",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, eliminar",
-    cancelButtonText: "Cancelar",
+    confirmButtonText: "Eliminar",
   });
 };
 
 export const confirmSignUp = (title, text) => {
-  return Swal.fire({
+  return confirmMixin.fire({
     title,
     text,
-    icon: "question",
-    showCancelButton: true,
     confirmButtonColor: "var(--success)",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, inscribirme",
-    cancelButtonText: "Cancelar",
+    confirmButtonText: "Inscribirme",
   });
 };
 
 export const confirmUnenroll = (title, text) => {
-  return Swal.fire({
+  return confirmMixin.fire({
     title,
-    reverseButtons: true,
     text,
-    icon: "warning",
-    showCancelButton: true,
     confirmButtonColor: "var(--danger)",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, cancelar inscripción",
+    confirmButtonText: "Cancelar inscripción",
     cancelButtonText: "Volver",
   });
 };
 
 export const confirmToggleStatus = (newStatus, type) => {
   const toPublish = newStatus === "published";
-  return Swal.fire({
-    reverseButtons: true,
+  return confirmMixin.fire({
     title: toPublish ? `¿Publicar ${type}?` : `¿Archivar ${type}?`,
     text: toPublish
-      ? `El ${type} será visible para los usuarios`
-      : `El ${type} dejará de ser público y se eliminarán las inscripciones`,
-    icon: "warning",
-    showCancelButton: true,
+      ? `Se publicará para los usuarios en el cartel de anuncios`
+      : `Se ocultará al público y se eliminarán las inscripciones`,
     confirmButtonColor: toPublish ? "var(--success)" : "var(--danger)",
-    cancelButtonColor: "#6b7280",
     confirmButtonText: toPublish ? "Publicar" : "Archivar",
-    cancelButtonText: "Cancelar",
   });
 };
 
-export const closeLoading = () => {
-  Swal.close();
-};
-
 export const confirmReauth = (message) => {
-  return Swal.fire({
-    icon: "warning",
+  return confirmMixin.fire({
     title: "Autorización expirada",
     text: message,
-    showCancelButton: true,
     confirmButtonColor: "var(--success)",
-    cancelButtonColor: "#6b7280",
     confirmButtonText: "Volver a autorizar",
-    cancelButtonText: "Cancelar",
   });
 };
 
 export const confirmAddToCalendar = (title) => {
-  return Swal.fire({
-    reverseButtons: true,
+  return confirmMixin.fire({
     title: "¿Agregar a Google Calendar?",
     text: `Se creará un evento para "${title}" en tu Google Calendar`,
-    icon: "question",
-    showCancelButton: true,
     confirmButtonColor: "var(--success)",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, agregar",
-    cancelButtonText: "Cancelar",
+    confirmButtonText: "Agregar",
   });
 };
 
 export const confirmUnlink = (classTitle, courseTitle) => {
-  return Swal.fire({
-    reverseButtons: true,
+  return confirmMixin.fire({
     title: "¿Desvincular clase?",
     text: `"${classTitle}" será desvinculada del curso "${courseTitle}"`,
-    icon: "warning",
-    showCancelButton: true,
     confirmButtonColor: "var(--danger)",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, desvincular",
-    cancelButtonText: "Cancelar",
+    confirmButtonText: "Desvincular",
   });
 };
 
 export const confirmDeleteItem = (type, title) => {
-  return Swal.fire({
+  return confirmMixin.fire({
     title: `¿Eliminar ${type}?`,
-    text: `"${title}" será eliminado de forma permanente`,
-    icon: "warning",
-    showCancelButton: true,
+    text: `Se eliminará "${title}" de forma permanente`,
     confirmButtonColor: "var(--danger)",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, eliminar",
-    cancelButtonText: "Cancelar",
+    confirmButtonText: "Eliminar",
   });
 };
 
 export const confirmPayment = (courseTitle) => {
-  return Swal.fire({
+  return confirmMixin.fire({
     title: "Confirmar pago",
     text: `¿Confirmar el pago para el curso "${courseTitle}"?`,
-    icon: "question",
-    showCancelButton: true,
     confirmButtonColor: "var(--success)",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, confirmar pago",
-    cancelButtonText: "Cancelar",
+    confirmButtonText: "Confirmar pago",
   });
 };

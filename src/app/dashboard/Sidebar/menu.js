@@ -12,12 +12,6 @@ const SIDEBAR_MENU = [
     roles: ["user", "admin"],
   },
   {
-    href: "/dashboard/notifications",
-    iconKey: "Bell",
-    label: "Notificaciones",
-    roles: ["user", "admin"],
-  },
-  {
     href: "/dashboard/classes",
     iconKey: "NavbarClasses",
     label: "Clases",
@@ -27,6 +21,12 @@ const SIDEBAR_MENU = [
     href: "/dashboard/courses",
     iconKey: "Courses",
     label: "Cursos",
+    roles: ["user", "admin"],
+  },
+  {
+    href: "/dashboard/notifications",
+    iconKey: "Bell",
+    label: "Notificaciones",
     roles: ["user", "admin"],
   },
 ];

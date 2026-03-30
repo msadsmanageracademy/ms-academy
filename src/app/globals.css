@@ -114,6 +114,43 @@ svg {
   border-right-color: transparent !important;
 }
 
+/* SweetAlert2 Confirmation Modal */
+.confirm-popup {
+  border-radius: 16px !important;
+  border-top: 3px solid var(--color-3) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+  padding: 1.5rem 2rem 2rem !important;
+}
+
+.confirm-popup .swal2-image {
+  margin-bottom: 0 !important;
+  margin-top: 0.5rem !important;
+}
+
+.confirm-popup .swal2-title {
+  color: #e3e3e3 !important;
+  font-size: 1.2rem !important;
+  padding-top: 0.25rem !important;
+}
+
+.confirm-popup .swal2-html-container {
+  color: rgba(227, 227, 227, 0.7) !important;
+  font-size: 0.9rem !important;
+}
+
+.confirm-popup .swal2-actions {
+  gap: 0.5rem !important;
+  margin-top: 1.5rem !important;
+}
+
+.confirm-popup .swal2-confirm,
+.confirm-popup .swal2-cancel {
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.55rem 1.2rem !important;
+}
+
 /* Reusable classes */
 
 .wrapper {
