@@ -11,6 +11,7 @@ import IconLink from "@/views/components/ui/IconLink";
 import {
   closeLoading,
   confirmDeleteItem,
+  confirmPayment,
   confirmToggleStatus,
   confirmUnenroll,
   toastError,
@@ -152,10 +153,10 @@ const CoursesPage = () => {
 
       const data = await res.json();
 
-      // Filter courses based on user role
       if (session?.user?.role === "user") {
-        const userCourses = data.data.filter((course) =>
-          course.participants?.includes(session.user.id),
+        // Show only courses where the user has an enrollment (pending or paid)
+        const userCourses = data.data.filter(
+          (course) => course.userPaymentStatus != null,
         );
         setCourses(userCourses);
       } else {
@@ -165,6 +166,39 @@ const CoursesPage = () => {
       console.error("Error fetching courses:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmPayment = async (courseId, courseTitle) => {
+    const result = await confirmPayment(courseTitle);
+    if (!result.isConfirmed) return;
+
+    toastLoading("Procesando tu solicitud", "Confirmando pago...");
+
+    try {
+      const res = await fetch(`/api/courses/confirm-payment/${courseId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.user.id }),
+      });
+
+      const data = await res.json();
+      closeLoading();
+
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+
+      setCourses(
+        courses.map((c) =>
+          c._id === courseId ? { ...c, userPaymentStatus: "paid" } : c,
+        ),
+      );
+      toastSuccess(3000, "Pago confirmado", "¡Ya estás inscripto en el curso!");
+    } catch (err) {
+      console.error("Error confirming payment:", err);
+      closeLoading();
+      toastError(3000, "Ha habido un error", "No se pudo confirmar el pago");
     }
   };
 
@@ -193,6 +227,7 @@ const CoursesPage = () => {
                       <th>Clases</th>
                       <th>Precio</th>
                       <th>Participantes</th>
+                      <th>Pagos</th>
                       <th>Estado</th>
                       <th>Acciones</th>
                     </tr>
@@ -216,6 +251,9 @@ const CoursesPage = () => {
                         <td>
                           {course.participants?.length || 0} /{" "}
                           {course.max_participants || "∞"}
+                        </td>
+                        <td>
+                          {course.paidCount ?? 0} / {course.enrolledCount ?? 0}
                         </td>
                         <td>
                           <StatusBadge status={course.status}>
@@ -259,7 +297,7 @@ const CoursesPage = () => {
                               }
                               title={
                                 course.status !== "draft"
-                                  ? "Solo se pueden eliminar cursos en borrador"
+                                  ? "Solo se pueden eliminar cursos archivados"
                                   : "Eliminar"
                               }
                             />
@@ -296,41 +334,74 @@ const CoursesPage = () => {
               <PrimaryLink href="/content" text="Ver próximas actividades" />
             </div>
           ) : (
-            <div className={styles.courseGrid}>
-              {courses.map((course) => (
-                <div key={course._id} className={styles.courseCard}>
-                  <h3>{course.title}</h3>
-                  <p>{course.short_description}</p>
-                  {course.start_date && (
-                    <p>
-                      <strong>Inicio:</strong>{" "}
-                      {format(new Date(course.start_date), "dd/MM/yyyy")}
-                    </p>
-                  )}
-                  {course.end_date && (
-                    <p>
-                      <strong>Fin:</strong>{" "}
-                      {format(new Date(course.end_date), "dd/MM/yyyy")}
-                    </p>
-                  )}
-                  {course.amount_of_classes > 0 && (
-                    <p>
-                      <strong>Clases:</strong> {course.amount_of_classes}
-                    </p>
-                  )}
-                  <p>
-                    <strong>Precio:</strong> ${course.price}
-                  </p>
-                  <div className={styles.actions}>
-                    <PrimaryLink
-                      asButton
-                      danger
-                      text={"Cancelar inscripción"}
-                      onClick={() => handleUnenroll(course._id)}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className={styles.tableContainer}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Título</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Clases</th>
+                    <th>Precio</th>
+                    <th>Pago</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {courses.map((course) => (
+                    <tr key={course._id}>
+                      <td>{course.title}</td>
+                      <td>
+                        {course.start_date
+                          ? format(new Date(course.start_date), "dd/MM/yyyy")
+                          : "—"}
+                      </td>
+                      <td>
+                        {course.end_date
+                          ? format(new Date(course.end_date), "dd/MM/yyyy")
+                          : "—"}
+                      </td>
+                      <td>{course.amount_of_classes ?? 0}</td>
+                      <td>${course.price}</td>
+                      <td>
+                        <StatusBadge
+                          status={
+                            course.userPaymentStatus === "paid"
+                              ? "published"
+                              : "pending"
+                          }
+                        >
+                          {course.userPaymentStatus === "paid"
+                            ? "Pagado"
+                            : "Pendiente"}
+                        </StatusBadge>
+                      </td>
+                      <td>
+                        <div className={styles.actionButtons}>
+                          {course.userPaymentStatus === "pending" && (
+                            <IconLink
+                              asButton
+                              icon={"Money"}
+                              onClick={() =>
+                                handleConfirmPayment(course._id, course.title)
+                              }
+                              success
+                              title={"Confirmar pago"}
+                            />
+                          )}
+                          <IconLink
+                            asButton
+                            danger
+                            icon={"UserMinus"}
+                            onClick={() => handleUnenroll(course._id)}
+                            title={"Cancelar inscripción"}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

@@ -4,6 +4,7 @@ import {
   addTimestampToUpdate,
   prepareNotificationForDB,
 } from "@/models/schemas";
+import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
 
 const courseAggregationPipeline = (matchStage) => [
@@ -62,6 +63,30 @@ export async function GET(req, { params }) {
         { status: 404 },
       );
     }
+
+    // Attach userPaymentStatus for authenticated users
+    const session = await auth();
+    if (session?.user?.id) {
+      const enrollment = await db
+        .collection("courseEnrollments")
+        .findOne(
+          { userId: new ObjectId(session.user.id), courseId: new ObjectId(id) },
+          { projection: { paymentStatus: 1 } },
+        );
+      course.userPaymentStatus = enrollment?.paymentStatus ?? null;
+    }
+
+    // Build enrollmentMap from all courseEnrollments (pending + paid)
+    const enrollments = await db
+      .collection("courseEnrollments")
+      .find(
+        { courseId: new ObjectId(id) },
+        { projection: { userId: 1, paymentStatus: 1 } },
+      )
+      .toArray();
+    course.enrollmentMap = Object.fromEntries(
+      enrollments.map((e) => [e.userId.toString(), e.paymentStatus]),
+    );
 
     return Response.json(
       {
@@ -154,7 +179,7 @@ export async function PATCH(req, { params }) {
                 userId: participantId,
                 type: "class.removed_by_admin",
                 title: "Suscripción anulada",
-                message: `Has sido dado de baja de la clase "${classItem.title}" porque el curso al que pertenecía fue movido a borrador`,
+                message: `Has sido dado de baja de la clase "${classItem.title}" porque el curso al que pertenecía fue archivado por un administrador`,
                 relatedId: classItem._id,
                 relatedType: "class",
               }),
@@ -170,7 +195,7 @@ export async function PATCH(req, { params }) {
                   userId: participantId,
                   type: "course.removed_by_admin",
                   title: "Suscripción anulada",
-                  message: `Has sido dado de baja del curso porque fue movido a borrador`,
+                  message: `Has sido dado de baja del curso porque fue archivado por un administrador`,
                   relatedId: new ObjectId(id),
                   relatedType: "course",
                 }),
@@ -332,7 +357,7 @@ export async function DELETE(req, { params }) {
       return Response.json(
         {
           success: false,
-          message: "Solo se pueden eliminar cursos en estado borrador",
+          message: "Solo se pueden eliminar cursos en estado archivado",
         },
         { status: 400 },
       );

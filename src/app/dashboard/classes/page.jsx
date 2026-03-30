@@ -367,20 +367,16 @@ const ClassesPage = () => {
 
   const fetchClasses = async () => {
     try {
-      const res = await fetch("/api/classes?showAll=true");
+      const url =
+        session?.user?.role === "user"
+          ? "/api/classes?myClasses=true"
+          : "/api/classes?showAll=true";
+
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Error fetching classes");
 
       const data = await res.json();
-
-      // Filter classes based on user role
-      if (session?.user?.role === "user") {
-        const userClasses = data.data.filter((classItem) =>
-          classItem.participants?.includes(session.user.id),
-        );
-        setClasses(userClasses);
-      } else {
-        setClasses(data.data || []);
-      }
+      setClasses(data.data || []);
     } catch (err) {
       console.error("Error fetching classes:", err);
     } finally {
@@ -611,7 +607,7 @@ const ClassesPage = () => {
                                 }
                                 title={
                                   classItem.status !== "draft"
-                                    ? "Solo se pueden eliminar clases en borrador"
+                                    ? "Solo se pueden eliminar clases archivadas"
                                     : "Eliminar"
                                 }
                               />
@@ -703,7 +699,12 @@ const ClassesPage = () => {
                               : `$${classItem.price}`}
                         </td>
                         <td>
-                          {classItem.googleEventId ? (
+                          {classItem.courseId &&
+                          classItem.userCoursePaymentStatus !== "paid" ? (
+                            <span className={styles.lockedMeet}>
+                              🔒 Pago pendiente
+                            </span>
+                          ) : classItem.googleEventId ? (
                             <div className={styles.calendarStatus}>
                               <IconLink
                                 href={classItem.googleMeetLink}
@@ -713,7 +714,7 @@ const ClassesPage = () => {
                               />
                             </div>
                           ) : (
-                            "-"
+                            "Próximamente"
                           )}
                         </td>
                         <td>

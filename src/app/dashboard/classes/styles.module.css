@@ -56,6 +56,12 @@
   width: 100%;
 }
 
+.lockedMeet {
+  color: var(--color-5);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
 .googleLink {
   margin: 0 auto;
   max-width: 175px;

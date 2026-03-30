@@ -139,8 +139,9 @@
   border: 2px solid var(--color-2);
   border-radius: 0.75rem;
   box-shadow: 0 4px 12px rgba(255, 159, 28, 0.15);
+  display: flex;
+  flex-direction: column;
   padding: 1.5rem;
-  position: relative;
   transition:
     transform 0.2s,
     box-shadow 0.2s;
@@ -152,23 +153,21 @@
 }
 
 .upcomingBadge {
+  align-self: flex-start;
   background: var(--color-2);
   border-radius: 0.25rem;
   color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
+  margin-bottom: 1.25rem;
   padding: 0.25rem 0.75rem;
-  position: absolute;
-  right: 1rem;
   text-transform: uppercase;
-  top: 1rem;
 }
 
 .upcomingCard h3 {
   color: var(--color-4);
   font-size: 1.25rem;
-  margin-bottom: 0.75rem;
-  margin-right: 6rem;
+  margin-bottom: 1.25rem;
 }
 
 .upcomingDate {

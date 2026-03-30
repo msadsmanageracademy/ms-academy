@@ -31,6 +31,7 @@ const courseAggregationPipeline = (matchStage = {}) => [
 
 export async function GET(req) {
   try {
+    const session = await auth();
     const { searchParams } = new URL(req.url);
     const showAll = searchParams.get("showAll") === "true";
 
@@ -43,6 +44,47 @@ export async function GET(req) {
     const courses = await coursesCollection
       .aggregate(courseAggregationPipeline(matchStage))
       .toArray();
+
+    // Attach userPaymentStatus for authenticated users
+    if (session?.user?.id) {
+      const userId = new ObjectId(session.user.id);
+      const enrollments = await db
+        .collection("courseEnrollments")
+        .find(
+          { userId, courseId: { $in: courses.map((c) => c._id) } },
+          { projection: { courseId: 1, paymentStatus: 1 } },
+        )
+        .toArray();
+      const enrollmentMap = Object.fromEntries(
+        enrollments.map((e) => [e.courseId.toString(), e.paymentStatus]),
+      );
+      for (const course of courses) {
+        course.userPaymentStatus = enrollmentMap[course._id.toString()] ?? null;
+      }
+    }
+
+    // For admin: attach paid/total enrollment counts per course
+    if (session?.user?.role === "admin" && courses.length > 0) {
+      const allEnrollments = await db
+        .collection("courseEnrollments")
+        .find(
+          { courseId: { $in: courses.map((c) => c._id) } },
+          { projection: { courseId: 1, paymentStatus: 1 } },
+        )
+        .toArray();
+      const countMap = {};
+      for (const e of allEnrollments) {
+        const key = e.courseId.toString();
+        if (!countMap[key]) countMap[key] = { total: 0, paid: 0 };
+        countMap[key].total++;
+        if (e.paymentStatus === "paid") countMap[key].paid++;
+      }
+      for (const course of courses) {
+        const counts = countMap[course._id.toString()] ?? { total: 0, paid: 0 };
+        course.enrolledCount = counts.total;
+        course.paidCount = counts.paid;
+      }
+    }
 
     return Response.json(
       {

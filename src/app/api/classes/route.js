@@ -34,7 +34,7 @@ export async function GET(req) {
           { status: 401 },
         );
       }
-      const classes = await classesCollection
+      let classes = await classesCollection
         .aggregate([
           { $match: { participants: new ObjectId(session.user.id) } },
           {
@@ -55,6 +55,34 @@ export async function GET(req) {
         ])
         .toArray();
 
+      // Strip Google links for classes in courses where user hasn't paid
+      if (session.user.role !== "admin") {
+        const enrollments = await db
+          .collection("courseEnrollments")
+          .find({ userId: new ObjectId(session.user.id) })
+          .project({ courseId: 1, paymentStatus: 1 })
+          .toArray();
+        const enrollmentMap = Object.fromEntries(
+          enrollments.map((e) => [e.courseId.toString(), e.paymentStatus]),
+        );
+        classes = classes.map((cls) => {
+          if (!cls.courseId) return cls;
+          const paymentStatus = enrollmentMap[cls.courseId.toString()] ?? null;
+          const paid = paymentStatus === "paid";
+          return {
+            ...cls,
+            userCoursePaymentStatus: paymentStatus,
+            ...(paid
+              ? {}
+              : {
+                  googleEventId: undefined,
+                  googleMeetLink: undefined,
+                  calendarEventLink: undefined,
+                }),
+          };
+        });
+      }
+
       return Response.json({ success: true, data: classes }, { status: 200 });
     }
 
@@ -68,7 +96,7 @@ export async function GET(req) {
 
     let classes;
     if (showAll) {
-      // Admin view: include courseTitle via lookup
+      // Include courseTitle via lookup
       classes = await classesCollection
         .aggregate([
           { $match: baseFilter },
@@ -89,6 +117,36 @@ export async function GET(req) {
           { $sort: { start_date: 1 } },
         ])
         .toArray();
+
+      // Attach userCoursePaymentStatus and strip Google links for unpaid users
+      const session = await auth();
+      if (session?.user?.id && session.user.role !== "admin") {
+        const enrollments = await db
+          .collection("courseEnrollments")
+          .find({ userId: new ObjectId(session.user.id) })
+          .project({ courseId: 1, paymentStatus: 1 })
+          .toArray();
+        const enrollmentMap = Object.fromEntries(
+          enrollments.map((e) => [e.courseId.toString(), e.paymentStatus]),
+        );
+        classes = classes.map((cls) => {
+          if (!cls.courseId) return cls;
+          const paymentStatus = enrollmentMap[cls.courseId.toString()] ?? null;
+          const paid = paymentStatus === "paid";
+          return {
+            ...cls,
+            userCoursePaymentStatus: paymentStatus,
+            // Strip Google links if user hasn't paid
+            ...(paid
+              ? {}
+              : {
+                  googleEventId: undefined,
+                  googleMeetLink: undefined,
+                  calendarEventLink: undefined,
+                }),
+          };
+        });
+      }
     } else {
       classes = await classesCollection
         .find(baseFilter)

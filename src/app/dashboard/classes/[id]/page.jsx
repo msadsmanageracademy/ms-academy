@@ -335,23 +335,33 @@ const ClassDetailPage = () => {
                   <div className={styles.infoItem}>
                     <span className={styles.label}>Google:</span>
                     <span className={styles.value}>
-                      {classData.googleMeetLink && (
-                        <IconLink
-                          href={classData.googleMeetLink}
-                          icon="GoogleMeet"
-                          rel="noopener noreferrer"
-                          size={24}
-                          target="_blank"
-                        />
-                      )}
-                      {classData.calendarEventLink && (
-                        <IconLink
-                          href={classData.calendarEventLink}
-                          icon="GoogleCalendar"
-                          rel="noopener noreferrer"
-                          size={24}
-                          target="_blank"
-                        />
+                      {classData.courseId &&
+                      session?.user?.role !== "admin" &&
+                      classData.userCoursePaymentStatus !== "paid" ? (
+                        <span className={styles.lockedLinks}>
+                          🔒 Pago pendiente para acceder a los links
+                        </span>
+                      ) : (
+                        <>
+                          {classData.googleMeetLink && (
+                            <IconLink
+                              href={classData.googleMeetLink}
+                              icon="GoogleMeet"
+                              rel="noopener noreferrer"
+                              size={24}
+                              target="_blank"
+                            />
+                          )}
+                          {classData.calendarEventLink && (
+                            <IconLink
+                              href={classData.calendarEventLink}
+                              icon="GoogleCalendar"
+                              rel="noopener noreferrer"
+                              size={24}
+                              target="_blank"
+                            />
+                          )}
+                        </>
                       )}
                     </span>
                   </div>

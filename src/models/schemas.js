@@ -61,6 +61,28 @@ export const CourseDBSchema = z.object({
   updatedAt: z.date(),
 });
 
+// ==================== COURSE ENROLLMENT SCHEMAS ====================
+
+export const CourseEnrollmentDBSchema = z.object({
+  userId: z.instanceof(Object), // ObjectId
+  courseId: z.instanceof(Object), // ObjectId
+  paymentStatus: z.enum(["pending", "paid"]).default("pending"),
+  paidAt: z.date().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export function prepareCourseEnrollmentForDB(userId, courseId) {
+  const now = new Date();
+  return {
+    userId,
+    courseId,
+    paymentStatus: "pending",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 // ==================== NOTIFICATION SCHEMAS ====================
 
 export const NotificationDBSchema = z.object({
@@ -81,15 +103,19 @@ export const NotificationDBSchema = z.object({
     "class.added_to_calendar",
     "class.status_changed",
     // Course - User notifications
+    "course.pre_enrolled",
     "course.enrolled",
     "course.unenrolled",
     "course.removed_by_admin",
     "course.updated",
+    "course.payment_confirmed",
     // Course - Admin notifications
     "course.created",
     "course.participant_joined",
+    "course.participant_pre_joined",
     "course.participant_left",
     "course.participant_removed",
+    "course.payment_received",
     "course.status_changed",
   ]),
   title: z.string(),

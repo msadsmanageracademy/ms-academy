@@ -48,9 +48,11 @@ const CourseDetailPage = () => {
         setClasses(classesData.data || []);
       }
 
-      if (data.data.participants && data.data.participants.length > 0) {
+      // Fetch all enrollees (pending + paid) from enrollmentMap
+      const allEnrolleeIds = Object.keys(data.data.enrollmentMap || {});
+      if (allEnrolleeIds.length > 0) {
         const participantsData = await Promise.all(
-          data.data.participants.map(async (participantId) => {
+          allEnrolleeIds.map(async (participantId) => {
             try {
               const userRes = await fetch(`/api/users/${participantId}`);
               if (userRes.ok) {
@@ -347,6 +349,7 @@ const CourseDetailPage = () => {
                       <th>Nombre</th>
                       <th>Apellido</th>
                       <th>Email</th>
+                      <th>Pago</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -356,6 +359,21 @@ const CourseDetailPage = () => {
                         <td>{participant.first_name}</td>
                         <td>{participant.last_name || "-"}</td>
                         <td>{participant.email}</td>
+                        <td>
+                          <StatusBadge
+                            status={
+                              courseData.enrollmentMap?.[participant._id] ===
+                              "paid"
+                                ? "published"
+                                : "pending"
+                            }
+                          >
+                            {courseData.enrollmentMap?.[participant._id] ===
+                            "paid"
+                              ? "Pagado"
+                              : "Pendiente"}
+                          </StatusBadge>
+                        </td>
                         <td>
                           <div className={styles.actionButtons}>
                             <IconLink

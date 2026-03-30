@@ -4,6 +4,7 @@ import {
   addTimestampToUpdate,
   prepareNotificationForDB,
 } from "@/models/schemas";
+import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
 import { google } from "googleapis";
 
@@ -36,6 +37,28 @@ export async function GET(req, { params }) {
         },
         { status: 404 },
       );
+    }
+
+    // If class belongs to a course, attach payment status and strip Google links if unpaid
+    const session = await auth();
+    if (classItem.courseId && session?.user?.id) {
+      const enrollment = await db.collection("courseEnrollments").findOne(
+        {
+          userId: new ObjectId(session.user.id),
+          courseId: classItem.courseId,
+        },
+        { projection: { paymentStatus: 1 } },
+      );
+      classItem.userCoursePaymentStatus = enrollment?.paymentStatus ?? null;
+
+      if (
+        session.user.role !== "admin" &&
+        classItem.userCoursePaymentStatus !== "paid"
+      ) {
+        delete classItem.googleEventId;
+        delete classItem.googleMeetLink;
+        delete classItem.calendarEventLink;
+      }
     }
 
     return Response.json(
@@ -126,7 +149,7 @@ export async function PATCH(req, { params }) {
               userId: participantId,
               type: "class.removed_by_admin",
               title: "Suscripción anulada",
-              message: `Has sido dado de baja de la clase "${classToToggle.title}" porque fue movida a borrador`,
+              message: `Has sido dado de baja de la clase "${classToToggle.title}" porque fue archivada por un administrador`,
               relatedId: new ObjectId(id),
               relatedType: "class",
             }),
@@ -137,7 +160,7 @@ export async function PATCH(req, { params }) {
       // Notify admin about status change
       if (classToToggle.createdBy) {
         const statusLabel =
-          body.status === "published" ? "publicada" : "movida a borrador";
+          body.status === "published" ? "publicada" : "archivada";
         notificationsToCreate.push(
           prepareNotificationForDB({
             userId: classToToggle.createdBy,
@@ -635,7 +658,7 @@ export async function DELETE(req, { params }) {
       return Response.json(
         {
           success: false,
-          message: "Solo se pueden eliminar clases en estado borrador",
+          message: "Solo se pueden eliminar clases en estado archivado",
         },
         { status: 400 },
       );

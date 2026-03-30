@@ -1,9 +1,10 @@
 import styles from "./styles.module.css";
 
 const statusClassMap = {
-  published: styles.published,
-  enrolled: styles.enrolled,
   draft: styles.draft,
+  enrolled: styles.enrolled,
+  pending: styles.pending,
+  published: styles.published,
 };
 
 export default function StatusBadge({ status, children }) {
