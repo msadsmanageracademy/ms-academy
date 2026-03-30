@@ -1,0 +1,47 @@
+.cta {
+  background-color: var(--color-6);
+  padding: 5rem 2rem;
+  width: 100%;
+}
+
+.inner {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  margin: 0 auto;
+  max-width: 750px;
+  text-align: center;
+}
+
+.title {
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.accent {
+  color: var(--color-2);
+}
+
+.subtitle {
+  color: rgba(227, 227, 227, 0.75);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  max-width: 50ch;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .title {
+    font-size: 2.25rem;
+  }
+}

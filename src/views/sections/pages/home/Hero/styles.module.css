@@ -1,54 +1,116 @@
 .hero {
-  background-color: var(--gray-100);
-  color: #000;
-  display: flex;
-  flex-direction: column;
-  margin: 3rem auto;
-  max-width: 1200px;
-  min-height: 400px;
-  padding: 5rem 2.75rem;
-}
-
-.heroHeader {
   align-items: center;
+  background-color: var(--color-7);
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  justify-content: center;
-}
-
-.heroImage {
-  align-items: center;
-  border: #000 2px solid;
-  color: #000;
-  display: flex;
-  font-size: 2.5rem;
-  font-weight: 700;
-  max-width: 375px;
-  justify-content: center;
-  min-height: 375px;
-  text-align: center;
+  min-height: calc(90vh - var(--navbar-height));
+  padding: calc(var(--navbar-height) + 5rem) 2rem 5rem 2rem;
   width: 100%;
+}
+
+.heroInner {
+  align-items: center;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3rem;
+  margin: 0 auto;
+  max-width: 1200px;
 }
 
 .heroText {
   display: flex;
   flex-direction: column;
-  font-size: 1.25rem;
-  gap: 1.75rem;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  border-left: 3px solid var(--color-2);
+  color: var(--color-2);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  padding-left: 0.75rem;
+  text-transform: uppercase;
+}
+
+.headline {
+  color: #fff;
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.accent {
+  color: var(--color-2);
+}
+
+.subheadline {
+  color: rgba(227, 227, 227, 0.7);
+  font-size: 1.1rem;
+  line-height: 1.7;
+  max-width: 48ch;
+}
+
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.heroImageWrapper {
+  display: flex;
   justify-content: center;
-  max-width: 50ch;
   width: 100%;
 }
 
-.link {
-  margin-left: auto;
-  max-width: 325px;
+.heroImageRing {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px var(--color-2),
+    0 0 40px rgba(255, 159, 28, 0.25);
+  height: 280px;
+  overflow: hidden;
+  width: 280px;
+}
+
+.heroImage {
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .headline {
+    font-size: 2.75rem;
+  }
+
+  .heroImageRing {
+    height: 340px;
+    width: 340px;
+  }
 }
 
 @media (min-width: 992px) {
-  .heroHeader {
+  .heroInner {
     flex-direction: row;
     justify-content: space-between;
+  }
+
+  .heroText {
+    max-width: 55%;
+  }
+
+  .headline {
+    font-size: 3rem;
+  }
+
+  .heroImageWrapper {
+    width: auto;
+  }
+
+  .heroImageRing {
+    height: 400px;
+    width: 400px;
   }
 }
