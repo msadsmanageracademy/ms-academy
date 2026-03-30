@@ -6,26 +6,37 @@ const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const session = req.auth;
+  const path = req.nextUrl.pathname;
 
-  if (!session) {
+  // Redirect authenticated users away from auth pages
+  if (session && (path === "/login" || path === "/register")) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  // All dashboard routes require authentication
+  if (!session && path.startsWith("/dashboard")) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const adminRoutes = ["/dashboard/create-events", "/dashboard/edit-events"];
-  const userRoutes = ["/dashboard/my-classes"];
-  const path = req.nextUrl.pathname;
-
-  if (adminRoutes.includes(path) && session.user?.role !== "admin") {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
-  }
-
-  if (userRoutes.includes(path) && session.user?.role !== "user") {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+  // Detail pages are admin-only
+  if (
+    (/^\/dashboard\/courses\/.+/.test(path) ||
+      /^\/dashboard\/classes\/.+/.test(path)) &&
+    session?.user?.role !== "admin"
+  ) {
+    return NextResponse.redirect(
+      new URL(
+        path.startsWith("/dashboard/courses")
+          ? "/dashboard/courses"
+          : "/dashboard/classes",
+        req.url,
+      ),
+    );
   }
 
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/login", "/register"],
 };
