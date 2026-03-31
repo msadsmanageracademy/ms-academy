@@ -66,6 +66,7 @@ const LoginPage = () => {
         </div>
         <PrimaryLink
           asButton
+          dark
           disabled={loading}
           text={"ingresar"}
           type="submit"

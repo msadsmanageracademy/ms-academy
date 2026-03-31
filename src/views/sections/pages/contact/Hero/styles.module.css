@@ -2,7 +2,7 @@
   align-items: center;
   background-color: var(--color-1);
   display: flex;
-  height: 100vh;
+  min-height: calc(100vh - var(--navbar-height));
   padding: 5rem 2rem;
   width: 100%;
 }

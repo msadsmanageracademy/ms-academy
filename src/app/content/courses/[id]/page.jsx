@@ -163,13 +163,14 @@ const CourseDetail = () => {
         <div className={styles.actionsContainer}>
           {session?.user?.role === "admin" ? (
             <PrimaryLink href={`/dashboard/courses`} text={"Ir a Cursos"} />
-          ) : course.participants?.some(
-              (p) => p.toString() === session?.user?.id,
-            ) ? (
+          ) : course.userPaymentStatus === "paid" ? (
             <PrimaryLink disabled text={"Ya estás inscripto"} />
+          ) : course.userPaymentStatus === "pending" ? (
+            <PrimaryLink disabled text={"Inscripción pendiente de pago"} />
           ) : (
             <PrimaryLink
               asButton
+              dark
               text={"Inscribirse"}
               onClick={() => courseSignUp(course._id)}
             />

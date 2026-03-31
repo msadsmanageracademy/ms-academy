@@ -8,6 +8,7 @@ const CredentialsSection = ({ handleGoogleLogin }) => {
       <div className={styles.title}>Ingresá a tu cuenta</div>
       <PrimaryLink
         asButton
+        dark
         google
         onClick={handleGoogleLogin}
         text={"Iniciar sesión con Google"}

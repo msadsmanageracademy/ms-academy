@@ -94,7 +94,7 @@ const AccountForm = ({ userData, userId, onUpdate }) => {
       <div className={styles.formCustomError}>{errors?.age?.message}</div>
 
       <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
-        <PrimaryLink asButton text="Guardar" type="submit" />
+        <PrimaryLink asButton dark text="Guardar" type="submit" />
       </div>
     </form>
   );

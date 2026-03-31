@@ -23,6 +23,15 @@
   background-color: var(--danger-hover);
 }
 
+.link.dark {
+  background-color: var(--color-4);
+  border-color: #1d3460;
+}
+
+.link.dark:hover {
+  background-color: #1d3460;
+}
+
 .link.disabled {
   border: 1px solid #999999;
   background-color: #cccccc;

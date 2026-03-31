@@ -311,6 +311,7 @@ const CoursesPage = () => {
             )}
             <PrimaryLink
               asButton
+              dark
               text={showCreateForm ? "Cancelar" : "+ Nuevo Curso"}
               onClick={() => setShowCreateForm(!showCreateForm)}
             />
@@ -331,7 +332,11 @@ const CoursesPage = () => {
           {courses.length === 0 ? (
             <div className={styles.noInscriptions}>
               <p>No estás inscrito en ningún curso</p>
-              <PrimaryLink href="/content" text="Ver próximas actividades" />
+              <PrimaryLink
+                dark
+                href="/content"
+                text="Ver próximas actividades"
+              />
             </div>
           ) : (
             <div className={styles.tableContainer}>

@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 
 const ContactForm = () => {
@@ -82,7 +83,6 @@ const ContactForm = () => {
             <span className={styles.error}>{errors.name.message}</span>
           )}
         </div>
-
         <div className={styles.field}>
           <label htmlFor="contact-email">Email</label>
           <input
@@ -98,7 +98,6 @@ const ContactForm = () => {
           )}
         </div>
       </div>
-
       <div className={styles.field}>
         <label htmlFor="contact-subject">Asunto</label>
         <input
@@ -112,7 +111,6 @@ const ContactForm = () => {
           <span className={styles.error}>{errors.subject.message}</span>
         )}
       </div>
-
       <div className={styles.field}>
         <label htmlFor="contact-message">Mensaje</label>
         <textarea
@@ -125,10 +123,13 @@ const ContactForm = () => {
           <span className={styles.error}>{errors.message.message}</span>
         )}
       </div>
-
-      <button type="submit" className={styles.submit} disabled={isSubmitting}>
-        {isSubmitting ? "Enviando..." : "Enviar mensaje"}
-      </button>
+      <PrimaryLink
+        asButton
+        dark
+        disabled={isSubmitting}
+        text={isSubmitting ? "Enviando..." : "Enviar mensaje"}
+        type="submit"
+      />
     </form>
   );
 };

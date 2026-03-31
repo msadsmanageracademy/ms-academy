@@ -5,7 +5,6 @@ import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import StatusBadge from "@/views/components/ui/StatusBadge";
-import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import { useNotifications } from "@/providers/NotificationProvider";
@@ -621,6 +620,7 @@ const ClassesPage = () => {
               )}
               <PrimaryLink
                 asButton
+                dark
                 text={showCreateForm ? "Cancelar" : "+ Nueva Clase"}
                 onClick={() => {
                   setShowCreateForm(!showCreateForm);
@@ -662,7 +662,11 @@ const ClassesPage = () => {
             {classes.length === 0 ? (
               <div className={styles.noInscriptions}>
                 <p>No estás inscrito en ninguna clase</p>
-                <PrimaryLink href="/content" text="Ver próximas actividades" />
+                <PrimaryLink
+                  dark
+                  href="/content"
+                  text="Ver próximas actividades"
+                />
               </div>
             ) : (
               <div className={styles.tableContainer}>

@@ -12,6 +12,7 @@ export default function PrimaryLink({
   calendar = false,
   className = "",
   danger = false,
+  dark = false,
   disabled = false,
   google = false,
   href = "",
@@ -24,6 +25,7 @@ export default function PrimaryLink({
 }) {
   const classes = [styles.link, className];
   if (danger) classes.push(`${styles.danger}`);
+  if (dark) classes.push(`${styles.dark}`);
   if (disabled) classes.push(`${styles.disabled}`);
   return asButton ? (
     <button

@@ -16,6 +16,8 @@ const DashboardPage = () => {
   const [stats, setStats] = useState({
     classes: 0,
     courses: 0,
+    preEnrolledCourses: 0,
+    enrolledCourses: 0,
     publishedClasses: 0,
     draftClasses: 0,
     enrolledClasses: 0,
@@ -95,8 +97,17 @@ const DashboardPage = () => {
         } else {
           // myClasses API already filters by participant, coursesData still needs client-side filter
           const userClasses = classesData.data ?? [];
-          const userCourses = coursesData.data?.filter((c) =>
-            c.participants?.includes(session.user.id),
+          const userCourses =
+            coursesData.data?.filter(
+              (c) =>
+                c.userPaymentStatus === "paid" ||
+                c.userPaymentStatus === "pending",
+            ) ?? [];
+          const preEnrolledCourses = userCourses.filter(
+            (c) => c.userPaymentStatus === "pending",
+          );
+          const enrolledCourses = userCourses.filter(
+            (c) => c.userPaymentStatus === "paid",
           );
 
           // Find next upcoming class for enrolled users
@@ -124,7 +135,9 @@ const DashboardPage = () => {
 
           setStats({
             classes: userClasses.length,
-            courses: userCourses?.length || 0,
+            courses: userCourses.length,
+            preEnrolledCourses: preEnrolledCourses.length,
+            enrolledCourses: enrolledCourses.length,
           });
         }
       } catch (err) {
@@ -200,9 +213,14 @@ const DashboardPage = () => {
                 <div className={styles.label}>Clases inscritas</div>
               </div>
               <div className={styles.statCard}>
+                <h3>Pre-inscripciones</h3>
+                <div className={styles.value}>{stats.preEnrolledCourses}</div>
+                <div className={styles.label}>Pago pendiente</div>
+              </div>
+              <div className={styles.statCard}>
                 <h3>Mis Cursos</h3>
-                <div className={styles.value}>{stats.courses}</div>
-                <div className={styles.label}>Cursos inscritos</div>
+                <div className={styles.value}>{stats.enrolledCourses}</div>
+                <div className={styles.label}>Cursos pagos</div>
               </div>
             </div>
           )}
@@ -299,22 +317,25 @@ const DashboardPage = () => {
           <h2>Accesos Rápidos</h2>
           <div className={styles.actionsGrid}>
             <PrimaryLink
+              dark
               className={styles.actionsGridLink}
               href="/dashboard/classes"
               text="Ver Clases"
             />
             <PrimaryLink
+              dark
               className={styles.actionsGridLink}
               href="/dashboard/courses"
               text="Ver Cursos"
             />
             <PrimaryLink
+              dark
               className={styles.actionsGridLink}
               href="/dashboard/account"
               text="Mi Cuenta"
             />
             {!isAdmin && (
-              <PrimaryLink href="/content" text="Próximas actividades" />
+              <PrimaryLink dark href="/content" text="Próximas actividades" />
             )}
           </div>
         </div>

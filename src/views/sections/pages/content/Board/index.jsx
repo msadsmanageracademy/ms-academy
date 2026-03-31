@@ -39,7 +39,7 @@ export const Board = ({ items, title, type, onSignUp }) => {
                     })}
                   </p>
                 </div>
-                <PrimaryLink asButton onClick={() => onSignUp(_id)} />
+                <PrimaryLink asButton dark onClick={() => onSignUp(_id)} />
               </div>
             ))
           : null}
@@ -69,11 +69,12 @@ export const Board = ({ items, title, type, onSignUp }) => {
                     <p>Cupo: {max_participants ?? "Ilimitado"} </p>
                   </div>
                   <PrimaryLink
+                    dark
                     href={`/content/courses/${_id}`}
                     text={"Ver detalles"}
                   />
                 </div>
-              )
+              ),
             )
           : null}
       </div>
