@@ -295,7 +295,7 @@ export async function PATCH(req, { params }) {
       ) {
         const removedCourse = await coursesCollection.findOne(
           { _id: existingClass.courseId },
-          { projection: { title: 1, participants: 1 } },
+          { projection: { title: 1, participants: 1, status: 1 } },
         );
         const courseTitle = removedCourse?.title || "";
 
@@ -338,6 +338,25 @@ export async function PATCH(req, { params }) {
 
       if (notificationsToCreate.length > 0) {
         await db.collection("notifications").insertMany(notificationsToCreate);
+      }
+
+      // If the course is now left with no classes and was published, revert it to draft
+      if (isRemoving && existingClass.courseId) {
+        const remainingClasses = await classesCollection.countDocuments({
+          courseId: existingClass.courseId,
+        });
+        if (remainingClasses === 0) {
+          const formerCourse = await coursesCollection.findOne(
+            { _id: existingClass.courseId },
+            { projection: { status: 1 } },
+          );
+          if (formerCourse?.status === "published") {
+            await coursesCollection.updateOne(
+              { _id: existingClass.courseId },
+              { $set: { status: "draft", updatedAt: new Date() } },
+            );
+          }
+        }
       }
 
       const updatedClass = await classesCollection.findOne(

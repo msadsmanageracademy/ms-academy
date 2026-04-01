@@ -133,6 +133,15 @@ export const confirmReauth = (message) => {
   });
 };
 
+export const confirmNotify = (title, text) => {
+  return confirmMixin.fire({
+    title,
+    text,
+    confirmButtonColor: "var(--success)",
+    confirmButtonText: "Enviar",
+  });
+};
+
 export const confirmAddToCalendar = (title) => {
   return confirmMixin.fire({
     title: "¿Agregar a Google Calendar?",

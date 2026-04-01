@@ -102,6 +102,7 @@ export const NotificationDBSchema = z.object({
     "class.participant_removed",
     "class.added_to_calendar",
     "class.status_changed",
+    "class.reminder",
     // Course - User notifications
     "course.pre_enrolled",
     "course.enrolled",

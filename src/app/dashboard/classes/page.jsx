@@ -215,6 +215,7 @@ const ClassesPage = () => {
             ? {
                 ...c,
                 ...data.data,
+                courseId: undefined,
                 courseTitle: undefined,
               }
             : c,

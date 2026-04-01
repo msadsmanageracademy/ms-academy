@@ -11,6 +11,7 @@ import { useNotifications } from "@/providers/NotificationProvider";
 import { useParams } from "next/navigation";
 import {
   closeLoading,
+  confirmNotify,
   confirmUnenroll,
   toastError,
   toastLoading,
@@ -32,6 +33,8 @@ const ClassDetailPage = () => {
   const [listDownloadState, setListDownloadState] = useState(false);
   const [loading, setLoading] = useState(true);
   const [meetLinkState, setMeetLinkState] = useState(false);
+  const [notifyAllState, setNotifyAllState] = useState(false);
+  const [notifyingParticipant, setNotifyingParticipant] = useState(null);
   const [participants, setParticipants] = useState([]);
 
   useEffect(() => {
@@ -143,6 +146,86 @@ const ClassDetailPage = () => {
         3000,
         "Ha habido un error",
         "No se pudo remover el participante",
+      );
+    }
+  };
+
+  const handleNotifyParticipant = async (participantId) => {
+    const result = await confirmNotify(
+      "¿Notificar al participante?",
+      `Se enviará un email recordatorio de la clase al participante seleccionado`,
+    );
+
+    if (!result.isConfirmed) return;
+
+    setNotifyingParticipant(participantId);
+    toastLoading("Enviando recordatorio", "Enviando email...");
+
+    try {
+      const res = await fetch(`/api/classes/${id}/notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantIds: [participantId] }),
+      });
+
+      const data = await res.json();
+      closeLoading();
+
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+
+      toastSuccess(3000, "Email enviado", "Se notificó al participante");
+    } catch (err) {
+      console.error("Error notifying participant:", err);
+      closeLoading();
+      toastError(3000, "Ha habido un error", "No se pudo enviar el email");
+    } finally {
+      setTimeout(() => setNotifyingParticipant(null), 2000);
+    }
+  };
+
+  const handleNotifyAll = async () => {
+    if (participants.length === 0) return;
+
+    const result = await confirmNotify(
+      "¿Notificar a todos?",
+      `Se enviará un email recordatorio de la clase a ${participants.length} participante${participants.length > 1 ? "s" : ""}`,
+    );
+
+    if (!result.isConfirmed) return;
+
+    toastLoading("Enviando recordatorios", "Enviando emails...");
+
+    try {
+      const res = await fetch(`/api/classes/${id}/notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json();
+      closeLoading();
+
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+
+      setNotifyAllState(true);
+      setTimeout(() => setNotifyAllState(false), 30000);
+
+      toastSuccess(
+        3000,
+        "Emails enviados",
+        `Se notificó a ${data.notifiedCount} participante${data.notifiedCount > 1 ? "s" : ""}`,
+      );
+    } catch (err) {
+      console.error("Error notifying all participants:", err);
+      closeLoading();
+      toastError(
+        3000,
+        "Ha habido un error",
+        "No se pudieron enviar los emails",
       );
     }
   };
@@ -419,9 +502,22 @@ const ClassDetailPage = () => {
                               <div className={styles.actionButtons}>
                                 <IconLink
                                   asButton
-                                  disabled
-                                  fill={"var(--color-4)"}
-                                  icon="Mailbox"
+                                  disabled={
+                                    notifyingParticipant === participant._id
+                                  }
+                                  fill={
+                                    notifyingParticipant === participant._id
+                                      ? "var(--success)"
+                                      : "var(--color-4)"
+                                  }
+                                  icon={
+                                    notifyingParticipant === participant._id
+                                      ? "CheckCircle"
+                                      : "Mailbox"
+                                  }
+                                  onClick={() =>
+                                    handleNotifyParticipant(participant._id)
+                                  }
                                 />
                                 <IconLink
                                   asButton
@@ -466,10 +562,13 @@ const ClassDetailPage = () => {
                   />
                   <IconLink
                     asButton
-                    disabled
-                    fill={"var(--color-4)"}
-                    icon="Mailbox"
-                    text="Notificar participantes"
+                    disabled={notifyAllState || participants.length === 0}
+                    fill={notifyAllState ? "var(--success)" : "var(--color-4)"}
+                    icon={notifyAllState ? "CheckCircle" : "Mailbox"}
+                    text={
+                      notifyAllState ? "Notificados" : "Notificar participantes"
+                    }
+                    onClick={handleNotifyAll}
                   />
                 </div>
               </section>
