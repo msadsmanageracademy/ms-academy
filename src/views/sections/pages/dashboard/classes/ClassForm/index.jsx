@@ -1,5 +1,5 @@
 import "react-datepicker/dist/react-datepicker.css";
-import { ClassFormSchema } from "@/utils/validation";
+import { ClassFormSchema, PublishedClassEditSchema } from "@/utils/validation";
 import DatePicker from "react-datepicker";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
@@ -16,8 +16,17 @@ import {
 } from "@/utils/alerts";
 import { useEffect, useState } from "react";
 
-const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
+const ClassForm = ({
+  classData,
+  onSuccess,
+  onCancel,
+  hasCalendarAccess,
+  allowFullEdit = false,
+}) => {
   const isEditMode = !!classData;
+  const isRestricted =
+    classData?.status === "published" ||
+    (classData?.status === "enrolled" && !allowFullEdit);
   const { incrementCount } = useNotifications();
   const [addToCalendar, setAddToCalendar] = useState(false);
 
@@ -28,12 +37,17 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
     register,
     reset,
   } = useForm({
-    resolver: zodResolver(ClassFormSchema),
+    resolver: zodResolver(
+      isRestricted ? PublishedClassEditSchema : ClassFormSchema,
+    ),
+    shouldFocusError: false,
     defaultValues: classData
       ? {
           title: classData.title,
           short_description: classData.short_description,
-          start_date: new Date(classData.start_date),
+          start_date: classData.start_date
+            ? new Date(classData.start_date)
+            : null,
           duration: classData.duration,
           max_participants: classData.max_participants || 0,
           price: classData.price || 0,
@@ -51,7 +65,9 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
       reset({
         title: classData.title,
         short_description: classData.short_description,
-        start_date: new Date(classData.start_date),
+        start_date: classData.start_date
+          ? new Date(classData.start_date)
+          : null,
         duration: classData.duration,
         max_participants: classData.max_participants || 0,
         price: classData.price || 0,
@@ -84,17 +100,21 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
         : "/api/classes/";
       const method = isEditMode ? "PATCH" : "POST";
 
+      const payload = isRestricted
+        ? { title, short_description }
+        : {
+            title,
+            short_description,
+            start_date,
+            duration,
+            max_participants,
+            price,
+          };
+
       const response = await fetch(url, {
         headers: { "Content-Type": "application/json" },
         method,
-        body: JSON.stringify({
-          title,
-          short_description,
-          start_date,
-          duration,
-          max_participants,
-          price,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -201,7 +221,8 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
               timeInputLabel="Hora:"
               dateFormat="dd/MM/yyyy hh:mm aa"
               showTimeInput
-              className={`${styles.input}`}
+              className={`${styles.input} ${isRestricted ? styles.inputDisabled : ""}`}
+              disabled={isRestricted}
             />
           )}
         />
@@ -214,7 +235,8 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
         <label>Duración (en minutos)</label>
         <input
           {...register("duration", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number}`}
+          className={`${styles.input} ${styles.number} ${isRestricted ? styles.inputDisabled : ""}`}
+          disabled={isRestricted}
         />
       </div>
       <div className={styles.formCustomError}>{errors?.duration?.message}</div>
@@ -223,7 +245,8 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
         <label>Máximo de participantes</label>
         <input
           {...register("max_participants", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number}`}
+          className={`${styles.input} ${styles.number} ${isRestricted ? styles.inputDisabled : ""}`}
+          disabled={isRestricted}
         />
       </div>
       <div className={styles.formCustomError}>
@@ -234,7 +257,8 @@ const ClassForm = ({ classData, onSuccess, onCancel, hasCalendarAccess }) => {
         <label>Precio</label>
         <input
           {...register("price", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number}`}
+          className={`${styles.input} ${styles.number} ${isRestricted ? styles.inputDisabled : ""}`}
+          disabled={isRestricted}
         />
       </div>
       <div className={styles.formCustomError}>{errors?.price?.message}</div>

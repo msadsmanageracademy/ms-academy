@@ -1,0 +1,38 @@
+.stars {
+  display: inline-flex;
+  gap: 0.1rem;
+  line-height: 1;
+}
+
+.sm .star {
+  font-size: 1rem;
+}
+
+.md .star {
+  font-size: 1.5rem;
+}
+
+.lg .star {
+  font-size: 2rem;
+}
+
+.star {
+  color: #ccc;
+  cursor: pointer;
+  transition:
+    color 0.1s,
+    transform 0.1s;
+  user-select: none;
+}
+
+.filled {
+  color: #f5a623;
+}
+
+.readOnly .star {
+  cursor: default;
+}
+
+.stars:not(.readOnly) .star:hover {
+  transform: scale(1.15);
+}

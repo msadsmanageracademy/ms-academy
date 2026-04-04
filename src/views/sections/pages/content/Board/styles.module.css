@@ -109,3 +109,12 @@
 .postItText p {
   margin: 0;
 }
+
+.courseRating {
+  align-items: center;
+  color: var(--color-5);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem !important;
+}

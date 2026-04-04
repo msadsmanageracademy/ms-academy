@@ -3,8 +3,11 @@
 import PageLoader from "@/views/components/layout/PageLoader";
 import PageWrapper from "@/views/components/layout/PageWrapper";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import StarRating from "@/views/components/ui/StarRating";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
+import { getCourseTimeStatus } from "@/utils/classStatus";
 import { useSession } from "next-auth/react";
 import {
   closeLoading,
@@ -22,6 +25,7 @@ const CourseDetail = () => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -41,6 +45,16 @@ const CourseDetail = () => {
     };
 
     if (id) fetchCourse();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/courses/${id}/reviews?series=true`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setReviews(data.data);
+      })
+      .catch(() => {});
   }, [id]);
 
   const courseSignUp = async (id) => {
@@ -101,6 +115,25 @@ const CourseDetail = () => {
 
   if (!course) return <p>No se encontró el curso</p>;
 
+  const enrollmentCount = Object.keys(course.enrollmentMap || {}).length;
+  const isFull =
+    course.max_participants !== null &&
+    course.max_participants !== undefined &&
+    enrollmentCount >= course.max_participants;
+  const courseTimeStatus = getCourseTimeStatus(
+    course.start_date,
+    course.end_date,
+    course.status,
+  );
+  const courseStatusLabel =
+    courseTimeStatus === "completed"
+      ? "Finalizado"
+      : courseTimeStatus === "in-progress"
+        ? "En progreso"
+        : courseTimeStatus === "upcoming"
+          ? "Por comenzar"
+          : null;
+
   return (
     <PageWrapper>
       <div className={styles.container}>
@@ -144,15 +177,28 @@ const CourseDetail = () => {
 
           <div className={styles.infoItem}>
             <div className={styles.infoLabel}>Duración total</div>
-            <div className={styles.infoValue}>{course.duration / 60} horas</div>
+            <div className={styles.infoValue}>
+              {course.total_duration < 60
+                ? `${course.total_duration} minutos`
+                : `${parseFloat((course.total_duration / 60).toFixed(1))} horas`}
+            </div>
           </div>
 
           <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Cupo máximo</div>
+            <div className={styles.infoLabel}>Cupo</div>
             <div className={styles.infoValue}>
-              {course.max_participants} personas
+              {course.max_participants
+                ? `${enrollmentCount} / ${course.max_participants} inscriptos${isFull ? " — Lleno" : ""}`
+                : "Sin límite"}
             </div>
           </div>
+
+          {courseStatusLabel && (
+            <div className={styles.infoItem}>
+              <div className={styles.infoLabel}>Estado</div>
+              <div className={styles.infoValue}>{courseStatusLabel}</div>
+            </div>
+          )}
 
           <div className={styles.infoItem}>
             <div className={styles.infoLabel}>Precio</div>
@@ -167,6 +213,10 @@ const CourseDetail = () => {
             <PrimaryLink disabled text={"Ya estás inscripto"} />
           ) : course.userPaymentStatus === "pending" ? (
             <PrimaryLink disabled text={"Inscripción pendiente de pago"} />
+          ) : courseTimeStatus === "in-progress" ? (
+            <PrimaryLink disabled text={"Curso en progreso"} />
+          ) : isFull ? (
+            <PrimaryLink disabled text={"Cupo completo"} />
           ) : (
             <PrimaryLink
               asButton
@@ -174,6 +224,49 @@ const CourseDetail = () => {
               text={"Inscribirse"}
               onClick={() => courseSignUp(course._id)}
             />
+          )}
+        </div>
+
+        {/* Reviews section */}
+        <div className={styles.section}>
+          <div className={styles.subtitle}>
+            Reseñas
+            {course.reviewCount > 0 && (
+              <span className={styles.reviewSummary}>
+                <StarRating
+                  value={Math.round(course.avgRating)}
+                  readOnly
+                  size="sm"
+                />
+                {course.avgRating} ({course.reviewCount})
+              </span>
+            )}
+          </div>
+
+          {/* Reviews list */}
+          {reviews.length === 0 ? (
+            <p className={styles.noReviews}>
+              Todavía no hay reseñas para este curso.
+            </p>
+          ) : (
+            <ul className={styles.reviewList}>
+              {reviews.map((r) => (
+                <li key={r._id?.toString()} className={styles.reviewItem}>
+                  <div className={styles.reviewHeader}>
+                    <span className={styles.reviewAuthor}>{r.firstName}</span>
+                    <StarRating value={r.rating} readOnly size="sm" />
+                    <span className={styles.reviewDate}>
+                      {format(new Date(r.createdAt), "dd/MM/yyyy", {
+                        locale: es,
+                      })}
+                    </span>
+                  </div>
+                  {r.comment && (
+                    <p className={styles.reviewComment}>{r.comment}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

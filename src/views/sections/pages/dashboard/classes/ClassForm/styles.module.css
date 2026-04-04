@@ -25,7 +25,9 @@
   font-size: 1rem;
   min-height: 2.5rem;
   padding: 0.75rem 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   width: 100%;
 }
 
@@ -70,11 +72,17 @@
   margin-top: -0.75rem;
 }
 
-.checkboxRow {
-  align-items: center;
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+.inputDisabled {
+  background-color: var(--color-1, #f5f5f5);
+  color: var(--color-4);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.fieldNote {
+  color: var(--color-3);
+  font-size: 0.8rem;
+  margin-top: -0.75rem;
 }
 
 .checkbox {

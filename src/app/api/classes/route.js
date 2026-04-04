@@ -78,6 +78,8 @@ export async function GET(req) {
                   googleEventId: undefined,
                   googleMeetLink: undefined,
                   calendarEventLink: undefined,
+                  recording_url: undefined,
+                  resources: undefined,
                 }),
           };
         });
@@ -88,18 +90,10 @@ export async function GET(req) {
 
     const currentDate = new Date();
 
-    const baseFilter = { start_date: { $gt: currentDate } };
-    if (!showAll) {
-      // Public view: only standalone published classes
-      baseFilter.status = "published";
-    }
-
-    let classes;
     if (showAll) {
-      // Include courseTitle via lookup
-      classes = await classesCollection
+      // Admin view: all classes (past and future) with courseTitle
+      const classes_raw = await classesCollection
         .aggregate([
-          { $match: baseFilter },
           {
             $lookup: {
               from: "courses",
@@ -119,6 +113,7 @@ export async function GET(req) {
         .toArray();
 
       // Attach userCoursePaymentStatus and strip Google links for unpaid users
+      let classes = classes_raw;
       const session = await auth();
       if (session?.user?.id && session.user.role !== "admin") {
         const enrollments = await db
@@ -136,23 +131,32 @@ export async function GET(req) {
           return {
             ...cls,
             userCoursePaymentStatus: paymentStatus,
-            // Strip Google links if user hasn't paid
             ...(paid
               ? {}
               : {
                   googleEventId: undefined,
                   googleMeetLink: undefined,
                   calendarEventLink: undefined,
+                  recording_url: undefined,
+                  resources: undefined,
                 }),
           };
         });
       }
-    } else {
-      classes = await classesCollection
-        .find(baseFilter)
-        .sort({ start_date: 1 })
-        .toArray();
+
+      return Response.json({ success: true, data: classes }, { status: 200 });
     }
+
+    // Public view: only upcoming standalone published classes
+    const baseFilter = {
+      start_date: { $gt: currentDate },
+      status: "published",
+    };
+
+    const classes = await classesCollection
+      .find(baseFilter)
+      .sort({ start_date: 1 })
+      .toArray();
 
     return Response.json(
       {

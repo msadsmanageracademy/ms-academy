@@ -21,7 +21,17 @@ const courseAggregationPipeline = (matchStage = {}) => [
     $addFields: {
       amount_of_classes: { $size: "$assignedClasses" },
       start_date: { $min: "$assignedClasses.start_date" },
-      end_date: { $max: "$assignedClasses.start_date" },
+      end_date: {
+        $max: {
+          $map: {
+            input: "$assignedClasses",
+            as: "c",
+            in: {
+              $add: ["$$c.start_date", { $multiply: ["$$c.duration", 60000] }],
+            },
+          },
+        },
+      },
       total_duration: { $sum: "$assignedClasses.duration" },
     },
   },
@@ -86,6 +96,39 @@ export async function GET(req) {
       }
     }
 
+    // Attach avgRating and reviewCount for all courses
+    if (courses.length > 0) {
+      const reviewAggregates = await db
+        .collection("reviews")
+        .aggregate([
+          { $match: { courseId: { $in: courses.map((c) => c._id) } } },
+          {
+            $group: {
+              _id: "$courseId",
+              avgRating: { $avg: "$rating" },
+              reviewCount: { $sum: 1 },
+            },
+          },
+        ])
+        .toArray();
+      const reviewMap = Object.fromEntries(
+        reviewAggregates.map((r) => [
+          r._id.toString(),
+          { avgRating: r.avgRating, reviewCount: r.reviewCount },
+        ]),
+      );
+      for (const course of courses) {
+        const r = reviewMap[course._id.toString()] ?? {
+          avgRating: null,
+          reviewCount: 0,
+        };
+        course.avgRating = r.avgRating
+          ? Math.round(r.avgRating * 10) / 10
+          : null;
+        course.reviewCount = r.reviewCount;
+      }
+    }
+
     return Response.json(
       {
         success: true,
@@ -134,6 +177,12 @@ export async function POST(req) {
     );
 
     const result = await coursesCollection.insertOne(courseData);
+
+    // Self-reference: courseSeriesId = own _id (first iteration in its series)
+    await coursesCollection.updateOne(
+      { _id: result.insertedId },
+      { $set: { courseSeriesId: result.insertedId } },
+    );
 
     return Response.json(
       {

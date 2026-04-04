@@ -1,9 +1,11 @@
 "use client";
 
+import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import ClassForm from "@/views/sections/pages/dashboard/classes/ClassForm";
 import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import ReviewModal from "@/views/components/ui/ReviewModal";
 import StatusBadge from "@/views/components/ui/StatusBadge";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
@@ -20,6 +22,7 @@ import {
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
+import { getClassStatus } from "@/utils/classStatus";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 
@@ -33,14 +36,17 @@ const ClassesPage = () => {
   const [hasCalendarAccess, setHasCalendarAccess] = useState(false);
   const [linkModalClassId, setLinkModalClassId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviewModal, setReviewModal] = useState(null); // { classId, title, existingReview }
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [userReviewMap, setUserReviewMap] = useState({}); // classId -> { rating, comment }
 
   useEffect(() => {
     if (session) {
       fetchClasses();
       setHasCalendarAccess(session.user.hasAuthorizedCalendar || false);
       if (session.user.role === "admin") fetchAllCourses();
+      if (session.user.role !== "admin") fetchUserReviews();
     }
   }, [session]);
 
@@ -327,6 +333,26 @@ const ClassesPage = () => {
     }
   };
 
+  const fetchUserReviews = async () => {
+    try {
+      const res = await fetch("/api/reviews");
+      const data = await res.json();
+      if (data.success) {
+        const map = {};
+        data.data.forEach((r) => {
+          if (r.classId)
+            map[r.classId.toString()] = {
+              rating: r.rating,
+              comment: r.comment,
+            };
+        });
+        setUserReviewMap(map);
+      }
+    } catch {
+      // non-blocking
+    }
+  };
+
   const handleFormSuccess = () => {
     setShowCreateForm(false);
     if (session) {
@@ -376,7 +402,19 @@ const ClassesPage = () => {
       if (!res.ok) throw new Error("Error fetching classes");
 
       const data = await res.json();
-      setClasses(data.data || []);
+      const raw = data.data || [];
+
+      // Sort: upcoming/ongoing first (by date), completed at the bottom
+      raw.sort((a, b) => {
+        const aCompleted =
+          getClassStatus(a.start_date, a.duration, a.status) === "completed";
+        const bCompleted =
+          getClassStatus(b.start_date, b.duration, b.status) === "completed";
+        if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+        return new Date(a.start_date) - new Date(b.start_date);
+      });
+
+      setClasses(raw);
     } catch (err) {
       console.error("Error fetching classes:", err);
     } finally {
@@ -447,6 +485,7 @@ const ClassesPage = () => {
                         <th>Duración</th>
                         <th>Precio</th>
                         <th>Participantes</th>
+                        <th>Progreso</th>
                         <th>Estado</th>
                         <th>Google</th>
                         <th>Acciones</th>
@@ -458,13 +497,17 @@ const ClassesPage = () => {
                           <td>{classItem.title}</td>
                           <td>{classItem.courseTitle || "—"}</td>
                           <td>
-                            {format(
-                              new Date(classItem.start_date),
-                              "dd/MM/yyyy",
-                            )}
+                            {classItem.start_date
+                              ? format(
+                                  new Date(classItem.start_date),
+                                  "dd/MM/yyyy",
+                                )
+                              : "—"}
                           </td>
                           <td>
-                            {format(new Date(classItem.start_date), "h:mm a")}
+                            {classItem.start_date
+                              ? format(new Date(classItem.start_date), "h:mm a")
+                              : "—"}
                           </td>
                           <td>{classItem.duration} min</td>
                           <td>
@@ -475,6 +518,15 @@ const ClassesPage = () => {
                           <td>
                             {classItem.participants?.length || 0} /{" "}
                             {classItem.max_participants || "∞"}
+                          </td>
+                          <td>
+                            <ClassStatusBadge
+                              status={getClassStatus(
+                                classItem.start_date,
+                                classItem.duration,
+                                classItem.status,
+                              )}
+                            />
                           </td>
                           <td>
                             <StatusBadge status={classItem.status}>
@@ -680,7 +732,10 @@ const ClassesPage = () => {
                       <th>Hora</th>
                       <th>Duración</th>
                       <th>Precio</th>
+                      <th>Progreso</th>
                       <th>Google</th>
+                      <th>Grabación</th>
+                      <th>Materiales</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -690,10 +745,17 @@ const ClassesPage = () => {
                         <td>{classItem.title}</td>
                         <td>{classItem.courseTitle || "—"}</td>
                         <td>
-                          {format(new Date(classItem.start_date), "dd/MM/yyyy")}
+                          {classItem.start_date
+                            ? format(
+                                new Date(classItem.start_date),
+                                "dd/MM/yyyy",
+                              )
+                            : "—"}
                         </td>
                         <td>
-                          {format(new Date(classItem.start_date), "h:mm a")}
+                          {classItem.start_date
+                            ? format(new Date(classItem.start_date), "h:mm a")
+                            : "—"}
                         </td>
                         <td>{classItem.duration} min</td>
                         <td>
@@ -702,6 +764,15 @@ const ClassesPage = () => {
                             : classItem.price === 0
                               ? "Gratis"
                               : `$${classItem.price}`}
+                        </td>
+                        <td>
+                          <ClassStatusBadge
+                            status={getClassStatus(
+                              classItem.start_date,
+                              classItem.duration,
+                              classItem.status,
+                            )}
+                          />
                         </td>
                         <td>
                           {classItem.courseId &&
@@ -723,7 +794,80 @@ const ClassesPage = () => {
                           )}
                         </td>
                         <td>
+                          {classItem.recording_url ? (
+                            <ul className={styles.resourceLinks}>
+                              <li>
+                                <a
+                                  href={classItem.recording_url}
+                                  rel="noopener noreferrer"
+                                  target="_blank"
+                                >
+                                  Grabación
+                                </a>
+                              </li>
+                            </ul>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td>
+                          {classItem.resources?.length > 0 ? (
+                            <ul className={styles.resourceLinks}>
+                              {classItem.resources.map((r, i) => (
+                                <li key={i}>
+                                  <a
+                                    href={r.url}
+                                    rel="noopener noreferrer"
+                                    target="_blank"
+                                  >
+                                    {r.title}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td>
                           <div className={styles.actionButtons}>
+                            {!classItem.courseId && (
+                              <IconLink
+                                asButton
+                                disabled={
+                                  getClassStatus(
+                                    classItem.start_date,
+                                    classItem.duration,
+                                    classItem.status,
+                                  ) !== "completed"
+                                }
+                                fill={
+                                  userReviewMap[classItem._id]
+                                    ? "var(--warning)"
+                                    : "var(--color-4)"
+                                }
+                                icon={"Star"}
+                                onClick={() =>
+                                  setReviewModal({
+                                    classId: classItem._id,
+                                    title: classItem.title,
+                                    existingReview:
+                                      userReviewMap[classItem._id] ?? null,
+                                  })
+                                }
+                                title={
+                                  getClassStatus(
+                                    classItem.start_date,
+                                    classItem.duration,
+                                    classItem.status,
+                                  ) !== "completed"
+                                    ? "Disponible al finalizar la clase"
+                                    : userReviewMap[classItem._id]
+                                      ? "Editar tu reseña"
+                                      : "Dejar una reseña"
+                                }
+                              />
+                            )}
                             <IconLink
                               asButton
                               danger
@@ -742,6 +886,23 @@ const ClassesPage = () => {
           </div>
         )}
       </div>
+
+      {reviewModal && (
+        <ReviewModal
+          isOpen
+          entityId={reviewModal.classId}
+          entityTitle={reviewModal.title}
+          entityType="class"
+          existingReview={reviewModal.existingReview}
+          onClose={() => setReviewModal(null)}
+          onSuccess={(updated) => {
+            setUserReviewMap((prev) => ({
+              ...prev,
+              [reviewModal.classId]: updated,
+            }));
+          }}
+        />
+      )}
 
       {linkModalClassId && (
         <div

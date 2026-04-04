@@ -1,11 +1,12 @@
-import { CourseFormSchema } from "@/utils/validation";
-import { ObjectId } from "mongodb";
 import {
-  addTimestampToUpdate,
-  prepareNotificationForDB,
-} from "@/models/schemas";
+  CourseFormSchema,
+  PublishedCourseEditSchema,
+} from "@/utils/validation";
+import { ObjectId } from "mongodb";
+import { addTimestampToUpdate } from "@/models/schemas";
 import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
+import { getCourseTimeStatus } from "@/utils/classStatus";
 
 const courseAggregationPipeline = (matchStage) => [
   { $match: matchStage },
@@ -24,7 +25,17 @@ const courseAggregationPipeline = (matchStage) => [
     $addFields: {
       amount_of_classes: { $size: "$assignedClasses" },
       start_date: { $min: "$assignedClasses.start_date" },
-      end_date: { $max: "$assignedClasses.start_date" },
+      end_date: {
+        $max: {
+          $map: {
+            input: "$assignedClasses",
+            as: "c",
+            in: {
+              $add: ["$$c.start_date", { $multiply: ["$$c.duration", 60000] }],
+            },
+          },
+        },
+      },
       total_duration: { $sum: "$assignedClasses.duration" },
     },
   },
@@ -88,6 +99,35 @@ export async function GET(req, { params }) {
       enrollments.map((e) => [e.userId.toString(), e.paymentStatus]),
     );
 
+    // Attach avg rating and review count
+    const reviewStats = await db
+      .collection("reviews")
+      .aggregate([
+        { $match: { courseId: new ObjectId(id) } },
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: "$rating" },
+            reviewCount: { $sum: 1 },
+          },
+        },
+      ])
+      .toArray();
+    const stats = reviewStats[0] ?? { avgRating: null, reviewCount: 0 };
+    course.avgRating = stats.avgRating
+      ? Math.round(stats.avgRating * 10) / 10
+      : null;
+    course.reviewCount = stats.reviewCount;
+
+    // Attach user's own review if logged in
+    if (session?.user?.id) {
+      course.userReview =
+        (await db.collection("reviews").findOne({
+          courseId: new ObjectId(id),
+          userId: new ObjectId(session.user.id),
+        })) ?? null;
+    }
+
     return Response.json(
       {
         success: true,
@@ -139,88 +179,83 @@ export async function PATCH(req, { params }) {
             { status: 400 },
           );
         }
-      }
-      // When reverting to draft, remove all participants from the course and its classes
-      if (body.status === "draft") {
-        const classesCollection = db.collection("classes");
 
-        // Fetch course participants and affected class participants before clearing
-        const course = await db
-          .collection("courses")
-          .findOne(
-            { _id: new ObjectId(id) },
-            { projection: { participants: 1 } },
-          );
-
-        const affectedClasses = await classesCollection
-          .find(
-            { courseId: new ObjectId(id), "participants.0": { $exists: true } },
-            { projection: { _id: 1, title: 1, participants: 1 } },
-          )
-          .toArray();
-
-        // Clear participants from all assigned classes
-        await classesCollection.updateMany(
-          { courseId: new ObjectId(id) },
-          { $set: { participants: [], updatedAt: new Date() } },
-        );
-
-        // Build notifications
-        const notificationsToCreate = [];
-
-        // Track participants already notified via course to avoid duplicates
-        const notifiedViaClass = new Set();
-
-        for (const classItem of affectedClasses) {
-          for (const participantId of classItem.participants) {
-            notifiedViaClass.add(participantId.toString());
-            notificationsToCreate.push(
-              prepareNotificationForDB({
-                userId: participantId,
-                type: "class.removed_by_admin",
-                title: "Suscripción anulada",
-                message: `Has sido dado de baja de la clase "${classItem.title}" porque el curso al que pertenecía fue archivado por un administrador`,
-                relatedId: classItem._id,
-                relatedType: "class",
-              }),
-            );
-          }
-        }
-
-        if (course?.participants?.length > 0) {
-          for (const participantId of course.participants) {
-            if (!notifiedViaClass.has(participantId.toString())) {
-              notificationsToCreate.push(
-                prepareNotificationForDB({
-                  userId: participantId,
-                  type: "course.removed_by_admin",
-                  title: "Suscripción anulada",
-                  message: `Has sido dado de baja del curso porque fue archivado por un administrador`,
-                  relatedId: new ObjectId(id),
-                  relatedType: "course",
-                }),
-              );
-            }
-          }
-        }
-
-        if (notificationsToCreate.length > 0) {
-          await db
-            .collection("notifications")
-            .insertMany(notificationsToCreate);
-        }
-
-        // Clear course participants
-        await db.collection("courses").updateOne(
-          { _id: new ObjectId(id) },
-          {
-            $set: {
-              participants: [],
-              status: "draft",
-              updatedAt: new Date(),
+        const missingDateCount = await db.collection("classes").countDocuments({
+          courseId: new ObjectId(id),
+          $or: [{ start_date: null }, { start_date: { $exists: false } }],
+        });
+        if (missingDateCount > 0) {
+          return Response.json(
+            {
+              success: false,
+              message: `No se puede publicar: ${missingDateCount} clase(s) no tienen fecha asignada`,
             },
-          },
-        );
+            { status: 400 },
+          );
+        }
+
+        const earliest = await db
+          .collection("classes")
+          .findOne(
+            { courseId: new ObjectId(id) },
+            { projection: { start_date: 1 }, sort: { start_date: 1 } },
+          );
+        if (
+          earliest?.start_date &&
+          new Date(earliest.start_date) < new Date()
+        ) {
+          return Response.json(
+            {
+              success: false,
+              message:
+                "No se puede publicar un curso cuya primera clase ya comenzó",
+            },
+            { status: 400 },
+          );
+        }
+      }
+      // When reverting to draft, only block if the course is currently in-progress.
+      // Participants are NOT removed — finished courses stay in their dashboard.
+      if (body.status === "draft") {
+        const dateStats = await db
+          .collection("classes")
+          .aggregate([
+            { $match: { courseId: new ObjectId(id) } },
+            {
+              $group: {
+                _id: null,
+                start_date: { $min: "$start_date" },
+                end_date: {
+                  $max: {
+                    $add: ["$start_date", { $multiply: ["$duration", 60000] }],
+                  },
+                },
+              },
+            },
+          ])
+          .toArray();
+        const { start_date: courseStart, end_date: courseEnd } =
+          dateStats[0] ?? {};
+        if (
+          getCourseTimeStatus(courseStart, courseEnd, "published") ===
+          "in-progress"
+        ) {
+          return Response.json(
+            {
+              success: false,
+              message:
+                "No se puede archivar un curso que está en progreso en este momento",
+            },
+            { status: 400 },
+          );
+        }
+
+        await db
+          .collection("courses")
+          .updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status: "draft", updatedAt: new Date() } },
+          );
 
         return Response.json(
           { success: true, message: "Estado actualizado" },
@@ -246,6 +281,54 @@ export async function PATCH(req, { params }) {
       );
     }
 
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME);
+    const coursesCollection = db.collection("courses");
+    const classesCollection = db.collection("classes");
+
+    // Check current course status to determine which fields are editable
+    const existingCourse = await coursesCollection.findOne(
+      { _id: new ObjectId(id) },
+      { projection: { status: 1 } },
+    );
+
+    if (!existingCourse) {
+      return Response.json(
+        { success: false, message: "Curso no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    // Published courses: only title and descriptions are editable
+    if (existingCourse.status === "published") {
+      const parsedBody = PublishedCourseEditSchema.safeParse(body);
+      if (!parsedBody.success) {
+        return Response.json(
+          {
+            success: false,
+            message: "El formato de los datos es inválido",
+            details: parsedBody.error.errors,
+          },
+          { status: 400 },
+        );
+      }
+      const result = await coursesCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: addTimestampToUpdate(parsedBody.data) },
+      );
+      if (result.matchedCount === 0) {
+        return Response.json(
+          { success: false, message: "Curso no encontrado" },
+          { status: 404 },
+        );
+      }
+      return Response.json(
+        { success: true, message: "Curso actualizado con éxito" },
+        { status: 200 },
+      );
+    }
+
+    // Draft course: full validation
     const parsedBody = CourseFormSchema.safeParse(body);
 
     if (!parsedBody.success) {
@@ -258,11 +341,6 @@ export async function PATCH(req, { params }) {
         { status: 400 },
       );
     }
-
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    const coursesCollection = db.collection("courses");
-    const classesCollection = db.collection("classes");
 
     // If trying to publish, require at least one assigned class
     if (parsedBody.data.status === "published") {

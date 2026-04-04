@@ -1,10 +1,13 @@
 "use client";
 
+import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import CourseForm from "@/views/sections/pages/dashboard/courses/CourseForm";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import ReviewModal from "@/views/components/ui/ReviewModal";
 import StatusBadge from "@/views/components/ui/StatusBadge";
 import { format } from "date-fns";
+import { getCourseTimeStatus } from "@/utils/classStatus";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import IconLink from "@/views/components/ui/IconLink";
@@ -25,10 +28,13 @@ const CoursesPage = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [reviewModal, setReviewModal] = useState(null); // { courseId, title, existingReview }
+  const [userReviewMap, setUserReviewMap] = useState({}); // courseId -> { rating, comment }
 
   useEffect(() => {
     if (session) {
       fetchCourses();
+      if (session.user.role !== "admin") fetchUserReviews();
     }
   }, [session]);
 
@@ -114,15 +120,7 @@ const CoursesPage = () => {
         return toastError(3000, "Ha habido un error", data.message);
       }
       setCourses(
-        courses.map((c) =>
-          c._id === id
-            ? {
-                ...c,
-                status: newStatus,
-                ...(newStatus === "draft" && { participants: [] }),
-              }
-            : c,
-        ),
+        courses.map((c) => (c._id === id ? { ...c, status: newStatus } : c)),
       );
       toastSuccess(
         3000,
@@ -169,6 +167,26 @@ const CoursesPage = () => {
     }
   };
 
+  const fetchUserReviews = async () => {
+    try {
+      const res = await fetch("/api/reviews");
+      const data = await res.json();
+      if (data.success) {
+        const map = {};
+        data.data.forEach((r) => {
+          if (r.courseId)
+            map[r.courseId.toString()] = {
+              rating: r.rating,
+              comment: r.comment,
+            };
+        });
+        setUserReviewMap(map);
+      }
+    } catch {
+      // non-blocking
+    }
+  };
+
   const handleConfirmPayment = async (courseId, courseTitle) => {
     const result = await confirmPayment(courseTitle);
     if (!result.isConfirmed) return;
@@ -205,17 +223,159 @@ const CoursesPage = () => {
   if (loading) return <PageLoader />;
 
   return (
-    <div className={styles.container}>
-      <h1>
-        {session?.user?.role === "admin" ? "Gestión de Cursos" : "Mis Cursos"}
-      </h1>
+    <>
+      <div className={styles.container}>
+        <h1>
+          {session?.user?.role === "admin" ? "Gestión de Cursos" : "Mis Cursos"}
+        </h1>
 
-      {session?.user?.role === "admin" ? (
-        <>
+        {session?.user?.role === "admin" ? (
+          <>
+            <div className={styles.listSection}>
+              <h2>Todos los Cursos</h2>
+              {courses.length === 0 ? (
+                <p className={styles.noClasses}>No hay cursos disponibles</p>
+              ) : (
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Título</th>
+                        <th>Inicio</th>
+                        <th>Fin</th>
+                        <th>Clases</th>
+                        <th>Precio</th>
+                        <th>Participantes</th>
+                        <th>Pagos</th>
+                        <th>Progreso</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {courses.map((course) => (
+                        <tr key={course._id}>
+                          <td>{course.title}</td>
+                          <td>
+                            {course.start_date
+                              ? format(
+                                  new Date(course.start_date),
+                                  "dd/MM/yyyy",
+                                )
+                              : "—"}
+                          </td>
+                          <td>
+                            {course.end_date
+                              ? format(new Date(course.end_date), "dd/MM/yyyy")
+                              : "—"}
+                          </td>
+                          <td>{course.amount_of_classes ?? 0}</td>
+                          <td>${course.price}</td>
+                          <td>
+                            {course.enrolledCount ?? 0} /{" "}
+                            {course.max_participants || "∞"}
+                          </td>
+                          <td>
+                            {course.paidCount ?? 0} /{" "}
+                            {course.enrolledCount ?? 0}
+                          </td>
+                          <td>
+                            {course.start_date ? (
+                              <ClassStatusBadge
+                                gender="m"
+                                status={getCourseTimeStatus(
+                                  course.start_date,
+                                  course.end_date,
+                                  course.status,
+                                )}
+                              />
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td>
+                            <StatusBadge status={course.status}>
+                              {course.status === "published"
+                                ? "Publicado"
+                                : "Borrador"}
+                            </StatusBadge>
+                          </td>
+                          <td>
+                            <div className={styles.actionButtons}>
+                              <IconLink
+                                fill={"var(--color-4)"}
+                                href={`/dashboard/courses/${course._id}`}
+                                icon={"Eye"}
+                              />
+                              <IconLink
+                                asButton
+                                danger={course.status === "published"}
+                                icon={
+                                  course.status === "published"
+                                    ? "Pin"
+                                    : "Confetti"
+                                }
+                                success={course.status !== "published"}
+                                onClick={() =>
+                                  handleToggleStatus(course._id, course.status)
+                                }
+                                title={
+                                  course.status === "published"
+                                    ? "Ocultar"
+                                    : "Publicar"
+                                }
+                              />
+                              <IconLink
+                                asButton
+                                danger
+                                disabled={course.status !== "draft"}
+                                icon={"Delete"}
+                                onClick={() =>
+                                  handleDeleteCourse(course._id, course.title)
+                                }
+                                title={
+                                  course.status !== "draft"
+                                    ? "Solo se pueden eliminar cursos archivados"
+                                    : "Eliminar"
+                                }
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <PrimaryLink
+                asButton
+                dark
+                text={showCreateForm ? "Cancelar" : "+ Nuevo Curso"}
+                onClick={() => setShowCreateForm(!showCreateForm)}
+              />
+            </div>
+
+            {showCreateForm && (
+              <div className={styles.formSection}>
+                <CourseForm
+                  onSuccess={handleFormSuccess}
+                  onCancel={() => setShowCreateForm(false)}
+                />
+              </div>
+            )}
+          </>
+        ) : (
           <div className={styles.listSection}>
-            <h2>Todos los Cursos</h2>
+            <h2>Cursos Inscritos</h2>
             {courses.length === 0 ? (
-              <p className={styles.noClasses}>No hay cursos disponibles</p>
+              <div className={styles.noInscriptions}>
+                <p>No estás inscrito en ningún curso</p>
+                <PrimaryLink
+                  dark
+                  href="/content"
+                  text="Ver próximas actividades"
+                />
+              </div>
             ) : (
               <div className={styles.tableContainer}>
                 <table className={styles.table}>
@@ -226,9 +386,8 @@ const CoursesPage = () => {
                       <th>Fin</th>
                       <th>Clases</th>
                       <th>Precio</th>
-                      <th>Participantes</th>
-                      <th>Pagos</th>
-                      <th>Estado</th>
+                      <th>Progreso</th>
+                      <th>Pago</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -249,58 +408,91 @@ const CoursesPage = () => {
                         <td>{course.amount_of_classes ?? 0}</td>
                         <td>${course.price}</td>
                         <td>
-                          {course.participants?.length || 0} /{" "}
-                          {course.max_participants || "∞"}
+                          {course.start_date ? (
+                            <ClassStatusBadge
+                              gender="m"
+                              status={getCourseTimeStatus(
+                                course.start_date,
+                                course.end_date,
+                                course.status,
+                              )}
+                            />
+                          ) : (
+                            "—"
+                          )}
                         </td>
                         <td>
-                          {course.paidCount ?? 0} / {course.enrolledCount ?? 0}
-                        </td>
-                        <td>
-                          <StatusBadge status={course.status}>
-                            {course.status === "published"
-                              ? "Publicado"
-                              : "Borrador"}
+                          <StatusBadge
+                            status={
+                              course.userPaymentStatus === "paid"
+                                ? "published"
+                                : "pending"
+                            }
+                          >
+                            {course.userPaymentStatus === "paid"
+                              ? "Pagado"
+                              : "Pendiente"}
                           </StatusBadge>
                         </td>
                         <td>
                           <div className={styles.actionButtons}>
-                            <IconLink
-                              fill={"var(--color-4)"}
-                              href={`/dashboard/courses/${course._id}`}
-                              icon={"Eye"}
-                            />
-                            <IconLink
-                              asButton
-                              danger={course.status === "published"}
-                              icon={
-                                course.status === "published"
-                                  ? "Pin"
-                                  : "Confetti"
-                              }
-                              success={course.status !== "published"}
-                              onClick={() =>
-                                handleToggleStatus(course._id, course.status)
-                              }
-                              title={
-                                course.status === "published"
-                                  ? "Ocultar"
-                                  : "Publicar"
-                              }
-                            />
-                            <IconLink
-                              asButton
-                              danger
-                              disabled={course.status !== "draft"}
-                              icon={"Delete"}
-                              onClick={() =>
-                                handleDeleteCourse(course._id, course.title)
-                              }
-                              title={
-                                course.status !== "draft"
-                                  ? "Solo se pueden eliminar cursos archivados"
-                                  : "Eliminar"
-                              }
-                            />
+                            {course.userPaymentStatus === "pending" && (
+                              <IconLink
+                                asButton
+                                icon={"Money"}
+                                onClick={() =>
+                                  handleConfirmPayment(course._id, course.title)
+                                }
+                                success
+                                title={"Confirmar pago"}
+                              />
+                            )}
+                            {course.userPaymentStatus === "paid" && (
+                              <IconLink
+                                asButton
+                                disabled={
+                                  getCourseTimeStatus(
+                                    course.start_date,
+                                    course.end_date,
+                                    course.status,
+                                  ) !== "completed"
+                                }
+                                fill={
+                                  userReviewMap[course._id]
+                                    ? "var(--warning)"
+                                    : "var(--color-4)"
+                                }
+                                icon={"Star"}
+                                onClick={() =>
+                                  setReviewModal({
+                                    courseId: course._id,
+                                    title: course.title,
+                                    existingReview:
+                                      userReviewMap[course._id] ?? null,
+                                  })
+                                }
+                                title={
+                                  getCourseTimeStatus(
+                                    course.start_date,
+                                    course.end_date,
+                                    course.status,
+                                  ) !== "completed"
+                                    ? "Disponible al finalizar el curso"
+                                    : userReviewMap[course._id]
+                                      ? "Editar tu reseña"
+                                      : "Dejar una reseña"
+                                }
+                              />
+                            )}
+                            {course.userPaymentStatus !== "paid" && (
+                              <IconLink
+                                asButton
+                                danger
+                                icon={"UserMinus"}
+                                onClick={() => handleUnenroll(course._id)}
+                                title={"Cancelar inscripción"}
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -309,109 +501,27 @@ const CoursesPage = () => {
                 </table>
               </div>
             )}
-            <PrimaryLink
-              asButton
-              dark
-              text={showCreateForm ? "Cancelar" : "+ Nuevo Curso"}
-              onClick={() => setShowCreateForm(!showCreateForm)}
-            />
           </div>
+        )}
+      </div>
 
-          {showCreateForm && (
-            <div className={styles.formSection}>
-              <CourseForm
-                onSuccess={handleFormSuccess}
-                onCancel={() => setShowCreateForm(false)}
-              />
-            </div>
-          )}
-        </>
-      ) : (
-        <div className={styles.listSection}>
-          <h2>Cursos Inscritos</h2>
-          {courses.length === 0 ? (
-            <div className={styles.noInscriptions}>
-              <p>No estás inscrito en ningún curso</p>
-              <PrimaryLink
-                dark
-                href="/content"
-                text="Ver próximas actividades"
-              />
-            </div>
-          ) : (
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Título</th>
-                    <th>Inicio</th>
-                    <th>Fin</th>
-                    <th>Clases</th>
-                    <th>Precio</th>
-                    <th>Pago</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courses.map((course) => (
-                    <tr key={course._id}>
-                      <td>{course.title}</td>
-                      <td>
-                        {course.start_date
-                          ? format(new Date(course.start_date), "dd/MM/yyyy")
-                          : "—"}
-                      </td>
-                      <td>
-                        {course.end_date
-                          ? format(new Date(course.end_date), "dd/MM/yyyy")
-                          : "—"}
-                      </td>
-                      <td>{course.amount_of_classes ?? 0}</td>
-                      <td>${course.price}</td>
-                      <td>
-                        <StatusBadge
-                          status={
-                            course.userPaymentStatus === "paid"
-                              ? "published"
-                              : "pending"
-                          }
-                        >
-                          {course.userPaymentStatus === "paid"
-                            ? "Pagado"
-                            : "Pendiente"}
-                        </StatusBadge>
-                      </td>
-                      <td>
-                        <div className={styles.actionButtons}>
-                          {course.userPaymentStatus === "pending" && (
-                            <IconLink
-                              asButton
-                              icon={"Money"}
-                              onClick={() =>
-                                handleConfirmPayment(course._id, course.title)
-                              }
-                              success
-                              title={"Confirmar pago"}
-                            />
-                          )}
-                          <IconLink
-                            asButton
-                            danger
-                            icon={"UserMinus"}
-                            onClick={() => handleUnenroll(course._id)}
-                            title={"Cancelar inscripción"}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {reviewModal && (
+        <ReviewModal
+          isOpen
+          entityId={reviewModal.courseId}
+          entityTitle={reviewModal.title}
+          entityType="course"
+          existingReview={reviewModal.existingReview}
+          onClose={() => setReviewModal(null)}
+          onSuccess={(updated) => {
+            setUserReviewMap((prev) => ({
+              ...prev,
+              [reviewModal.courseId]: updated,
+            }));
+          }}
+        />
       )}
-    </div>
+    </>
   );
 };
 

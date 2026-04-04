@@ -55,6 +55,22 @@ export async function DELETE(req, { params }) {
     }
 
     // Delete enrollment doc (ignore if not found — remove may still proceed)
+    const existingEnrollment = await enrollmentsCollection.findOne({
+      userId: new ObjectId(userId),
+      courseId: new ObjectId(id),
+    });
+
+    if (existingEnrollment?.paymentStatus === "paid") {
+      return Response.json(
+        {
+          success: false,
+          message:
+            "No se puede remover a un participante que ya ha pagado el curso",
+        },
+        { status: 403 },
+      );
+    }
+
     await enrollmentsCollection.deleteOne({
       userId: new ObjectId(userId),
       courseId: new ObjectId(id),

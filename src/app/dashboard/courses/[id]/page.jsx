@@ -1,13 +1,17 @@
 "use client";
 
+import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import CourseForm from "@/views/sections/pages/dashboard/courses/CourseForm";
 import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
+import StarRating from "@/views/components/ui/StarRating";
 import StatusBadge from "@/views/components/ui/StatusBadge";
 import styles from "./styles.module.css";
+import { es } from "date-fns/locale";
 import { format } from "date-fns";
+import { getCourseProgress } from "@/utils/classStatus";
 import { useSession } from "next-auth/react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   closeLoading,
   confirmUnenroll,
@@ -19,6 +23,7 @@ import { useEffect, useState } from "react";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
+  const router = useRouter();
   const { data: session } = useSession();
 
   const [courseData, setCourseData] = useState(null);
@@ -26,6 +31,7 @@ const CourseDetailPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [participants, setParticipants] = useState([]);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     if (session) {
@@ -68,6 +74,14 @@ const CourseDetailPage = () => {
         );
         setParticipants(participantsData.filter((p) => p !== null));
       }
+
+      // Fetch reviews (non-blocking)
+      fetch(`/api/courses/${id}/reviews`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success) setReviews(d.data);
+        })
+        .catch(() => {});
     } catch (err) {
       console.error("Error fetching course details:", err);
       toastError(
@@ -135,6 +149,25 @@ const CourseDetailPage = () => {
     fetchCourseDetails();
   };
 
+  const handleCloneCourse = async () => {
+    toastLoading("Procesando", "Creando nueva iteración del curso...");
+    try {
+      const res = await fetch(`/api/courses/${id}/clone`, { method: "POST" });
+      const data = await res.json();
+      closeLoading();
+      if (!res.ok) return toastError(3000, "Ha habido un error", data.message);
+      toastSuccess(
+        3000,
+        "Curso duplicado",
+        "Se creó un borrador listo para editar",
+      );
+      router.push(`/dashboard/courses/${data.data._id}`);
+    } catch {
+      closeLoading();
+      toastError(3000, "Ha habido un error", "No se pudo duplicar el curso");
+    }
+  };
+
   if (loading) return <PageLoader />;
 
   if (!courseData) {
@@ -174,6 +207,13 @@ const CourseDetailPage = () => {
                   warning
                   icon="Pencil"
                   onClick={() => setEditMode(true)}
+                />
+                <IconLink
+                  asButton
+                  icon="Redo"
+                  onClick={handleCloneCourse}
+                  success
+                  title="Repetir curso (crear nueva iteración)"
                 />
               </div>
             </div>
@@ -253,6 +293,43 @@ const CourseDetailPage = () => {
             <div className={styles.sectionHeader}>
               <h2>Clases del Curso ({classes.length})</h2>
             </div>
+            {classes.length > 0 &&
+              (() => {
+                const progress = getCourseProgress(classes);
+                const progressLabel =
+                  progress.status === "completed"
+                    ? "Finalizado"
+                    : progress.status === "in-progress"
+                      ? "En progreso"
+                      : "Por comenzar";
+                return (
+                  <div className={styles.progressSection}>
+                    <div className={styles.progressHeader}>
+                      <span>
+                        {progress.completedCount}/{progress.totalCount} clases
+                        completadas
+                      </span>
+                      <StatusBadge
+                        status={
+                          progress.status === "completed"
+                            ? "published"
+                            : progress.status === "in-progress"
+                              ? "enrolled"
+                              : "draft"
+                        }
+                      >
+                        {progressLabel}
+                      </StatusBadge>
+                    </div>
+                    <div className={styles.progressBar}>
+                      <div
+                        className={styles.progressFill}
+                        style={{ width: `${progress.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             {classes.length === 0 ? (
               <p className={styles.noParticipants}>
                 No hay clases asignadas a este curso
@@ -266,6 +343,7 @@ const CourseDetailPage = () => {
                       <th>Fecha</th>
                       <th>Hora</th>
                       <th>Duración</th>
+                      <th>Progreso</th>
                       <th>Google Meet</th>
                     </tr>
                   </thead>
@@ -293,6 +371,25 @@ const CourseDetailPage = () => {
                             : "—"}
                         </td>
                         <td>{cls.duration ? `${cls.duration} min` : "—"}</td>
+                        <td>
+                          {cls.start_date && cls.duration ? (
+                            <ClassStatusBadge
+                              status={
+                                new Date() < new Date(cls.start_date)
+                                  ? "upcoming"
+                                  : new Date() <
+                                      new Date(
+                                        new Date(cls.start_date).getTime() +
+                                          cls.duration * 60 * 1000,
+                                      )
+                                    ? "ongoing"
+                                    : "completed"
+                              }
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td>
                           <div className={styles.actionButtons}>
                             {cls.googleMeetLink ? (
@@ -385,9 +482,19 @@ const CourseDetailPage = () => {
                             <IconLink
                               asButton
                               danger
+                              disabled={
+                                courseData?.enrollmentMap?.[participant._id] ===
+                                "paid"
+                              }
                               icon="UserMinus"
                               onClick={() =>
                                 handleRemoveParticipant(participant._id)
+                              }
+                              title={
+                                courseData?.enrollmentMap?.[participant._id] ===
+                                "paid"
+                                  ? "No se puede remover un participante que ya pagó"
+                                  : "Remover participante"
                               }
                             />
                           </div>
@@ -397,6 +504,54 @@ const CourseDetailPage = () => {
                   </tbody>
                 </table>
               </div>
+            )}
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h2>
+                Reseñas
+                {reviews.length > 0 && (
+                  <span className={styles.reviewSummary}>
+                    <StarRating
+                      value={Math.round(
+                        reviews.reduce((s, r) => s + r.rating, 0) /
+                          reviews.length,
+                      )}
+                      readOnly
+                      size="sm"
+                    />
+                    {(
+                      reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+                    ).toFixed(1)}{" "}
+                    ({reviews.length})
+                  </span>
+                )}
+              </h2>
+            </div>
+            {reviews.length === 0 ? (
+              <p className={styles.noParticipants}>
+                Todavía no hay reseñas para este curso.
+              </p>
+            ) : (
+              <ul className={styles.reviewList}>
+                {reviews.map((r) => (
+                  <li key={r._id?.toString()} className={styles.reviewItem}>
+                    <div className={styles.reviewHeader}>
+                      <span className={styles.reviewAuthor}>{r.firstName}</span>
+                      <StarRating value={r.rating} readOnly size="sm" />
+                      <span className={styles.reviewDate}>
+                        {format(new Date(r.createdAt), "dd/MM/yyyy", {
+                          locale: es,
+                        })}
+                      </span>
+                    </div>
+                    {r.comment && (
+                      <p className={styles.reviewComment}>{r.comment}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
         </>

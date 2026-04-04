@@ -69,7 +69,9 @@ export const ClassFormSchema = z.object({
     .date({ message: "Debe seleccionar una fecha de inicio" })
     .refine((date) => date > new Date(), {
       message: "Día/horario deben ser posteriores al actual",
-    }),
+    })
+    .nullable()
+    .optional(),
   max_participants: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" })
@@ -105,4 +107,33 @@ export const CourseFormSchema = z.object({
 export const AddGoogleInformationToEvent = z.object({
   googleEventId: z.string().min(1),
   googleEventUrl: z.string().min(1),
+});
+
+// Schemas for editing published items (restricted fields only)
+export const PublishedCourseEditSchema = CourseFormSchema.pick({
+  title: true,
+  short_description: true,
+  full_description: true,
+});
+
+export const PublishedClassEditSchema = ClassFormSchema.pick({
+  title: true,
+  short_description: true,
+});
+
+export const ClassResourcesUpdateSchema = z.object({
+  resources: z.array(
+    z.object({
+      title: z.string().min(1, "El título es requerido"),
+      url: z.string().url("La URL no es válida"),
+    }),
+  ),
+});
+
+export const ReviewFormSchema = z.object({
+  rating: z.number().int().min(1, "Seleccioná una puntuación").max(5),
+  comment: z
+    .string()
+    .max(500, "El comentario no puede superar 500 caracteres")
+    .optional(),
 });

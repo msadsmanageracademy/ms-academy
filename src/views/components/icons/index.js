@@ -31,6 +31,7 @@ export { NavbarLogin } from "@/views/components/icons/NavbarLogin";
 export { Pencil } from "@/views/components/icons/Pencil";
 export { Pin } from "@/views/components/icons/Pin";
 export { Plus } from "@/views/components/icons/Plus";
+export { Redo } from "@/views/components/icons/Redo";
 export { Refresh } from "@/views/components/icons/Refresh";
 export { Register } from "@/views/components/icons/Register";
 export { Search } from "@/views/components/icons/Search";

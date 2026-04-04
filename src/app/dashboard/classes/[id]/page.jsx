@@ -3,7 +3,9 @@
 import ClassForm from "@/views/sections/pages/dashboard/classes/ClassForm";
 import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
+import StarRating from "@/views/components/ui/StarRating";
 import StatusBadge from "@/views/components/ui/StatusBadge";
+import { getCourseTimeStatus, getClassStatus } from "@/utils/classStatus";
 import { es } from "date-fns/locale";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
@@ -28,6 +30,7 @@ const ClassDetailPage = () => {
 
   const [classData, setClassData] = useState(null);
   const [courseTitle, setCourseTitle] = useState(null);
+  const [linkedCourseInfo, setLinkedCourseInfo] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [hasCalendarAccess, setHasCalendarAccess] = useState(false);
   const [listDownloadState, setListDownloadState] = useState(false);
@@ -36,6 +39,13 @@ const ClassDetailPage = () => {
   const [notifyAllState, setNotifyAllState] = useState(false);
   const [notifyingParticipant, setNotifyingParticipant] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [recordingUrl, setRecordingUrl] = useState("");
+  const [recordingUrlSaving, setRecordingUrlSaving] = useState(false);
+  const [resources, setResources] = useState([]);
+  const [newResourceTitle, setNewResourceTitle] = useState("");
+  const [newResourceUrl, setNewResourceUrl] = useState("");
+  const [resourcesSaving, setResourcesSaving] = useState(false);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     if (session) {
@@ -51,6 +61,12 @@ const ClassDetailPage = () => {
 
       const data = await res.json();
       setClassData(data.data);
+      setRecordingUrl(data.data.recording_url || "");
+      setResources(data.data.resources || []);
+      if (data.data.userReview) {
+        setReviewRating(data.data.userReview.rating);
+        setReviewComment(data.data.userReview.comment || "");
+      }
 
       // Fetch course title if the class belongs to one
       if (data.data.courseId) {
@@ -59,6 +75,11 @@ const ClassDetailPage = () => {
           if (courseRes.ok) {
             const courseData = await courseRes.json();
             setCourseTitle(courseData.data?.title ?? null);
+            setLinkedCourseInfo({
+              status: courseData.data?.status ?? null,
+              start_date: courseData.data?.start_date ?? null,
+              end_date: courseData.data?.end_date ?? null,
+            });
           }
         } catch {
           // non-blocking — course title stays null
@@ -66,6 +87,14 @@ const ClassDetailPage = () => {
       } else {
         setCourseTitle(null);
       }
+
+      // Fetch reviews (non-blocking)
+      fetch(`/api/classes/${id}/reviews`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success) setReviews(d.data);
+        })
+        .catch(() => {});
 
       // Fetch participant details
       if (data.data.participants && data.data.participants.length > 0) {
@@ -282,6 +311,91 @@ const ClassDetailPage = () => {
     setTimeout(() => setListDownloadState(false), 3000);
   };
 
+  const handleAddResource = () => {
+    if (!newResourceTitle.trim() || !newResourceUrl.trim()) return;
+    try {
+      new URL(newResourceUrl);
+    } catch {
+      return toastError(2000, "URL inválida", "Ingresá una URL válida");
+    }
+    setResources((prev) => [
+      ...prev,
+      { title: newResourceTitle.trim(), url: newResourceUrl.trim() },
+    ]);
+    setNewResourceTitle("");
+    setNewResourceUrl("");
+  };
+
+  const handleRemoveResource = (index) => {
+    setResources((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveResources = async () => {
+    setResourcesSaving(true);
+    toastLoading("Guardando materiales", "Actualizando lista...");
+    try {
+      const res = await fetch(`/api/classes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resources }),
+      });
+      const data = await res.json();
+      closeLoading();
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+      setClassData((prev) => ({ ...prev, resources }));
+      toastSuccess(
+        3000,
+        "Materiales actualizados",
+        "La lista fue guardada correctamente",
+      );
+    } catch (err) {
+      console.error("Error saving resources:", err);
+      closeLoading();
+      toastError(
+        3000,
+        "Ha habido un error",
+        "No se pudieron guardar los materiales",
+      );
+    } finally {
+      setResourcesSaving(false);
+    }
+  };
+
+  const handleSaveRecording = async () => {
+    setRecordingUrlSaving(true);
+    toastLoading("Guardando grabación", "Actualizando URL...");
+    try {
+      const res = await fetch(`/api/classes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recording_url: recordingUrl }),
+      });
+      const data = await res.json();
+      closeLoading();
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+      setClassData((prev) => ({ ...prev, recording_url: recordingUrl }));
+      toastSuccess(
+        3000,
+        "Grabación actualizada",
+        "La URL fue guardada correctamente",
+      );
+    } catch (err) {
+      console.error("Error saving recording URL:", err);
+      closeLoading();
+      toastError(
+        3000,
+        "Ha habido un error",
+        "No se pudo guardar la URL de grabación",
+      );
+    } finally {
+      setRecordingUrlSaving(false);
+    }
+  };
+
   const handleFormSuccess = () => {
     setEditMode(false);
     fetchClassDetails();
@@ -345,17 +459,23 @@ const ClassDetailPage = () => {
               <div className={styles.infoItem}>
                 <span className={styles.label}>Fecha:</span>
                 <span className={styles.value}>
-                  {format(
-                    new Date(classData.start_date),
-                    "dd/MM/yyyy 'a las' h:mm a",
+                  {classData.start_date ? (
+                    <>
+                      {format(
+                        new Date(classData.start_date),
+                        "dd/MM/yyyy 'a las' h:mm a",
+                      )}
+                      <span className={styles.relative}>
+                        (
+                        {formatDistanceToNow(new Date(classData.start_date), {
+                          locale: es,
+                        })}
+                        )
+                      </span>
+                    </>
+                  ) : (
+                    "Sin fecha asignada"
                   )}
-                  <span className={styles.relative}>
-                    (
-                    {formatDistanceToNow(new Date(classData.start_date), {
-                      locale: es,
-                    })}
-                    )
-                  </span>
                 </span>
               </div>
 
@@ -452,6 +572,96 @@ const ClassDetailPage = () => {
               )}
             </div>
           </section>
+          {classData.courseId && (
+            <section className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h2>Materiales</h2>
+              </div>
+              <div className={styles.resourceAddRow}>
+                <input
+                  className={styles.recordingInput}
+                  placeholder="Título del material"
+                  type="text"
+                  value={newResourceTitle}
+                  onChange={(e) => setNewResourceTitle(e.target.value)}
+                />
+                <input
+                  className={styles.recordingInput}
+                  placeholder="https://..."
+                  type="url"
+                  value={newResourceUrl}
+                  onChange={(e) => setNewResourceUrl(e.target.value)}
+                />
+                <button
+                  className={styles.recordingBtn}
+                  onClick={handleAddResource}
+                >
+                  Agregar
+                </button>
+              </div>
+              {resources.length > 0 && (
+                <ul className={styles.resourceList}>
+                  {resources.map((r, i) => (
+                    <li key={i} className={styles.resourceItem}>
+                      <a href={r.url} rel="noopener noreferrer" target="_blank">
+                        {r.title}
+                      </a>
+                      <button
+                        className={styles.resourceRemoveBtn}
+                        onClick={() => handleRemoveResource(i)}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {resources.length > 0 && (
+                <button
+                  className={styles.recordingBtn}
+                  disabled={resourcesSaving}
+                  onClick={handleSaveResources}
+                >
+                  {resourcesSaving ? "Guardando..." : "Guardar cambios"}
+                </button>
+              )}
+            </section>
+          )}
+          {classData.courseId && (
+            <section className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h2>Grabación</h2>
+              </div>
+              <div className={styles.recordingRow}>
+                <input
+                  className={styles.recordingInput}
+                  placeholder="https://..."
+                  type="url"
+                  value={recordingUrl}
+                  onChange={(e) => setRecordingUrl(e.target.value)}
+                />
+                <button
+                  className={styles.recordingBtn}
+                  disabled={recordingUrlSaving}
+                  onClick={handleSaveRecording}
+                >
+                  {recordingUrlSaving ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
+              {classData.recording_url && (
+                <p className={styles.recordingCurrent}>
+                  URL actual:{" "}
+                  <a
+                    href={classData.recording_url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {classData.recording_url}
+                  </a>
+                </p>
+              )}
+            </section>
+          )}
           {classData.status !== "enrolled" && (
             <>
               <section className={styles.section}>
@@ -574,6 +784,60 @@ const ClassDetailPage = () => {
               </section>
             </>
           )}
+
+          {/* Reviews section — visible to everyone once the class is completed */}
+          {getClassStatus(
+            classData.start_date,
+            classData.duration,
+            classData.status,
+          ) === "completed" && (
+            <section className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h2>
+                  Reseñas
+                  {classData.reviewCount > 0 && (
+                    <span className={styles.reviewSummary}>
+                      <StarRating
+                        value={Math.round(classData.avgRating)}
+                        readOnly
+                        size="sm"
+                      />
+                      {classData.avgRating} ({classData.reviewCount})
+                    </span>
+                  )}
+                </h2>
+              </div>
+
+              {/* Review form removed — leave review via the Star button in Mis Clases */}
+
+              {reviews.length === 0 ? (
+                <p className={styles.noReviews}>
+                  Todavía no hay reseñas para esta clase.
+                </p>
+              ) : (
+                <ul className={styles.reviewList}>
+                  {reviews.map((r) => (
+                    <li key={r._id?.toString()} className={styles.reviewItem}>
+                      <div className={styles.reviewHeader}>
+                        <span className={styles.reviewAuthor}>
+                          {r.firstName}
+                        </span>
+                        <StarRating value={r.rating} readOnly size="sm" />
+                        <span className={styles.reviewDate}>
+                          {format(new Date(r.createdAt), "dd/MM/yyyy", {
+                            locale: es,
+                          })}
+                        </span>
+                      </div>
+                      {r.comment && (
+                        <p className={styles.reviewComment}>{r.comment}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
         </>
       ) : (
         <section className={styles.section}>
@@ -583,6 +847,14 @@ const ClassDetailPage = () => {
             onSuccess={handleFormSuccess}
             onCancel={() => setEditMode(false)}
             hasCalendarAccess={hasCalendarAccess}
+            allowFullEdit={
+              classData?.status === "enrolled" &&
+              getCourseTimeStatus(
+                linkedCourseInfo?.start_date,
+                linkedCourseInfo?.end_date,
+                linkedCourseInfo?.status,
+              ) !== "in-progress"
+            }
           />
         </section>
       )}

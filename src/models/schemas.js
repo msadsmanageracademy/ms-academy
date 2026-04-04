@@ -30,7 +30,7 @@ export const ClassDBSchema = z.object({
   title: z.string(),
   short_description: z.string(),
   duration: z.number().positive(),
-  start_date: z.date(),
+  start_date: z.date().optional().nullable(),
   participants: z.array(z.instanceof(Object)).default([]),
   max_participants: z.number().nonnegative().nullable(),
   price: z.number().nonnegative(),
@@ -41,6 +41,10 @@ export const ClassDBSchema = z.object({
   googleEventUrl: z.string().optional(),
   googleMeetLink: z.string().optional(),
   calendarEventLink: z.string().optional(),
+  recording_url: z.string().url().optional(),
+  resources: z
+    .array(z.object({ title: z.string(), url: z.string().url() }))
+    .default([]),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -56,6 +60,7 @@ export const CourseDBSchema = z.object({
   price: z.number().nonnegative(),
   status: z.enum(["draft", "published"]).default("draft"),
   type: z.literal("course"),
+  courseSeriesId: z.instanceof(Object).optional(), // ObjectId — links iterations of the same course
   createdBy: z.instanceof(Object).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -103,6 +108,8 @@ export const NotificationDBSchema = z.object({
     "class.added_to_calendar",
     "class.status_changed",
     "class.reminder",
+    "class.recording_added",
+    "class.resources_updated",
     // Course - User notifications
     "course.pre_enrolled",
     "course.enrolled",
@@ -129,6 +136,18 @@ export const NotificationDBSchema = z.object({
   read: z.boolean().default(false),
   createdAt: z.date(),
   metadata: z.record(z.any()).optional(), // Only for truly dynamic/extra data
+});
+
+// ==================== REVIEW SCHEMAS ====================
+
+export const ReviewDBSchema = z.object({
+  courseId: z.instanceof(Object), // ObjectId
+  userId: z.instanceof(Object), // ObjectId
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(500).optional(),
+  firstName: z.string().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 // ==================== HELPER FUNCTIONS ====================
@@ -160,6 +179,7 @@ export function prepareCourseForDB(formData, userId) {
       formData.max_participants === 0 ? null : formData.max_participants,
     createdAt: now,
     updatedAt: now,
+    // courseSeriesId is set to the doc's own _id after insertion
   };
 }
 

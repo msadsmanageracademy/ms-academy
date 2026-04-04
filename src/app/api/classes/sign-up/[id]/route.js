@@ -14,7 +14,7 @@ export async function PATCH(req, { params }) {
           success: false,
           message: "ID de clase inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     if (!ObjectId.isValid(userId))
@@ -23,7 +23,7 @@ export async function PATCH(req, { params }) {
           success: false,
           message: "ID de usuario inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const client = await clientPromise;
@@ -39,7 +39,7 @@ export async function PATCH(req, { params }) {
     if (!classItem) {
       return Response.json(
         { success: false, message: "Clase no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -53,13 +53,13 @@ export async function PATCH(req, { params }) {
       {
         $addToSet: { participants: new ObjectId(userId) },
         $set: { updatedAt: new Date() },
-      }
+      },
     );
 
     if (result.modifiedCount === 0) {
       return Response.json(
         { success: false, message: "Ya estás inscripto en esta clase" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -77,7 +77,7 @@ export async function PATCH(req, { params }) {
         relatedId: new ObjectId(id),
         relatedType: "class",
         actorId: new ObjectId(userId),
-      })
+      }),
     );
 
     // Notify admin about new signup
@@ -93,7 +93,7 @@ export async function PATCH(req, { params }) {
           relatedId: new ObjectId(id),
           relatedType: "class",
           actorId: new ObjectId(userId),
-        })
+        }),
       );
     }
 
@@ -103,7 +103,7 @@ export async function PATCH(req, { params }) {
 
     return Response.json(
       { success: true, message: "Inscripción realizada con éxito" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error en la inscripción:", error);
@@ -123,7 +123,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "ID de clase inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     if (!ObjectId.isValid(userId))
@@ -132,7 +132,7 @@ export async function DELETE(req, { params }) {
           success: false,
           message: "ID de usuario inválido",
         },
-        { status: 400 }
+        { status: 400 },
       );
 
     const client = await clientPromise;
@@ -148,7 +148,7 @@ export async function DELETE(req, { params }) {
     if (!classItem) {
       return Response.json(
         { success: false, message: "Clase no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -162,13 +162,13 @@ export async function DELETE(req, { params }) {
       {
         $pull: { participants: new ObjectId(userId) },
         $set: { updatedAt: new Date() },
-      }
+      },
     );
 
     if (result.modifiedCount === 0) {
       return Response.json(
         { success: false, message: "No estás inscrito en esta clase" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -186,7 +186,7 @@ export async function DELETE(req, { params }) {
         relatedId: new ObjectId(id),
         relatedType: "class",
         actorId: new ObjectId(userId),
-      })
+      }),
     );
 
     // Notify admin about unenrollment
@@ -202,7 +202,7 @@ export async function DELETE(req, { params }) {
           relatedId: new ObjectId(id),
           relatedType: "class",
           actorId: new ObjectId(userId),
-        })
+        }),
       );
     }
 
@@ -212,7 +212,7 @@ export async function DELETE(req, { params }) {
 
     return Response.json(
       { success: true, message: "Inscripción cancelada con éxito" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error al cancelar inscripción:", error);

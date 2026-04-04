@@ -3,6 +3,7 @@
 import { Board } from "@/views/sections/pages/content/Board";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PageWrapper from "@/views/components/layout/PageWrapper";
+import { getCourseTimeStatus } from "@/utils/classStatus";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -39,7 +40,13 @@ const ContentPage = () => {
         const coursesData = await coursesRes.json();
 
         setClasses(classesData.data || []);
-        setCourses(coursesData.data || []);
+        const allCourses = coursesData.data || [];
+        setCourses(
+          allCourses.filter((c) => {
+            const t = getCourseTimeStatus(c.start_date, c.end_date, c.status);
+            return t === "upcoming" || t === "in-progress";
+          }),
+        );
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {

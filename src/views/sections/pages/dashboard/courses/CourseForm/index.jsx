@@ -8,6 +8,7 @@ import { toastError, toastSuccess } from "@/utils/alerts";
 
 const CourseForm = ({ courseData, onSuccess, onCancel }) => {
   const isEditMode = !!courseData;
+  const isPublished = courseData?.status === "published";
 
   const {
     formState: { errors },
@@ -118,7 +119,8 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
         <label>Máximo de participantes</label>
         <input
           {...register("max_participants", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number}`}
+          className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
+          disabled={isPublished}
         />
       </div>
       <div className={styles.formCustomError}>
@@ -129,7 +131,8 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
         <label>Precio</label>
         <input
           {...register("price", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number}`}
+          className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
+          disabled={isPublished}
         />
       </div>
       <div className={styles.formCustomError}>{errors?.price?.message}</div>

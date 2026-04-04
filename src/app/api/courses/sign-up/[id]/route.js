@@ -67,6 +67,29 @@ export async function PATCH(req, { params }) {
       );
     }
 
+    // Enforce max_participants capacity
+    const courseWithParticipants = await coursesCollection.findOne(
+      { _id: new ObjectId(id) },
+      { projection: { max_participants: 1 } },
+    );
+    if (
+      courseWithParticipants?.max_participants !== null &&
+      courseWithParticipants?.max_participants !== undefined
+    ) {
+      const enrollmentCount = await enrollmentsCollection.countDocuments({
+        courseId: new ObjectId(id),
+      });
+      if (enrollmentCount >= courseWithParticipants.max_participants) {
+        return Response.json(
+          {
+            success: false,
+            message: "El cupo máximo de este curso ha sido alcanzado",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Create enrollment with pending payment status
     await enrollmentsCollection.insertOne(
       prepareCourseEnrollmentForDB(new ObjectId(userId), new ObjectId(id)),
@@ -173,6 +196,17 @@ export async function DELETE(req, { params }) {
       return Response.json(
         { success: false, message: "No estás inscrito en este curso" },
         { status: 400 },
+      );
+    }
+
+    // Paid enrollments cannot be cancelled
+    if (enrollment.paymentStatus === "paid" && session.user.role !== "admin") {
+      return Response.json(
+        {
+          success: false,
+          message: "No podés cancelar una inscripción ya pagada",
+        },
+        { status: 403 },
       );
     }
 
