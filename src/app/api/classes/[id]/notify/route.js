@@ -2,21 +2,15 @@ import { ClassReminderEmail } from "@/views/components/layout/ClassReminderEmail
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { Resend } from "resend";
-import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
 import { formatLongDateAtTime } from "@/utils/dates";
 import { prepareNotificationForDB } from "@/models/schemas";
+import { handleApiError, requireAdmin } from "@/lib/api/guards";
 
+// POST /api/classes/[id]/notify — admin only. Sends reminder emails to participants.
 export async function POST(req, { params }) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json(
-        { success: false, message: "No autorizado" },
-        { status: 401 },
-      );
-    }
+    const session = await requireAdmin();
 
     const { id } = await params;
 
@@ -174,10 +168,6 @@ export async function POST(req, { params }) {
       notifiedCount: users.length,
     });
   } catch (error) {
-    console.error("Error sending class reminder:", error);
-    return NextResponse.json(
-      { success: false, message: "Error en el servidor" },
-      { status: 500 },
-    );
+    return handleApiError(error, "Error sending class reminder");
   }
 }

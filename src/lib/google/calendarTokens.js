@@ -33,7 +33,7 @@ async function readStoredTokens(userId) {
     return decryptJSON(user.googleCalendarTokensEnc);
   } catch (error) {
     // Wrong/rotated TOKEN_ENCRYPTION_KEY or corrupted value: force re-authorization
-    console.error("No se pudieron descifrar los tokens de Calendar:", error.message);
+    console.error("Could not decrypt Calendar tokens:", error.message);
     await clearCalendarTokens(userId);
     return null;
   }

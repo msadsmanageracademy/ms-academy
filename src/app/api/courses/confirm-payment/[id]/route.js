@@ -109,6 +109,6 @@ export async function PATCH(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al confirmar pago");
+    return handleApiError(error, "Error confirming payment");
   }
 }

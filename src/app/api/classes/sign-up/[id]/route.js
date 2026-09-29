@@ -116,7 +116,7 @@ export async function PATCH(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error en la inscripción");
+    return handleApiError(error, "Error enrolling in class");
   }
 }
 
@@ -198,6 +198,6 @@ export async function DELETE(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al cancelar inscripción");
+    return handleApiError(error, "Error cancelling class enrollment");
   }
 }

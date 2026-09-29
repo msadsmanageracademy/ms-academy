@@ -34,6 +34,6 @@ export async function GET() {
 
     return Response.json({ success: true, authUrl }, { status: 200 });
   } catch (error) {
-    return handleApiError(error, "Error al iniciar la autorización de Calendar");
+    return handleApiError(error, "Error starting Calendar authorization");
   }
 }

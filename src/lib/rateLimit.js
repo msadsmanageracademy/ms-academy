@@ -15,7 +15,7 @@ async function getCollection() {
     .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
     .catch((error) => {
       indexReady = undefined; // retry on next call
-      console.error("Rate limit: no se pudo crear el índice TTL:", error.message);
+      console.error("Rate limit: could not create the TTL index:", error.message);
     });
   await indexReady;
   return collection;
@@ -39,7 +39,7 @@ export async function peekRateLimit({ scope, key, windowSec }) {
     const doc = await collection.findOne({ _id }, { projection: { count: 1 } });
     return doc?.count ?? 0;
   } catch (error) {
-    console.error("Rate limit (peek) falló, se permite el request:", error.message);
+    console.error("Rate limit (peek) failed, allowing the request:", error.message);
     return 0; // fail open: the limiter must never lock everyone out
   }
 }
@@ -72,7 +72,7 @@ export async function hitRateLimit({ scope, key, limit, windowSec }) {
       retryAfterSec: Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / 1000)),
     };
   } catch (error) {
-    console.error("Rate limit (hit) falló, se permite el request:", error.message);
+    console.error("Rate limit (hit) failed, allowing the request:", error.message);
     return { allowed: true, retryAfterSec: 0 };
   }
 }
@@ -83,7 +83,7 @@ export async function resetRateLimit({ scope, key, windowSec }) {
     const collection = await getCollection();
     await collection.deleteOne({ _id: windowDoc(scope, key, windowSec)._id });
   } catch (error) {
-    console.error("Rate limit (reset) falló:", error.message);
+    console.error("Rate limit (reset) failed:", error.message);
   }
 }
 

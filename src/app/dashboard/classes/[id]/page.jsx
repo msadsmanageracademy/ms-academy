@@ -54,6 +54,7 @@ const ClassDetailPage = () => {
       fetchClassDetails();
       setHasCalendarAccess(session.user.hasAuthorizedCalendar || false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the fetch function is recreated on every render; moves to a data hook in 3.2
   }, [session, id]);
 
   const fetchClassDetails = async () => {

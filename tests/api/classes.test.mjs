@@ -1,0 +1,194 @@
+// Authorization and data-exposure rules for the classes API.
+import { beforeEach, describe, expect, it } from "vitest";
+import * as classesRoute from "@/app/api/classes/route";
+import * as classRoute from "@/app/api/classes/[id]/route";
+import * as signUpRoute from "@/app/api/classes/sign-up/[id]/route";
+import * as removeParticipantRoute from "@/app/api/classes/[id]/remove-participant/route";
+import * as notifyRoute from "@/app/api/classes/[id]/notify/route";
+import {
+  callRoute,
+  createAdmin,
+  createClass,
+  createCourse,
+  createUser,
+  enroll,
+  resetDb,
+  setSession,
+} from "../helpers.mjs";
+
+const MEET = "https://meet.google.com/test-link";
+let db, admin, user, other;
+
+beforeEach(async () => {
+  db = await resetDb();
+  admin = await createAdmin(db);
+  user = await createUser(db);
+  other = await createUser(db);
+  setSession(null);
+});
+
+const newClassBody = () => ({
+  title: "New class",
+  short_description: "Class description",
+  start_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+  duration: 60,
+  price: 0,
+});
+
+describe("admin-only mutations", () => {
+  it("POST /api/classes: anonymous 401, user 403, admin 201", async () => {
+    const call = () => callRoute(classesRoute.POST, { method: "POST", body: newClassBody() });
+    expect((await call()).status).toBe(401);
+    setSession(user);
+    expect((await call()).status).toBe(403);
+    setSession(admin);
+    expect((await call()).status).toBe(201);
+  });
+
+  it("PATCH and DELETE /api/classes/[id] reject non-admins", async () => {
+    const cls = await createClass(db, { status: "draft" });
+    const params = { id: cls._id.toString() };
+    for (const session of [null, user]) {
+      setSession(session);
+      const expected = session ? 403 : 401;
+      expect((await callRoute(classRoute.PATCH, { method: "PATCH", body: { status: "published" }, params })).status).toBe(expected);
+      expect((await callRoute(classRoute.DELETE, { method: "DELETE", params })).status).toBe(expected);
+    }
+    expect(await db.collection("classes").countDocuments()).toBe(1);
+  });
+
+  it("remove-participant and notify reject a regular user", async () => {
+    const cls = await createClass(db, { participants: [other._id] });
+    const params = { id: cls._id.toString() };
+    setSession(user);
+    expect(
+      (await callRoute(removeParticipantRoute.DELETE, { method: "DELETE", path: `/?userId=${other._id}`, params })).status,
+    ).toBe(403);
+    expect((await callRoute(notifyRoute.POST, { method: "POST", body: {}, params })).status).toBe(403);
+  });
+
+  it("full PATCH rejects courseId (there is a dedicated endpoint)", async () => {
+    const cls = await createClass(db, { status: "draft" });
+    const course = await createCourse(db);
+    setSession(admin);
+    const res = await callRoute(classRoute.PATCH, {
+      method: "PATCH",
+      body: { ...newClassBody(), max_participants: 0, courseId: course._id.toString() },
+      params: { id: cls._id.toString() },
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("listings", () => {
+  it("public listing exposes neither participants nor links", async () => {
+    await createClass(db, { participants: [user._id], createdBy: admin._id, googleMeetLink: MEET });
+    const res = await callRoute(classesRoute.GET, { path: "/api/classes" });
+    expect(res.status).toBe(200);
+    const [pub] = res.json.data;
+    expect(pub.participantsCount).toBe(1);
+    expect(pub).not.toHaveProperty("participants");
+    expect(pub).not.toHaveProperty("createdBy");
+    expect(pub).not.toHaveProperty("googleMeetLink");
+  });
+
+  it.each([
+    ["/api/classes?showAll=true"],
+    ["/api/classes?courseId=507f1f77bcf86cd799439011"],
+  ])("%s: anonymous 401, user 403", async (path) => {
+    expect((await callRoute(classesRoute.GET, { path })).status).toBe(401);
+    setSession(user);
+    expect((await callRoute(classesRoute.GET, { path })).status).toBe(403);
+  });
+
+  it("myClasses requires a session", async () => {
+    expect((await callRoute(classesRoute.GET, { path: "/api/classes?myClasses=true" })).status).toBe(401);
+  });
+});
+
+describe("paywall on class detail", () => {
+  const getDetail = (cls) => callRoute(classRoute.GET, { params: { id: cls._id.toString() } });
+
+  it("standalone class: only participants see the link", async () => {
+    const cls = await createClass(db, { participants: [user._id], googleMeetLink: MEET });
+    expect((await getDetail(cls)).json.data.googleMeetLink).toBeUndefined();
+    setSession(other);
+    expect((await getDetail(cls)).json.data.googleMeetLink).toBeUndefined();
+    setSession(user);
+    const res = await getDetail(cls);
+    expect(res.json.data.googleMeetLink).toBe(MEET);
+    expect(res.json.data).not.toHaveProperty("participants");
+  });
+
+  it("course class: the link only shows up once payment is confirmed", async () => {
+    const course = await createCourse(db);
+    const cls = await createClass(db, {
+      status: "enrolled",
+      courseId: course._id,
+      participants: [user._id],
+      googleMeetLink: MEET,
+      recording_url: "https://example.test/rec",
+    });
+    await enroll(db, user, course, "pending");
+    setSession(user);
+    let data = (await getDetail(cls)).json.data;
+    expect(data.googleMeetLink).toBeUndefined();
+    expect(data.recording_url).toBeUndefined();
+
+    await db.collection("courseEnrollments").updateOne({ userId: user._id }, { $set: { paymentStatus: "paid" } });
+    data = (await getDetail(cls)).json.data;
+    expect(data.googleMeetLink).toBe(MEET);
+    expect(data.recording_url).toBe("https://example.test/rec");
+  });
+
+  it("admin sees everything, including participants", async () => {
+    const cls = await createClass(db, { participants: [user._id], googleMeetLink: MEET });
+    setSession(admin);
+    const data = (await getDetail(cls)).json.data;
+    expect(data.googleMeetLink).toBe(MEET);
+    expect(data.participants).toHaveLength(1);
+  });
+});
+
+describe("class enrollment", () => {
+  const signUp = (cls, body = {}) =>
+    callRoute(signUpRoute.PATCH, { method: "PATCH", body, params: { id: cls._id.toString() } });
+
+  it("requires a session", async () => {
+    const cls = await createClass(db);
+    expect((await signUp(cls)).status).toBe(401);
+  });
+
+  it("a user cannot enroll or unenroll someone else", async () => {
+    const cls = await createClass(db, { participants: [other._id] });
+    setSession(user);
+    expect((await signUp(cls, { userId: other._id.toString() })).status).toBe(403);
+    const res = await callRoute(signUpRoute.DELETE, {
+      method: "DELETE",
+      path: `/?userId=${other._id}`,
+      params: { id: cls._id.toString() },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects drafts, past classes, course classes and admins", async () => {
+    setSession(user);
+    expect((await signUp(await createClass(db, { status: "draft" }))).status).toBe(400);
+    expect((await signUp(await createClass(db, { start_date: new Date(Date.now() - 86400000) }))).status).toBe(400);
+    const course = await createCourse(db);
+    expect((await signUp(await createClass(db, { status: "enrolled", courseId: course._id }))).status).toBe(400);
+    setSession(admin);
+    expect((await signUp(await createClass(db))).status).toBe(403);
+  });
+
+  it("enforces capacity and prevents double enrollment", async () => {
+    const cls = await createClass(db, { max_participants: 1 });
+    setSession(user);
+    expect((await signUp(cls)).status).toBe(200);
+    expect((await signUp(cls)).status).toBe(400);
+    setSession(other);
+    expect((await signUp(cls)).status).toBe(400);
+    const saved = await db.collection("classes").findOne({ _id: cls._id });
+    expect(saved.participants).toHaveLength(1);
+  });
+});

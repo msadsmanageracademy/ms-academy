@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 
 /**
- * Error con status HTTP. Los handlers lo lanzan y `handleApiError` lo traduce
- * a una respuesta JSON con el status correspondiente.
+ * Error with an HTTP status. Handlers throw it and `handleApiError` turns it into
+ * a JSON response with that status. The message is user-facing (Spanish).
  */
 export class HttpError extends Error {
   constructor(status, message) {
@@ -11,14 +11,14 @@ export class HttpError extends Error {
   }
 }
 
-/** Devuelve la sesión o lanza 401. */
+/** Returns the session or throws 401. */
 export async function requireSession() {
   const session = await auth();
   if (!session?.user?.id) throw new HttpError(401, "No autenticado");
   return session;
 }
 
-/** Devuelve la sesión si el usuario es admin; si no, lanza 401/403. */
+/** Returns the session if the user is an admin; otherwise throws 401/403. */
 export async function requireAdmin() {
   const session = await requireSession();
   if (session.user.role !== "admin") {
@@ -30,9 +30,9 @@ export async function requireAdmin() {
 export const isAdmin = (session) => session?.user?.role === "admin";
 
 /**
- * Resuelve sobre qué usuario actúa el request.
- * - Sin userId solicitado (o igual al de la sesión) → el propio usuario.
- * - Otro userId → solo permitido para admins.
+ * Resolves which user the request acts on.
+ * - No requested userId (or the session's own) → the current user.
+ * - Another userId → only allowed for admins.
  */
 export function resolveTargetUserId(session, requestedUserId) {
   if (!requestedUserId || requestedUserId === session.user.id) {
@@ -43,11 +43,11 @@ export function resolveTargetUserId(session, requestedUserId) {
 }
 
 /**
- * Convierte cualquier error en una respuesta JSON segura.
- * Los HttpError exponen su mensaje; el resto se loguea y devuelve un 500 genérico
- * (nunca se filtra `error.message` al cliente).
+ * Turns any error into a safe JSON response.
+ * HttpErrors expose their message; anything else is logged and returns a generic 500
+ * (`error.message` is never leaked to the client).
  */
-export function handleApiError(error, context = "Error en la API") {
+export function handleApiError(error, context = "API error") {
   if (error instanceof HttpError) {
     return Response.json(
       { success: false, message: error.message },

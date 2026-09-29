@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:migrate": "node scripts/db-migrate.mjs"
   },
   "dependencies": {
@@ -48,6 +50,10 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "eslint": "^9",
-    "eslint-config-next": "15.2.0"
+    "eslint-config-next": "15.5.9",
+    "globals": "17.12.0",
+    "mongodb-memory-server": "11.3.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
   }
 }

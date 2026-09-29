@@ -146,6 +146,6 @@ export async function DELETE(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al remover participante");
+    return handleApiError(error, "Error removing participant");
   }
 }

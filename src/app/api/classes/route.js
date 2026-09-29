@@ -131,7 +131,7 @@ export async function GET(req) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al obtener las clases");
+    return handleApiError(error, "Error fetching classes");
   }
 }
 
@@ -222,6 +222,6 @@ export async function POST(req) {
       { status: 201 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al crear la clase");
+    return handleApiError(error, "Error creating class");
   }
 }

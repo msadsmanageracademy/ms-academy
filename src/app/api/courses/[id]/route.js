@@ -155,7 +155,7 @@ export async function GET(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al obtener el curso");
+    return handleApiError(error, "Error fetching course");
   }
 }
 
@@ -415,7 +415,7 @@ export async function PATCH(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al actualizar el curso");
+    return handleApiError(error, "Error updating course");
   }
 }
 
@@ -512,6 +512,6 @@ export async function DELETE(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al eliminar el curso");
+    return handleApiError(error, "Error deleting course");
   }
 }

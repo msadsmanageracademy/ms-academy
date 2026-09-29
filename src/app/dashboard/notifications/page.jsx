@@ -9,7 +9,7 @@ import { formatDateTime } from "@/utils/dates";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useSession } from "next-auth/react";
 import { toastError } from "@/utils/alerts";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const NotificationsPage = () => {
   const { data: session } = useSession();
@@ -24,6 +24,7 @@ const NotificationsPage = () => {
     if (session) {
       fetchNotifications();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the fetch function is recreated on every render; moves to a data hook in 3.2
   }, [session]);
 
   const fetchNotifications = async (page = 1) => {

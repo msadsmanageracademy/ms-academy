@@ -144,7 +144,7 @@ export async function GET(req) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al obtener los cursos");
+    return handleApiError(error, "Error fetching courses");
   }
 }
 
@@ -194,6 +194,6 @@ export async function POST(req) {
       { status: 201 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al crear el curso");
+    return handleApiError(error, "Error creating course");
   }
 }

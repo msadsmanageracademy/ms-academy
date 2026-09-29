@@ -52,7 +52,7 @@ export async function GET(req, { params }) {
 
     return Response.json({ success: true, data: user }, { status: 200 });
   } catch (error) {
-    return handleApiError(error, "Error al recuperar el usuario");
+    return handleApiError(error, "Error fetching user");
   }
 }
 
@@ -97,6 +97,6 @@ export async function PATCH(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    return handleApiError(error, "Error al actualizar el usuario");
+    return handleApiError(error, "Error updating user");
   }
 }

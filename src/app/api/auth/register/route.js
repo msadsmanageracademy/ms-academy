@@ -80,6 +80,6 @@ export async function POST(req) {
       { status: 201 },
     );
   } catch (error) {
-    return handleApiError(error, "Error en registro");
+    return handleApiError(error, "Error registering user");
   }
 }

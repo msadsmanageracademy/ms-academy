@@ -9,12 +9,12 @@ function getKey() {
   const raw = process.env.TOKEN_ENCRYPTION_KEY;
   if (!raw) {
     throw new Error(
-      "TOKEN_ENCRYPTION_KEY no está definida. Generá una con: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
+      "TOKEN_ENCRYPTION_KEY is not set. Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
     );
   }
   const key = Buffer.from(raw, "base64");
   if (key.length !== 32) {
-    throw new Error("TOKEN_ENCRYPTION_KEY debe ser de 32 bytes codificados en base64");
+    throw new Error("TOKEN_ENCRYPTION_KEY must be 32 bytes encoded as base64");
   }
   return key;
 }
@@ -35,7 +35,7 @@ export function encryptJSON(value) {
 export function decryptJSON(payload) {
   const [version, iv, tag, ciphertext] = String(payload).split(":");
   if (version !== VERSION || !iv || !tag || !ciphertext) {
-    throw new Error("Formato de dato cifrado inválido");
+    throw new Error("Invalid encrypted payload format");
   }
   const decipher = createDecipheriv(ALGORITHM, getKey(), Buffer.from(iv, "base64"));
   decipher.setAuthTag(Buffer.from(tag, "base64"));

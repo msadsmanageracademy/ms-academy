@@ -44,7 +44,7 @@ const CourseDetail = () => {
     };
 
     if (id) fetchCourse();
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
     if (!id) return;
