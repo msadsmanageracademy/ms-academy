@@ -4,9 +4,8 @@ import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import StarRating from "@/views/components/ui/StarRating";
 import { getCourseTimeStatus } from "@/utils/classStatus";
-import { es } from "date-fns/locale";
-import { format } from "date-fns";
 import styles from "./styles.module.css";
+import { formatDate, formatWeekdayDateTime } from "@/utils/dates";
 
 export const Board = ({ items, title, type, onSignUp }) => {
   if (!items.length) {
@@ -32,11 +31,17 @@ export const Board = ({ items, title, type, onSignUp }) => {
       <div className={styles.notesContainer}>
         {type === "class"
           ? items.map(
-              ({ _id, start_date, title, participants, max_participants }) => {
+              ({
+                _id,
+                start_date,
+                title,
+                participantsCount = 0,
+                max_participants,
+              }) => {
                 const isFull =
                   max_participants !== null &&
                   max_participants !== undefined &&
-                  (participants?.length || 0) >= max_participants;
+                  participantsCount >= max_participants;
                 return (
                   <div
                     key={_id}
@@ -46,18 +51,12 @@ export const Board = ({ items, title, type, onSignUp }) => {
                     <h3 className={styles.postItTitle}>{title}</h3>
                     <div className={styles.postItText}>
                       <p>
-                        {format(
-                          new Date(start_date),
-                          "EEEE, dd/MM/yyyy, h:mm a",
-                          {
-                            locale: es,
-                          },
-                        )}
+                        {formatWeekdayDateTime(start_date)}
                       </p>
                       {max_participants !== null &&
                         max_participants !== undefined && (
                           <p>
-                            Cupo: {participants?.length || 0}/{max_participants}
+                            Cupo: {participantsCount}/{max_participants}
                             {isFull ? " — Lleno" : ""}
                           </p>
                         )}
@@ -122,7 +121,7 @@ export const Board = ({ items, title, type, onSignUp }) => {
                       <p>
                         Comienza:{" "}
                         {start_date
-                          ? format(new Date(start_date), "dd/MM/yyyy")
+                          ? formatDate(start_date)
                           : "No se puede mostrar la fecha"}
                       </p>
                       <p>Cantidad de clases: {amount_of_classes}</p>

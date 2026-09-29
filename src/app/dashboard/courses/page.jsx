@@ -2,19 +2,18 @@
 
 import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import CourseForm from "@/views/sections/pages/dashboard/courses/CourseForm";
+import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import ReviewModal from "@/views/components/ui/ReviewModal";
 import StatusBadge from "@/views/components/ui/StatusBadge";
-import { format } from "date-fns";
+import { formatDate } from "@/utils/dates";
 import { getCourseTimeStatus } from "@/utils/classStatus";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
-import IconLink from "@/views/components/ui/IconLink";
 import {
   closeLoading,
   confirmDeleteItem,
-  confirmPayment,
   confirmToggleStatus,
   confirmUnenroll,
   toastError,
@@ -28,8 +27,8 @@ const CoursesPage = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [reviewModal, setReviewModal] = useState(null); // { courseId, title, existingReview }
-  const [userReviewMap, setUserReviewMap] = useState({}); // courseId -> { rating, comment }
+  const [reviewModal, setReviewModal] = useState(null);
+  const [userReviewMap, setUserReviewMap] = useState({});
 
   useEffect(() => {
     if (session) {
@@ -151,8 +150,7 @@ const CoursesPage = () => {
 
       const data = await res.json();
 
-      if (session?.user?.role === "user") {
-        // Show only courses where the user has an enrollment (pending or paid)
+      if (!isAdmin) {
         const userCourses = data.data.filter(
           (course) => course.userPaymentStatus != null,
         );
@@ -184,39 +182,6 @@ const CoursesPage = () => {
       }
     } catch {
       // non-blocking
-    }
-  };
-
-  const handleConfirmPayment = async (courseId, courseTitle) => {
-    const result = await confirmPayment(courseTitle);
-    if (!result.isConfirmed) return;
-
-    toastLoading("Procesando tu solicitud", "Confirmando pago...");
-
-    try {
-      const res = await fetch(`/api/courses/confirm-payment/${courseId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session.user.id }),
-      });
-
-      const data = await res.json();
-      closeLoading();
-
-      if (!res.ok) {
-        return toastError(3000, "Ha habido un error", data.message);
-      }
-
-      setCourses(
-        courses.map((c) =>
-          c._id === courseId ? { ...c, userPaymentStatus: "paid" } : c,
-        ),
-      );
-      toastSuccess(3000, "Pago confirmado", "¡Ya estás inscripto en el curso!");
-    } catch (err) {
-      console.error("Error confirming payment:", err);
-      closeLoading();
-      toastError(3000, "Ha habido un error", "No se pudo confirmar el pago");
     }
   };
 
@@ -258,15 +223,12 @@ const CoursesPage = () => {
                           <td>{course.title}</td>
                           <td>
                             {course.start_date
-                              ? format(
-                                  new Date(course.start_date),
-                                  "dd/MM/yyyy",
-                                )
+                              ? formatDate(course.start_date)
                               : "—"}
                           </td>
                           <td>
                             {course.end_date
-                              ? format(new Date(course.end_date), "dd/MM/yyyy")
+                              ? formatDate(course.end_date)
                               : "—"}
                           </td>
                           <td>{course.amount_of_classes ?? 0}</td>
@@ -397,12 +359,12 @@ const CoursesPage = () => {
                         <td>{course.title}</td>
                         <td>
                           {course.start_date
-                            ? format(new Date(course.start_date), "dd/MM/yyyy")
+                            ? formatDate(course.start_date)
                             : "—"}
                         </td>
                         <td>
                           {course.end_date
-                            ? format(new Date(course.end_date), "dd/MM/yyyy")
+                            ? formatDate(course.end_date)
                             : "—"}
                         </td>
                         <td>{course.amount_of_classes ?? 0}</td>
@@ -436,17 +398,6 @@ const CoursesPage = () => {
                         </td>
                         <td>
                           <div className={styles.actionButtons}>
-                            {course.userPaymentStatus === "pending" && (
-                              <IconLink
-                                asButton
-                                icon={"Money"}
-                                onClick={() =>
-                                  handleConfirmPayment(course._id, course.title)
-                                }
-                                success
-                                title={"Confirmar pago"}
-                              />
-                            )}
                             {course.userPaymentStatus === "paid" && (
                               <IconLink
                                 asButton

@@ -1,6 +1,12 @@
 ﻿import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
-import { auth } from "@/lib/auth";
+import {
+  HttpError,
+  handleApiError,
+  isAdmin,
+  requireSession,
+  resolveTargetUserId,
+} from "@/lib/api/guards";
 import {
   prepareCourseEnrollmentForDB,
   prepareNotificationForDB,
@@ -8,29 +14,17 @@ import {
 
 export async function PATCH(req, { params }) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return Response.json(
-        { success: false, message: "No autenticado" },
-        { status: 401 },
-      );
+    const session = await requireSession();
+    const { id } = await params;
+    const body = await req.json().catch(() => ({}));
+
+    if (!ObjectId.isValid(id)) throw new HttpError(400, "ID de curso inválido");
+    if (isAdmin(session)) {
+      throw new HttpError(403, "Los administradores no pueden inscribirse");
     }
 
-    const body = await req.json();
-    const { id } = params;
-    const { userId } = body;
-
-    if (!ObjectId.isValid(id))
-      return Response.json(
-        { success: false, message: "ID de curso inválido" },
-        { status: 400 },
-      );
-
-    if (!ObjectId.isValid(userId))
-      return Response.json(
-        { success: false, message: "ID de usuario inválido" },
-        { status: 400 },
-      );
+    const userId = new ObjectId(resolveTargetUserId(session, body.userId));
+    const courseId = new ObjectId(id);
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
@@ -38,81 +32,64 @@ export async function PATCH(req, { params }) {
     const enrollmentsCollection = db.collection("courseEnrollments");
 
     const course = await coursesCollection.findOne(
-      { _id: new ObjectId(id) },
-      { projection: { title: 1, createdBy: 1, status: 1 } },
+      { _id: courseId },
+      { projection: { title: 1, createdBy: 1, status: 1, max_participants: 1 } },
     );
-    if (!course) {
-      return Response.json(
-        { success: false, message: "Curso no encontrado" },
-        { status: 404 },
-      );
-    }
-
+    if (!course) throw new HttpError(404, "Curso no encontrado");
     if (course.status !== "published") {
-      return Response.json(
-        { success: false, message: "El curso no está publicado" },
-        { status: 400 },
-      );
+      throw new HttpError(400, "El curso no está publicado");
     }
 
-    // Check for existing enrollment (any status)
-    const existing = await enrollmentsCollection.findOne({
-      userId: new ObjectId(userId),
-      courseId: new ObjectId(id),
-    });
-    if (existing) {
-      return Response.json(
-        { success: false, message: "Ya estás inscripto en este curso" },
-        { status: 400 },
-      );
-    }
+    const hasCapacity =
+      course.max_participants !== null && course.max_participants !== undefined;
 
-    // Enforce max_participants capacity
-    const courseWithParticipants = await coursesCollection.findOne(
-      { _id: new ObjectId(id) },
-      { projection: { max_participants: 1 } },
-    );
-    if (
-      courseWithParticipants?.max_participants !== null &&
-      courseWithParticipants?.max_participants !== undefined
-    ) {
-      const enrollmentCount = await enrollmentsCollection.countDocuments({
-        courseId: new ObjectId(id),
-      });
-      if (enrollmentCount >= courseWithParticipants.max_participants) {
-        return Response.json(
-          {
-            success: false,
-            message: "El cupo máximo de este curso ha sido alcanzado",
-          },
-          { status: 400 },
-        );
+    if (hasCapacity) {
+      const enrollmentCount = await enrollmentsCollection.countDocuments({ courseId });
+      if (enrollmentCount >= course.max_participants) {
+        throw new HttpError(400, "El cupo máximo de este curso ha sido alcanzado");
       }
     }
 
-    // Create enrollment with pending payment status
-    await enrollmentsCollection.insertOne(
-      prepareCourseEnrollmentForDB(new ObjectId(userId), new ObjectId(id)),
-    );
+    // Create enrollment with pending payment status.
+    // The unique index (userId, courseId) rejects duplicates, even under concurrency.
+    let insertedId;
+    try {
+      ({ insertedId } = await enrollmentsCollection.insertOne(
+        prepareCourseEnrollmentForDB(userId, courseId),
+      ));
+    } catch (error) {
+      if (error?.code === 11000) throw new HttpError(400, "Ya estás inscripto en este curso");
+      throw error;
+    }
 
-    // Add user as participant to all linked classes (NOT to course.participants yet)
-    const classesCollection = db.collection("classes");
-    await classesCollection.updateMany(
-      { courseId: new ObjectId(id) },
+    // Capacity check after inserting: enrollments are ordered by _id (creation order),
+    // so if two users take the last seat at the same time, the later one is rolled back.
+    if (hasCapacity) {
+      const earlierOrSame = await enrollmentsCollection.countDocuments({
+        courseId,
+        _id: { $lte: insertedId },
+      });
+      if (earlierOrSame > course.max_participants) {
+        await enrollmentsCollection.deleteOne({ _id: insertedId });
+        throw new HttpError(400, "El cupo máximo de este curso ha sido alcanzado");
+      }
+    }
+
+    await db.collection("classes").updateMany(
+      { courseId },
       {
-        $addToSet: { participants: new ObjectId(userId) },
+        $addToSet: { participants: userId },
         $set: { updatedAt: new Date() },
       },
     );
 
-    // Notifications
     const notificationsToCreate = [
       prepareNotificationForDB({
-        userId: new ObjectId(userId),
+        userId,
         type: "course.pre_enrolled",
         title: "Pre-inscripción realizada",
         message: `Te pre-inscribiste en el curso "${course.title}". Completá el pago para confirmar tu inscripción.`,
-        relatedId: new ObjectId(id),
+        relatedId: courseId,
         relatedType: "course",
       }),
     ];
@@ -123,9 +100,9 @@ export async function PATCH(req, { params }) {
           type: "course.participant_pre_joined",
           title: "Nueva pre-inscripción",
           message: `Un usuario se pre-inscribió en el curso "${course.title}" y tiene pago pendiente.`,
-          relatedId: new ObjectId(id),
+          relatedId: courseId,
           relatedType: "course",
-          actorId: new ObjectId(userId),
+          actorId: userId,
         }),
       );
     }
@@ -141,36 +118,22 @@ export async function PATCH(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error en la inscripción:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error en la inscripción al curso");
   }
 }
 
 export async function DELETE(req, { params }) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return Response.json(
-        { success: false, message: "No autenticado" },
-        { status: 401 },
-      );
-    }
-
+    const session = await requireSession();
+    const { id } = await params;
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-    const { id } = params;
 
-    if (!ObjectId.isValid(id))
-      return Response.json(
-        { success: false, message: "ID de curso inválido" },
-        { status: 400 },
-      );
+    if (!ObjectId.isValid(id)) throw new HttpError(400, "ID de curso inválido");
 
-    if (!ObjectId.isValid(userId))
-      return Response.json(
-        { success: false, message: "ID de usuario inválido" },
-        { status: 400 },
-      );
+    const userId = new ObjectId(
+      resolveTargetUserId(session, searchParams.get("userId")),
+    );
+    const courseId = new ObjectId(id);
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
@@ -178,66 +141,43 @@ export async function DELETE(req, { params }) {
     const enrollmentsCollection = db.collection("courseEnrollments");
 
     const course = await coursesCollection.findOne(
-      { _id: new ObjectId(id) },
+      { _id: courseId },
       { projection: { title: 1, createdBy: 1 } },
     );
-    if (!course) {
-      return Response.json(
-        { success: false, message: "Curso no encontrado" },
-        { status: 404 },
-      );
+    if (!course) throw new HttpError(404, "Curso no encontrado");
+
+    const enrollment = await enrollmentsCollection.findOne({ userId, courseId });
+    if (!enrollment) throw new HttpError(400, "No estás inscripto en este curso");
+
+    // Paid enrollments cannot be cancelled by the student
+    if (enrollment.paymentStatus === "paid" && !isAdmin(session)) {
+      throw new HttpError(403, "No podés cancelar una inscripción ya pagada");
     }
 
-    const enrollment = await enrollmentsCollection.findOne({
-      userId: new ObjectId(userId),
-      courseId: new ObjectId(id),
-    });
-    if (!enrollment) {
-      return Response.json(
-        { success: false, message: "No estás inscrito en este curso" },
-        { status: 400 },
-      );
-    }
-
-    // Paid enrollments cannot be cancelled
-    if (enrollment.paymentStatus === "paid" && session.user.role !== "admin") {
-      return Response.json(
-        {
-          success: false,
-          message: "No podés cancelar una inscripción ya pagada",
-        },
-        { status: 403 },
-      );
-    }
-
-    // Delete enrollment
     await enrollmentsCollection.deleteOne({ _id: enrollment._id });
 
-    // Remove from course.participants (in case they had paid) and all linked classes
     await coursesCollection.updateOne(
-      { _id: new ObjectId(id) },
+      { _id: courseId },
       {
-        $pull: { participants: new ObjectId(userId) },
+        $pull: { participants: userId },
         $set: { updatedAt: new Date() },
       },
     );
-    const classesCollection = db.collection("classes");
-    await classesCollection.updateMany(
-      { courseId: new ObjectId(id) },
+    await db.collection("classes").updateMany(
+      { courseId },
       {
-        $pull: { participants: new ObjectId(userId) },
+        $pull: { participants: userId },
         $set: { updatedAt: new Date() },
       },
     );
 
-    // Notifications
     const notificationsToCreate = [
       prepareNotificationForDB({
-        userId: new ObjectId(userId),
+        userId,
         type: "course.unenrolled",
         title: "Inscripción cancelada",
         message: `Cancelaste tu inscripción al curso "${course.title}".`,
-        relatedId: new ObjectId(id),
+        relatedId: courseId,
         relatedType: "course",
       }),
     ];
@@ -248,9 +188,9 @@ export async function DELETE(req, { params }) {
           type: "course.participant_left",
           title: "Un participante canceló su inscripción",
           message: `Un usuario canceló su inscripción al curso "${course.title}".`,
-          relatedId: new ObjectId(id),
+          relatedId: courseId,
           relatedType: "course",
-          actorId: new ObjectId(userId),
+          actorId: userId,
         }),
       );
     }
@@ -261,7 +201,6 @@ export async function DELETE(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error al cancelar inscripción:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al cancelar inscripción al curso");
   }
 }

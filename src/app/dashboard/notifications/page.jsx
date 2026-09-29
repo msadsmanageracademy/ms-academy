@@ -4,13 +4,12 @@ import * as Icons from "@/views/components/icons";
 import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import Pagination from "@/views/components/ui/Pagination";
-import { es } from "date-fns/locale";
-import { format } from "date-fns";
 import styles from "./styles.module.css";
+import { formatDateTime } from "@/utils/dates";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useSession } from "next-auth/react";
 import { toastError } from "@/utils/alerts";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const NotificationsPage = () => {
   const { data: session } = useSession();
@@ -156,8 +155,20 @@ const NotificationsPage = () => {
         return "Pencil";
       case "class.cancelled":
         return "Cross";
+      case "class.reminder":
+        return "Clock";
+      case "class.recording_added":
+        return "Videocall";
+      case "class.resources_updated":
+        return "List";
 
       // Course notifications
+      case "course.pre_enrolled":
+      case "course.participant_pre_joined":
+        return "UserPlus";
+      case "course.payment_confirmed":
+      case "course.payment_received":
+        return "Money";
       case "course.created":
         return "Plus";
       case "course.enrolled":
@@ -178,6 +189,10 @@ const NotificationsPage = () => {
         return "Pencil";
       case "course.cancelled":
         return "Cross";
+
+      // Contact
+      case "contact.message":
+        return "Mailbox";
 
       // User notifications
       case "user.role_changed":
@@ -263,11 +278,7 @@ const NotificationsPage = () => {
                 <h3 className={styles.title}>{notification.title}</h3>
                 <p className={styles.message}>{notification.message}</p>
                 <span className={styles.date}>
-                  {format(
-                    new Date(notification.createdAt),
-                    "dd/MM/yyyy, h:mm a",
-                    { locale: es },
-                  )}
+                  {formatDateTime(notification.createdAt)}
                 </span>
               </div>
               <div className={styles.notificationActions}>

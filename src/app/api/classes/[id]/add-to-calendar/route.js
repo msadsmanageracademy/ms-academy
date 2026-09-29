@@ -1,123 +1,29 @@
+import { APP_TIME_ZONE } from "@/utils/dates";
 import { ObjectId } from "mongodb";
-import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
-import { google } from "googleapis";
 import { prepareNotificationForDB } from "@/models/schemas";
-
-// Initialize OAuth2 client
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`,
-);
-
-// Helper function to refresh token if expired
-async function getValidTokens(userId) {
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB_NAME);
-  const usersCollection = db.collection("users");
-
-  const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
-
-  if (!user?.googleCalendarTokens) {
-    throw new Error("CALENDAR_NOT_AUTHORIZED");
-  }
-
-  const tokens = user.googleCalendarTokens;
-
-  // Check if we have a refresh token
-  if (!tokens.refresh_token) {
-    // Clear invalid tokens from DB
-    await usersCollection.updateOne(
-      { _id: new ObjectId(userId) },
-      {
-        $unset: { googleCalendarTokens: "" },
-        $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
-      },
-    );
-    throw new Error("CALENDAR_NOT_AUTHORIZED");
-  }
-
-  // Check if token is expired or about to expire (within 5 minutes)
-  const now = Date.now();
-  const expiryBuffer = 5 * 60 * 1000; // 5 minutes
-
-  if (tokens.expiry_date && tokens.expiry_date < now + expiryBuffer) {
-    try {
-      // Token expired or about to expire, refresh it
-      oauth2Client.setCredentials({
-        refresh_token: tokens.refresh_token,
-      });
-
-      const { credentials } = await oauth2Client.refreshAccessToken();
-
-      // Update tokens in database
-      await usersCollection.updateOne(
-        { _id: new ObjectId(userId) },
-        {
-          $set: {
-            "googleCalendarTokens.access_token": credentials.access_token,
-            "googleCalendarTokens.expiry_date": credentials.expiry_date,
-            updatedAt: new Date(),
-          },
-        },
-      );
-
-      return credentials;
-    } catch (refreshError) {
-      // Refresh token is invalid/revoked - clear from DB
-      console.error("Failed to refresh token:", refreshError.message);
-      await usersCollection.updateOne(
-        { _id: new ObjectId(userId) },
-        {
-          $unset: { googleCalendarTokens: "" },
-          $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
-        },
-      );
-      throw new Error("CALENDAR_TOKEN_REVOKED");
-    }
-  }
-
-  return tokens;
-}
+import { HttpError, handleApiError, requireAdmin } from "@/lib/api/guards";
+import {
+  CalendarAuthError,
+  clearCalendarTokens,
+  getCalendarClient,
+  isGoogleAuthError,
+} from "@/lib/google/calendarTokens";
 
 export async function POST(req, { params }) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "admin") {
-      return Response.json(
-        { success: false, message: "No autorizado" },
-        { status: 401 },
-      );
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
 
-    if (!ObjectId.isValid(id)) {
-      return Response.json(
-        { success: false, message: "ID de clase inválido" },
-        { status: 400 },
-      );
-    }
+    if (!ObjectId.isValid(id)) throw new HttpError(400, "ID de clase inválido");
 
-    // Get class details
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
 
-    const classData = await classesCollection.findOne({
-      _id: new ObjectId(id),
-    });
+    const classData = await classesCollection.findOne({ _id: new ObjectId(id) });
+    if (!classData) throw new HttpError(404, "Clase no encontrada");
 
-    if (!classData) {
-      return Response.json(
-        { success: false, message: "Clase no encontrada" },
-        { status: 404 },
-      );
-    }
-
-    // Check if class already has a calendar event
     if (classData.googleEventId) {
       return Response.json(
         {
@@ -129,31 +35,26 @@ export async function POST(req, { params }) {
       );
     }
 
-    // Get valid tokens
-    const tokens = await getValidTokens(session.user.id);
+    if (!classData.start_date) {
+      throw new HttpError(400, "La clase necesita una fecha de inicio para agendarla");
+    }
 
-    // Set credentials
-    oauth2Client.setCredentials(tokens);
+    const calendar = await getCalendarClient(session.user.id);
 
-    // Initialize Calendar API
-    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-
-    // Calculate end time (start time + duration in minutes)
     const startDate = new Date(classData.start_date);
     const endDate = new Date(startDate);
     endDate.setMinutes(endDate.getMinutes() + classData.duration);
 
-    // Create calendar event with Google Meet
     const event = {
       summary: classData.title,
-      description: classData.short_description || classData.description || "",
+      description: classData.short_description || "",
       start: {
         dateTime: startDate.toISOString(),
-        timeZone: "America/Argentina/Buenos_Aires",
+        timeZone: APP_TIME_ZONE,
       },
       end: {
         dateTime: endDate.toISOString(),
-        timeZone: "America/Argentina/Buenos_Aires",
+        timeZone: APP_TIME_ZONE,
       },
       conferenceData: {
         createRequest: {
@@ -170,7 +71,6 @@ export async function POST(req, { params }) {
       },
     };
 
-    // Insert event with conference data
     let response;
     try {
       response = await calendar.events.insert({
@@ -179,27 +79,18 @@ export async function POST(req, { params }) {
         conferenceDataVersion: 1,
       });
     } catch (calendarError) {
-      // If Google Calendar API fails, it's likely due to invalid/revoked token
       console.error("Google Calendar API error:", calendarError.message);
-
-      // Clear invalid tokens from DB
-      const usersCollection = db.collection("users");
-      await usersCollection.updateOne(
-        { _id: new ObjectId(session.user.id) },
-        {
-          $unset: { googleCalendarTokens: "" },
-          $set: { hasAuthorizedCalendar: false, updatedAt: new Date() },
-        },
-      );
-
-      throw new Error("CALENDAR_TOKEN_REVOKED");
+      if (isGoogleAuthError(calendarError)) {
+        await clearCalendarTokens(session.user.id);
+        throw new CalendarAuthError("CALENDAR_TOKEN_REVOKED");
+      }
+      throw calendarError;
     }
 
     const googleMeetLink = response.data.conferenceData?.entryPoints?.find(
       (entry) => entry.entryPointType === "video",
     )?.uri;
 
-    // Update class with Google event ID and Meet link
     await classesCollection.updateOne(
       { _id: new ObjectId(id) },
       {
@@ -212,21 +103,18 @@ export async function POST(req, { params }) {
       },
     );
 
-    // Create notification for admin
-    const notifications = db.collection("notifications");
-    const notification = prepareNotificationForDB({
-      userId: new ObjectId(session.user.id),
-      type: "class.added_to_calendar",
-      title: "Clase agregada a Calendar",
-      message: `La clase "${classData.title}" se agregó a Google Calendar`,
-      relatedId: new ObjectId(id),
-      relatedType: "class",
-      actorId: new ObjectId(session.user.id),
-      metadata: {
-        googleMeetLink,
-      },
-    });
-    await notifications.insertOne(notification);
+    await db.collection("notifications").insertOne(
+      prepareNotificationForDB({
+        userId: new ObjectId(session.user.id),
+        type: "class.added_to_calendar",
+        title: "Clase agregada a Calendar",
+        message: `La clase "${classData.title}" se agregó a Google Calendar`,
+        relatedId: new ObjectId(id),
+        relatedType: "class",
+        actorId: new ObjectId(session.user.id),
+        metadata: { googleMeetLink },
+      }),
+    );
 
     return Response.json(
       {
@@ -239,13 +127,7 @@ export async function POST(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error adding to Google Calendar:", error);
-
-    // Handle specific error cases
-    if (
-      error.message === "CALENDAR_NOT_AUTHORIZED" ||
-      error.message === "CALENDAR_TOKEN_REVOKED"
-    ) {
+    if (error instanceof CalendarAuthError) {
       return Response.json(
         {
           success: false,
@@ -256,13 +138,13 @@ export async function POST(req, { params }) {
         { status: 401 },
       );
     }
+    if (error instanceof HttpError) return handleApiError(error);
 
+    console.error("Error adding to Google Calendar:", error);
     return Response.json(
       {
         success: false,
-        error: error.message,
-        message:
-          "Error al agregar la clase a Google Calendar. Intenta nuevamente.",
+        message: "Error al agregar la clase a Google Calendar. Intenta nuevamente.",
       },
       { status: 500 },
     );

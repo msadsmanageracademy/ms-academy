@@ -2,59 +2,69 @@ import { EditAccountFormSchema } from "@/utils/validation";
 import { ObjectId } from "mongodb";
 import { addTimestampToUpdate } from "@/models/schemas";
 import clientPromise from "@/lib/db";
+import {
+  HttpError,
+  handleApiError,
+  isAdmin,
+  requireSession,
+} from "@/lib/api/guards";
+
+// Whitelist of fields that can leave the server. Never expose password or Google tokens.
+const PUBLIC_USER_PROJECTION = {
+  first_name: 1,
+  last_name: 1,
+  email: 1,
+  age: 1,
+  image: 1,
+  role: 1,
+  createdAt: 1,
+};
+
+// Server-side schema: rejects any key other than the editable profile fields
+const EditAccountServerSchema = EditAccountFormSchema.strict();
+
+// Only the user themselves or an admin can access a user record
+async function requireSelfOrAdmin(params) {
+  const session = await requireSession();
+  const { id } = await params;
+  if (!ObjectId.isValid(id)) throw new HttpError(400, "ID de usuario inválido");
+  if (id !== session.user.id && !isAdmin(session)) {
+    throw new HttpError(403, "Acceso denegado");
+  }
+  return { session, id };
+}
 
 export async function GET(req, { params }) {
   try {
+    const { id } = await requireSelfOrAdmin(params);
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
-    const usersCollection = db.collection("users");
 
-    const { id } = await params;
-
-    if (!ObjectId.isValid(id))
-      return Response.json(
-        {
-          success: false,
-          message: "ID de usuario inválido",
-        },
-        { status: 400 },
+    const user = await db
+      .collection("users")
+      .findOne(
+        { _id: new ObjectId(id) },
+        { projection: PUBLIC_USER_PROJECTION },
       );
 
-    const user = await usersCollection.findOne(
-      { _id: new ObjectId(id) },
-      { projection: { password: 0 } }, // No traigo la contraseña del user
-    );
-
-    if (!user) {
-      return Response.json(
-        { success: false, message: "Usuario no encontrado" },
-        { status: 400 },
-      );
-    }
+    if (!user) throw new HttpError(404, "Usuario no encontrado");
 
     return Response.json({ success: true, data: user }, { status: 200 });
   } catch (error) {
-    console.error("Error al recuperar el usuario:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al recuperar el usuario");
   }
 }
 
 export async function PATCH(req, { params }) {
   try {
-    const { id } = await params;
+    const { session, id } = await requireSelfOrAdmin(params);
 
-    if (!ObjectId.isValid(id))
-      return Response.json(
-        {
-          success: false,
-          message: "ID de usuario inválido",
-        },
-        { status: 400 },
-      );
+    // Profile edits are self-service only (admins manage roles elsewhere)
+    if (id !== session.user.id) throw new HttpError(403, "Acceso denegado");
 
     const body = await req.json();
-
-    const parsedBody = EditAccountFormSchema.safeParse(body); // Paso el body por el schema de edición de perfil previo a enviar a la DB
+    const parsedBody = EditAccountServerSchema.safeParse(body);
 
     if (!parsedBody.success) {
       return Response.json(
@@ -69,29 +79,24 @@ export async function PATCH(req, { params }) {
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
-    const usersCollection = db.collection("users");
 
-    const updateData = addTimestampToUpdate(body);
-
-    await usersCollection.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: updateData },
-    );
+    // Persist only validated fields (never the raw body)
+    await db
+      .collection("users")
+      .updateOne(
+        { _id: new ObjectId(id) },
+        { $set: addTimestampToUpdate(parsedBody.data) },
+      );
 
     return Response.json(
       {
         success: true,
         message: "Información actualizada con éxito",
-        name: body.first_name, // Envío al FE para actualizar la sesión de next-auth
+        name: parsedBody.data.first_name, // Envío al FE para actualizar la sesión de next-auth
       },
       { status: 200 },
     );
   } catch (error) {
-    return Response.json(
-      {
-        error: error.message,
-      },
-      { status: 500 },
-    );
+    return handleApiError(error, "Error al actualizar el usuario");
   }
 }

@@ -33,7 +33,11 @@ const AccountForm = ({ userData, userId, onUpdate }) => {
       const result = await response.json();
 
       if (!response.ok) {
-        return toastError(3000, "Ha habido un error", result.error);
+        return toastError(
+          3000,
+          "Ha habido un error",
+          result.message || result.error,
+        );
       }
 
       if (result.name && onUpdate) {

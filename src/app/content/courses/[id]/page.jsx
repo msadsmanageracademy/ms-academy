@@ -4,10 +4,8 @@ import PageLoader from "@/views/components/layout/PageLoader";
 import PageWrapper from "@/views/components/layout/PageWrapper";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import StarRating from "@/views/components/ui/StarRating";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import styles from "./styles.module.css";
 import { getCourseTimeStatus } from "@/utils/classStatus";
+import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import {
   closeLoading,
@@ -16,6 +14,7 @@ import {
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
+import { formatDate, formatDateTime } from "@/utils/dates";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -115,7 +114,7 @@ const CourseDetail = () => {
 
   if (!course) return <p>No se encontró el curso</p>;
 
-  const enrollmentCount = Object.keys(course.enrollmentMap || {}).length;
+  const enrollmentCount = course.enrollmentCount ?? 0;
   const isFull =
     course.max_participants !== null &&
     course.max_participants !== undefined &&
@@ -156,7 +155,7 @@ const CourseDetail = () => {
             <div className={styles.infoLabel}>Fecha de inicio</div>
             <div className={styles.infoValue}>
               {course.start_date
-                ? format(new Date(course.start_date), "dd/MM/yyyy, h:mm a")
+                ? formatDateTime(course.start_date)
                 : "No disponible"}
             </div>
           </div>
@@ -165,7 +164,7 @@ const CourseDetail = () => {
             <div className={styles.infoLabel}>Fecha de finalización</div>
             <div className={styles.infoValue}>
               {course.end_date
-                ? format(new Date(course.end_date), "dd/MM/yyyy, h:mm a")
+                ? formatDateTime(course.end_date)
                 : "No disponible"}
             </div>
           </div>
@@ -256,9 +255,7 @@ const CourseDetail = () => {
                     <span className={styles.reviewAuthor}>{r.firstName}</span>
                     <StarRating value={r.rating} readOnly size="sm" />
                     <span className={styles.reviewDate}>
-                      {format(new Date(r.createdAt), "dd/MM/yyyy", {
-                        locale: es,
-                      })}
+                      {formatDate(r.createdAt)}
                     </span>
                   </div>
                   {r.comment && (

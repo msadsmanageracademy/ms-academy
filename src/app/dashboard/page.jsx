@@ -3,11 +3,12 @@
 import PageLoader from "@/views/components/layout/PageLoader";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { es } from "date-fns/locale";
+import { formatDistanceToNow } from "date-fns";
+import { formatWeekdayDateTime } from "@/utils/dates";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Clock, Courses, Money, NavbarClasses } from "@/views/components/icons";
-import { format, formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 
 const DashboardPage = () => {
@@ -243,11 +244,7 @@ const DashboardPage = () => {
                   </div>
                   <h3>{nextClass.title}</h3>
                   <p className={styles.upcomingDate}>
-                    {format(
-                      new Date(nextClass.start_date),
-                      "EEEE, dd/MM/yyyy, h:mm a",
-                      { locale: es },
-                    )}
+                    {formatWeekdayDateTime(nextClass.start_date)}
                   </p>
                   <p className={styles.upcomingDescription}>
                     {nextClass.short_description}
@@ -288,11 +285,7 @@ const DashboardPage = () => {
                   <h3>{nextCourse.title}</h3>
                   <p className={styles.upcomingDate}>
                     Inicia:{" "}
-                    {format(
-                      new Date(nextCourse.start_date),
-                      "EEEE, dd/MM/yyyy, h:mm a",
-                      { locale: es },
-                    )}
+                    {formatWeekdayDateTime(nextCourse.start_date)}
                   </p>
                   <p className={styles.upcomingDescription}>
                     {nextCourse.short_description}

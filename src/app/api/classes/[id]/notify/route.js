@@ -1,12 +1,11 @@
+import { ClassReminderEmail } from "@/views/components/layout/ClassReminderEmail";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { Resend } from "resend";
 import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
+import { formatLongDateAtTime } from "@/utils/dates";
 import { prepareNotificationForDB } from "@/models/schemas";
-import { ClassReminderEmail } from "@/views/components/layout/ClassReminderEmail";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 export async function POST(req, { params }) {
   try {
@@ -45,11 +44,28 @@ export async function POST(req, { params }) {
       );
     }
 
-    // Determine which participants to notify
     let targetIds = classItem.participants?.map((p) => p.toString()) || [];
 
+    if (classItem.courseId) {
+      const paidEnrollments = await db
+        .collection("courseEnrollments")
+        .find(
+          { courseId: classItem.courseId, paymentStatus: "paid" },
+          { projection: { userId: 1 } },
+        )
+        .toArray();
+      const paidIds = new Set(paidEnrollments.map((e) => e.userId.toString()));
+      targetIds = targetIds.filter((pid) => paidIds.has(pid));
+    }
+
+    if (participantIds !== undefined && !Array.isArray(participantIds)) {
+      return NextResponse.json(
+        { success: false, message: "participantIds debe ser una lista" },
+        { status: 400 },
+      );
+    }
+
     if (participantIds && participantIds.length > 0) {
-      // Validate all provided IDs are actual participants
       const validIds = participantIds.filter((pid) =>
         targetIds.includes(pid.toString()),
       );
@@ -88,12 +104,7 @@ export async function POST(req, { params }) {
       );
     }
 
-    // Format class date for the email
-    const formattedDate = format(
-      new Date(classItem.start_date),
-      "EEEE d 'de' MMMM 'de' yyyy 'a las' h:mm a",
-      { locale: es },
-    );
+    const formattedDate = formatLongDateAtTime(classItem.start_date);
 
     const emailProps = {
       className: classItem.title,
@@ -143,7 +154,6 @@ export async function POST(req, { params }) {
       }
     }
 
-    // Create in-app notifications for each notified participant
     const notifications = users.map((user) =>
       prepareNotificationForDB({
         userId: user._id,

@@ -219,7 +219,7 @@ const ClassForm = ({
               selected={field.value}
               onChange={(date) => field.onChange(date)}
               timeInputLabel="Hora:"
-              dateFormat="dd/MM/yyyy hh:mm aa"
+              dateFormat="dd/MM/yyyy HH:mm"
               showTimeInput
               className={`${styles.input} ${isRestricted ? styles.inputDisabled : ""}`}
               disabled={isRestricted}

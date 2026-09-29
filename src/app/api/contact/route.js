@@ -1,10 +1,11 @@
+import { EmailTemplate } from "@/views/components/layout/EmailTemplate";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { Resend } from "resend";
-import { z } from "zod";
 import clientPromise from "@/lib/db";
 import { prepareNotificationForDB } from "@/models/schemas";
-import { EmailTemplate } from "@/views/components/layout/EmailTemplate";
+import { z } from "zod";
+import { getClientIp, hitRateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 const ContactSchema = z.object({
   name: z
@@ -22,9 +23,22 @@ const ContactSchema = z.object({
     .trim(),
 });
 
-// POST /api/contact - Submit a contact form message
+const CONTACT_LIMIT = { scope: "contact-ip", limit: 5, windowSec: 60 * 60 };
+
 export async function POST(req) {
   try {
+    // Anti-spam: limits emails sent through Resend per IP
+    const { allowed, retryAfterSec } = await hitRateLimit({
+      ...CONTACT_LIMIT,
+      key: getClientIp(req.headers),
+    });
+    if (!allowed) {
+      return tooManyRequests(
+        retryAfterSec,
+        "Enviaste varios mensajes seguidos. Probá de nuevo más tarde.",
+      );
+    }
+
     const body = await req.json();
     const parsed = ContactSchema.safeParse(body);
 

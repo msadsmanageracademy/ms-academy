@@ -96,7 +96,7 @@ const ContentPage = () => {
       toastSuccess(3000, "Inscripción exitosa", responseData.message);
       // Notification created for user on signup
       incrementCount();
-      router.push("dashboard/classes");
+      router.push("/dashboard/classes");
     } catch (error) {
       closeLoading();
       return toastError(

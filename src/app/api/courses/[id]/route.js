@@ -1,12 +1,21 @@
+import { ObjectId } from "mongodb";
+import { auth } from "@/lib/auth";
+import clientPromise from "@/lib/db";
+import { getCourseTimeStatus } from "@/utils/classStatus";
 import {
   CourseFormSchema,
   PublishedCourseEditSchema,
 } from "@/utils/validation";
-import { ObjectId } from "mongodb";
-import { addTimestampToUpdate } from "@/models/schemas";
-import { auth } from "@/lib/auth";
-import clientPromise from "@/lib/db";
-import { getCourseTimeStatus } from "@/utils/classStatus";
+import {
+  HttpError,
+  handleApiError,
+  isAdmin,
+  requireAdmin,
+} from "@/lib/api/guards";
+import {
+  addTimestampToUpdate,
+  prepareNotificationForDB,
+} from "@/models/schemas";
 
 const courseAggregationPipeline = (matchStage) => [
   { $match: matchStage },
@@ -75,8 +84,8 @@ export async function GET(req, { params }) {
       );
     }
 
-    // Attach userPaymentStatus for authenticated users
     const session = await auth();
+    const admin = isAdmin(session);
     if (session?.user?.id) {
       const enrollment = await db
         .collection("courseEnrollments")
@@ -87,7 +96,10 @@ export async function GET(req, { params }) {
       course.userPaymentStatus = enrollment?.paymentStatus ?? null;
     }
 
-    // Build enrollmentMap from all courseEnrollments (pending + paid)
+    if (course.status !== "published" && !admin && !course.userPaymentStatus) {
+      throw new HttpError(404, "Curso no encontrado");
+    }
+
     const enrollments = await db
       .collection("courseEnrollments")
       .find(
@@ -95,11 +107,18 @@ export async function GET(req, { params }) {
         { projection: { userId: 1, paymentStatus: 1 } },
       )
       .toArray();
-    course.enrollmentMap = Object.fromEntries(
-      enrollments.map((e) => [e.userId.toString(), e.paymentStatus]),
-    );
+    course.enrollmentCount = enrollments.length;
 
-    // Attach avg rating and review count
+    if (admin) {
+      // Admin-only: map of userId → paymentStatus (pending + paid)
+      course.enrollmentMap = Object.fromEntries(
+        enrollments.map((e) => [e.userId.toString(), e.paymentStatus]),
+      );
+    } else {
+      delete course.participants;
+      delete course.createdBy;
+    }
+
     const reviewStats = await db
       .collection("reviews")
       .aggregate([
@@ -136,13 +155,13 @@ export async function GET(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error al obtener el curso:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al obtener el curso");
   }
 }
 
 export async function PATCH(req, { params }) {
   try {
+    await requireAdmin();
     const { id } = await params;
     const body = await req.json();
 
@@ -396,14 +415,14 @@ export async function PATCH(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error al actualizar el curso:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al actualizar el curso");
   }
 }
 
 export async function DELETE(req, { params }) {
   try {
-    const { id } = params;
+    await requireAdmin();
+    const { id } = await params;
 
     if (!ObjectId.isValid(id))
       return Response.json(
@@ -493,7 +512,6 @@ export async function DELETE(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error al eliminar el curso:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al eliminar el curso");
   }
 }

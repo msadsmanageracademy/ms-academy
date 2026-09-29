@@ -3,8 +3,6 @@ import clientPromise from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { prepareNotificationForDB } from "@/models/schemas";
 
-// DELETE /api/courses/[id]/remove-participant?userId=...
-// Admin-only: removes a participant from a course, its linked classes, and deletes their enrollment.
 export async function DELETE(req, { params }) {
   try {
     const session = await auth();
@@ -23,7 +21,7 @@ export async function DELETE(req, { params }) {
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
-    const { id } = params;
+    const { id } = await params;
 
     if (!ObjectId.isValid(id))
       return Response.json(

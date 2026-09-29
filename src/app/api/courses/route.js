@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
 import { prepareCourseForDB } from "@/models/schemas";
+import { handleApiError, isAdmin, requireAdmin } from "@/lib/api/guards";
 
 const courseAggregationPipeline = (matchStage = {}) => [
   { $match: matchStage },
@@ -41,9 +42,10 @@ const courseAggregationPipeline = (matchStage = {}) => [
 
 export async function GET(req) {
   try {
-    const session = await auth();
     const { searchParams } = new URL(req.url);
     const showAll = searchParams.get("showAll") === "true";
+
+    const session = showAll ? await requireAdmin() : await auth();
 
     const matchStage = showAll ? {} : { status: "published" };
 
@@ -73,8 +75,7 @@ export async function GET(req) {
       }
     }
 
-    // For admin: attach paid/total enrollment counts per course
-    if (session?.user?.role === "admin" && courses.length > 0) {
+    if (courses.length > 0) {
       const allEnrollments = await db
         .collection("courseEnrollments")
         .find(
@@ -89,14 +90,20 @@ export async function GET(req) {
         countMap[key].total++;
         if (e.paymentStatus === "paid") countMap[key].paid++;
       }
+      const admin = isAdmin(session);
       for (const course of courses) {
         const counts = countMap[course._id.toString()] ?? { total: 0, paid: 0 };
-        course.enrolledCount = counts.total;
-        course.paidCount = counts.paid;
+        course.enrollmentCount = counts.total;
+        if (admin) {
+          course.enrolledCount = counts.total;
+          course.paidCount = counts.paid;
+        } else {
+          delete course.participants;
+          delete course.createdBy;
+        }
       }
     }
 
-    // Attach avgRating and reviewCount for all courses
     if (courses.length > 0) {
       const reviewAggregates = await db
         .collection("reviews")
@@ -137,12 +144,7 @@ export async function GET(req) {
       { status: 200 },
     );
   } catch (error) {
-    return Response.json(
-      {
-        error: error.message,
-      },
-      { status: 500 },
-    );
+    return handleApiError(error, "Error al obtener los cursos");
   }
 }
 
@@ -150,7 +152,7 @@ export { courseAggregationPipeline };
 
 export async function POST(req) {
   try {
-    const session = await auth();
+    const session = await requireAdmin();
     const body = await req.json();
 
     const parsedBody = CourseFormSchema.safeParse(body);
@@ -192,7 +194,6 @@ export async function POST(req) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Error al crear el curso:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al crear el curso");
   }
 }

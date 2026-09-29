@@ -5,8 +5,8 @@ import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import StarRating from "@/views/components/ui/StarRating";
 import StatusBadge from "@/views/components/ui/StatusBadge";
-import { getCourseTimeStatus, getClassStatus } from "@/utils/classStatus";
 import { es } from "date-fns/locale";
+import { formatDistanceToNow } from "date-fns";
 import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
 import { useNotifications } from "@/providers/NotificationProvider";
@@ -19,7 +19,9 @@ import {
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
-import { format, formatDistanceToNow } from "date-fns";
+import { downloadCsv, safeFilename, toCsv } from "@/utils/csv";
+import { formatDate, formatDateAtTime } from "@/utils/dates";
+import { getCourseTimeStatus, getClassStatus } from "@/utils/classStatus";
 import { useEffect, useState } from "react";
 
 const ClassDetailPage = () => {
@@ -63,10 +65,6 @@ const ClassDetailPage = () => {
       setClassData(data.data);
       setRecordingUrl(data.data.recording_url || "");
       setResources(data.data.resources || []);
-      if (data.data.userReview) {
-        setReviewRating(data.data.userReview.rating);
-        setReviewComment(data.data.userReview.comment || "");
-      }
 
       // Fetch course title if the class belongs to one
       if (data.data.courseId) {
@@ -276,36 +274,11 @@ const ClassDetailPage = () => {
       );
     }
 
-    const csvContent = [
-      ["Nombre", "Apellido", "Email", "Fecha de inscripción"].join(","),
-      ...participants.map((p) =>
-        [
-          p.first_name || "",
-          p.last_name || "",
-          p.email || "",
-          classData.participants.includes(p._id.toString())
-            ? new Date().toLocaleDateString()
-            : "",
-        ].join(","),
-      ),
-    ].join("\n");
-
-    // Add UTF-8 BOM for proper encoding
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `${classData.title.replace(/\s/g, "_")}_participantes.csv`,
+    const csvContent = toCsv(
+      ["Nombre", "Apellido", "Email"],
+      participants.map((p) => [p.first_name, p.last_name, p.email]),
     );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`${safeFilename(classData.title)}_participantes.csv`, csvContent);
 
     setListDownloadState(true);
     setTimeout(() => setListDownloadState(false), 3000);
@@ -461,10 +434,7 @@ const ClassDetailPage = () => {
                 <span className={styles.value}>
                   {classData.start_date ? (
                     <>
-                      {format(
-                        new Date(classData.start_date),
-                        "dd/MM/yyyy 'a las' h:mm a",
-                      )}
+                      {formatDateAtTime(classData.start_date)}
                       <span className={styles.relative}>
                         (
                         {formatDistanceToNow(new Date(classData.start_date), {
@@ -808,8 +778,6 @@ const ClassDetailPage = () => {
                 </h2>
               </div>
 
-              {/* Review form removed — leave review via the Star button in Mis Clases */}
-
               {reviews.length === 0 ? (
                 <p className={styles.noReviews}>
                   Todavía no hay reseñas para esta clase.
@@ -824,9 +792,7 @@ const ClassDetailPage = () => {
                         </span>
                         <StarRating value={r.rating} readOnly size="sm" />
                         <span className={styles.reviewDate}>
-                          {format(new Date(r.createdAt), "dd/MM/yyyy", {
-                            locale: es,
-                          })}
+                          {formatDate(r.createdAt)}
                         </span>
                       </div>
                       {r.comment && (

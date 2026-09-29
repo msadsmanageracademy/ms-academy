@@ -6,20 +6,20 @@ import IconLink from "@/views/components/ui/IconLink";
 import PageLoader from "@/views/components/layout/PageLoader";
 import StarRating from "@/views/components/ui/StarRating";
 import StatusBadge from "@/views/components/ui/StatusBadge";
-import styles from "./styles.module.css";
-import { es } from "date-fns/locale";
-import { format } from "date-fns";
 import { getCourseProgress } from "@/utils/classStatus";
+import styles from "./styles.module.css";
 import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
 import {
   closeLoading,
+  confirmPayment,
   confirmUnenroll,
   toastError,
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
+import { formatDate, formatTime } from "@/utils/dates";
 import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
@@ -144,6 +144,41 @@ const CourseDetailPage = () => {
     }
   };
 
+  // Admin confirms a participant's payment (manual until a payment gateway is integrated)
+  const handleConfirmPayment = async (participant) => {
+    const participantName =
+      [participant.first_name, participant.last_name].filter(Boolean).join(" ") ||
+      participant.email;
+    const result = await confirmPayment(courseData.title, participantName);
+    if (!result.isConfirmed) return;
+
+    toastLoading("Procesando solicitud", "Confirmando pago...");
+
+    try {
+      const res = await fetch(`/api/courses/confirm-payment/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: participant._id }),
+      });
+      const data = await res.json();
+      closeLoading();
+
+      if (!res.ok) {
+        return toastError(3000, "Ha habido un error", data.message);
+      }
+
+      setCourseData((prev) => ({
+        ...prev,
+        enrollmentMap: { ...prev.enrollmentMap, [participant._id]: "paid" },
+      }));
+      toastSuccess(3000, "Pago confirmado", `${participantName} ya está inscripto`);
+    } catch (err) {
+      console.error("Error confirming payment:", err);
+      closeLoading();
+      toastError(3000, "Ha habido un error", "No se pudo confirmar el pago");
+    }
+  };
+
   const handleFormSuccess = () => {
     setEditMode(false);
     fetchCourseDetails();
@@ -264,7 +299,7 @@ const CourseDetailPage = () => {
                 <div className={styles.infoItem}>
                   <span className={styles.label}>Inicio:</span>
                   <span className={styles.value}>
-                    {format(new Date(courseData.start_date), "dd/MM/yyyy")}
+                    {formatDate(courseData.start_date)}
                   </span>
                 </div>
               )}
@@ -273,7 +308,7 @@ const CourseDetailPage = () => {
                 <div className={styles.infoItem}>
                   <span className={styles.label}>Fin:</span>
                   <span className={styles.value}>
-                    {format(new Date(courseData.end_date), "dd/MM/yyyy")}
+                    {formatDate(courseData.end_date)}
                   </span>
                 </div>
               )}
@@ -362,12 +397,12 @@ const CourseDetailPage = () => {
                         </td>
                         <td>
                           {cls.start_date
-                            ? format(new Date(cls.start_date), "dd/MM/yyyy")
+                            ? formatDate(cls.start_date)
                             : "—"}
                         </td>
                         <td>
                           {cls.start_date
-                            ? format(new Date(cls.start_date), "h:mm a")
+                            ? formatTime(cls.start_date)
                             : "—"}
                         </td>
                         <td>{cls.duration ? `${cls.duration} min` : "—"}</td>
@@ -475,9 +510,19 @@ const CourseDetailPage = () => {
                           <div className={styles.actionButtons}>
                             <IconLink
                               asButton
-                              disabled
-                              fill={"var(--color-4)"}
-                              icon="Mailbox"
+                              disabled={
+                                courseData?.enrollmentMap?.[participant._id] ===
+                                "paid"
+                              }
+                              icon="Money"
+                              onClick={() => handleConfirmPayment(participant)}
+                              success
+                              title={
+                                courseData?.enrollmentMap?.[participant._id] ===
+                                "paid"
+                                  ? "Pago confirmado"
+                                  : "Confirmar pago"
+                              }
                             />
                             <IconLink
                               asButton
@@ -541,9 +586,7 @@ const CourseDetailPage = () => {
                       <span className={styles.reviewAuthor}>{r.firstName}</span>
                       <StarRating value={r.rating} readOnly size="sm" />
                       <span className={styles.reviewDate}>
-                        {format(new Date(r.createdAt), "dd/MM/yyyy", {
-                          locale: es,
-                        })}
+                        {formatDate(r.createdAt)}
                       </span>
                     </div>
                     {r.comment && (

@@ -7,6 +7,7 @@ export const authConfig = {
   },
   pages: {
     signIn: "/login",
+    error: "/login", // Auth errors (e.g. AccessDenied) land on the login page with ?error=
   },
   providers: [],
   callbacks: {
@@ -25,8 +26,6 @@ export const authConfig = {
         role: token.role,
         hasAuthorizedCalendar: token.hasAuthorizedCalendar || false,
       };
-      session.googleAccessToken = token.googleAccessToken || null;
-      session.googleScope = token.googleScope || null;
       return session;
     },
   },

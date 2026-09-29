@@ -1,9 +1,11 @@
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
 import { prepareNotificationForDB } from "@/models/schemas";
+import { handleApiError, requireAdmin } from "@/lib/api/guards";
 
 export async function DELETE(req, { params }) {
   try {
+    await requireAdmin();
     const { id } = await params;
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
@@ -144,7 +146,6 @@ export async function DELETE(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error al remover participante:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al remover participante");
   }
 }

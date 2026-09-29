@@ -3,7 +3,6 @@ import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
 import clientPromise from "@/lib/db";
 
-// GET /api/notifications - Get all notifications for current user
 export async function GET(req) {
   try {
     const session = await auth();
@@ -20,13 +19,6 @@ export async function GET(req) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const notifications = db.collection("notifications");
-
-    // Delete notifications older than 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    await notifications.deleteMany({
-      createdAt: { $lt: thirtyDaysAgo },
-    });
 
     const userNotifications = await notifications
       .find({ userId: new ObjectId(session.user.id) })

@@ -1,9 +1,12 @@
-import { CourseFormSchema } from "@/utils/validation";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
+import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import {
+  CourseFormSchema,
+  PublishedCourseEditSchema,
+} from "@/utils/validation";
 import { toastError, toastSuccess } from "@/utils/alerts";
 
 const CourseForm = ({ courseData, onSuccess, onCancel }) => {
@@ -15,7 +18,9 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
     handleSubmit,
     register,
   } = useForm({
-    resolver: zodResolver(CourseFormSchema),
+    resolver: zodResolver(
+      isPublished ? PublishedCourseEditSchema : CourseFormSchema,
+    ),
     defaultValues: courseData
       ? {
           title: courseData.title,
@@ -45,13 +50,15 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
         : "/api/courses/";
       const method = isEditMode ? "PATCH" : "POST";
 
-      const body = {
-        title,
-        short_description,
-        full_description,
-        max_participants,
-        price,
-      };
+      const body = isPublished
+        ? { title, short_description, full_description }
+        : {
+            title,
+            short_description,
+            full_description,
+            max_participants,
+            price,
+          };
 
       const response = await fetch(url, {
         headers: { "Content-Type": "application/json" },

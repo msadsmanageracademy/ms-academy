@@ -4,8 +4,16 @@ import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { signIn } from "next-auth/react";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { closeLoading, toastLoading } from "@/utils/alerts";
+import { useEffect, useState } from "react";
+
+const AUTH_ERROR_MESSAGES = {
+  registration_disabled:
+    "El registro de nuevas cuentas está deshabilitado por el momento.",
+  AccessDenied: "No tenés permiso para ingresar con esa cuenta.",
+  OAuthAccountNotLinked:
+    "Ese email ya está registrado con otro método de ingreso.",
+};
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -13,6 +21,16 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const errorCode = new URLSearchParams(window.location.search).get("error");
+    if (errorCode) {
+      setError(
+        AUTH_ERROR_MESSAGES[errorCode] ||
+          "No se pudo iniciar sesión. Intentá de nuevo.",
+      );
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,7 +47,11 @@ const LoginPage = () => {
 
       closeLoading();
 
-      if (res.error) {
+      if (res.code === "rate_limited") {
+        setError(
+          "Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentar.",
+        );
+      } else if (res.error) {
         setError("Credenciales incorrectas");
       } else {
         router.push("/dashboard");

@@ -22,8 +22,8 @@ import {
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
+import { formatDate, formatTime } from "@/utils/dates";
 import { getClassStatus } from "@/utils/classStatus";
-import { format } from "date-fns";
 import { useEffect, useState } from "react";
 
 const ClassesPage = () => {
@@ -283,9 +283,7 @@ const ClassesPage = () => {
 
           if (result.isConfirmed) {
             setHasCalendarAccess(false);
-            const authRes = await fetch(
-              `/api/google-calendar?userId=${session.user.id}`,
-            );
+            const authRes = await fetch("/api/google-calendar");
             const authData = await authRes.json();
             if (authData.authUrl) {
               window.location.href = authData.authUrl;
@@ -394,9 +392,9 @@ const ClassesPage = () => {
   const fetchClasses = async () => {
     try {
       const url =
-        session?.user?.role === "user"
-          ? "/api/classes?myClasses=true"
-          : "/api/classes?showAll=true";
+        session?.user?.role === "admin"
+          ? "/api/classes?showAll=true"
+          : "/api/classes?myClasses=true";
 
       const res = await fetch(url);
       if (!res.ok) throw new Error("Error fetching classes");
@@ -498,15 +496,12 @@ const ClassesPage = () => {
                           <td>{classItem.courseTitle || "—"}</td>
                           <td>
                             {classItem.start_date
-                              ? format(
-                                  new Date(classItem.start_date),
-                                  "dd/MM/yyyy",
-                                )
+                              ? formatDate(classItem.start_date)
                               : "—"}
                           </td>
                           <td>
                             {classItem.start_date
-                              ? format(new Date(classItem.start_date), "h:mm a")
+                              ? formatTime(classItem.start_date)
                               : "—"}
                           </td>
                           <td>{classItem.duration} min</td>
@@ -746,15 +741,12 @@ const ClassesPage = () => {
                         <td>{classItem.courseTitle || "—"}</td>
                         <td>
                           {classItem.start_date
-                            ? format(
-                                new Date(classItem.start_date),
-                                "dd/MM/yyyy",
-                              )
+                            ? formatDate(classItem.start_date)
                             : "—"}
                         </td>
                         <td>
                           {classItem.start_date
-                            ? format(new Date(classItem.start_date), "h:mm a")
+                            ? formatTime(classItem.start_date)
                             : "—"}
                         </td>
                         <td>{classItem.duration} min</td>

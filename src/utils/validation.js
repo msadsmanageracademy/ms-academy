@@ -25,7 +25,6 @@ export const RegisterFormSchema = z.object({
           message: "No debe contener espacios",
         })
     : z.string().min(3, { message: "Debe contener al menos 3 caracteres" }),
-  role: z.enum(["user", "admin"]),
 });
 
 export const ContactFormSchema = z.object({
@@ -47,7 +46,6 @@ export const ContactFormSchema = z.object({
 export const EditAccountFormSchema = RegisterFormSchema.omit({
   email: true,
   password: true,
-  role: true,
 }).extend({
   first_name: z.string().trim().optional(),
   last_name: z.string().trim().optional(),

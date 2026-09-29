@@ -1,91 +1,75 @@
-import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/db";
-import { google } from "googleapis";
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { timingSafeEqual } from "crypto";
+import {
+  CALENDAR_CALLBACK_PATH,
+  OAUTH_STATE_COOKIE,
+  createOAuthClient,
+} from "@/lib/google/oauth";
+import {
+  getStoredCalendarTokens,
+  saveCalendarTokens,
+} from "@/lib/google/calendarTokens";
 
-// Initialize OAuth2 client
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  `${process.env.NEXTAUTH_URL}/api/google-calendar/callback`
-);
+// NextResponse (mutable headers) so the state-cookie deletion is applied to the redirect
+const redirectTo = (req, query) =>
+  NextResponse.redirect(new URL(`/dashboard/classes?${query}`, req.url));
+
+function statesMatch(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function GET(req) {
+  const cookieStore = await cookies();
+  const expectedState = cookieStore.get(OAUTH_STATE_COOKIE)?.value;
+  // One-time use: always clear the state cookie
+  cookieStore.delete({ name: OAUTH_STATE_COOKIE, path: CALENDAR_CALLBACK_PATH });
+
   try {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
-    const userId = searchParams.get("state");
+    const state = searchParams.get("state");
     const error = searchParams.get("error");
 
     // Check if user denied access
     if (error) {
-      console.error("OAuth error from Google:", error);
-      return Response.redirect(
-        new URL(
-          `/dashboard/classes?error=${
-            error === "access_denied" ? "access_denied" : "authorization_failed"
-          }`,
-          req.url
-        )
+      return redirectTo(
+        req,
+        `error=${error === "access_denied" ? "access_denied" : "authorization_failed"}`,
       );
     }
 
-    if (!code || !userId) {
-      console.error("Missing code or userId:", { code: !!code, userId });
-      return Response.redirect(
-        new URL("/dashboard/classes?error=authorization_failed", req.url)
-      );
+    // CSRF protection: the state must match the one issued to this browser
+    if (!code || !statesMatch(state, expectedState)) {
+      console.error("Google Calendar OAuth: missing code or invalid state");
+      return redirectTo(req, "error=authorization_failed");
     }
 
-    // Exchange authorization code for tokens
-    const { tokens } = await oauth2Client.getToken(code);
-
-    if (!tokens.refresh_token) {
-      console.warn(
-        "No refresh token received. User may have already authorized before."
-      );
+    // The account to link is taken from the session, never from the query string
+    const session = await auth();
+    if (!session?.user?.id || session.user.role !== "admin") {
+      return redirectTo(req, "error=authorization_failed");
     }
 
-    // Store tokens in user document
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-    const usersCollection = db.collection("users");
+    const { tokens } = await createOAuthClient().getToken(code);
 
-    await usersCollection.updateOne(
-      { _id: new ObjectId(userId) },
-      {
-        $set: {
-          hasAuthorizedCalendar: true,
-          googleCalendarTokens: {
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            expiry_date: tokens.expiry_date,
-            token_type: tokens.token_type,
-            scope: tokens.scope,
-          },
-          updatedAt: new Date(),
-        },
-      }
-    );
+    // Google only returns a refresh token on first consent; keep the stored one otherwise
+    let refreshToken = tokens.refresh_token;
+    if (!refreshToken) {
+      console.warn("Google Calendar OAuth: no refresh token received");
+      const previous = await getStoredCalendarTokens(session.user.id).catch(() => null);
+      refreshToken = previous?.refresh_token;
+    }
 
-    console.log("Successfully stored Google Calendar tokens for user:", userId);
+    // Stored encrypted at rest (AES-256-GCM)
+    await saveCalendarTokens(session.user.id, { ...tokens, refresh_token: refreshToken });
 
-    // Redirect back to dashboard with success message
-    return Response.redirect(
-      new URL("/dashboard/classes?calendar_connected=true", req.url)
-    );
+    return redirectTo(req, "calendar_connected=true");
   } catch (error) {
+    // Details are logged server-side only; never reflected in the URL
     console.error("Google Calendar OAuth Error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-    });
-    return Response.redirect(
-      new URL(
-        `/dashboard/classes?error=token_exchange_failed&details=${encodeURIComponent(
-          error.message
-        )}`,
-        req.url
-      )
-    );
+    return redirectTo(req, "error=token_exchange_failed");
   }
 }

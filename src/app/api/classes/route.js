@@ -1,8 +1,55 @@
 import { ClassFormSchema } from "@/utils/validation";
 import { ObjectId } from "mongodb";
-import { auth } from "@/lib/auth";
+import { assignClassToCourse } from "@/lib/classes/courseLink";
 import clientPromise from "@/lib/db";
 import { prepareClassForDB, prepareNotificationForDB } from "@/models/schemas";
+import {
+  HttpError,
+  handleApiError,
+  isAdmin,
+  requireAdmin,
+  requireSession,
+} from "@/lib/api/guards";
+
+const PAID_ONLY_FIELDS = [
+  "googleEventId",
+  "googleMeetLink",
+  "calendarEventLink",
+  "recording_url",
+  "resources",
+];
+
+const courseTitleLookup = [
+  {
+    $lookup: {
+      from: "courses",
+      localField: "courseId",
+      foreignField: "_id",
+      as: "courseData",
+    },
+  },
+  {
+    $addFields: {
+      courseTitle: { $arrayElemAt: ["$courseData.title", 0] },
+    },
+  },
+  { $unset: "courseData" },
+];
+
+function toPublicClass(cls) {
+  const {
+    participants,
+    createdBy,
+    googleEventId,
+    googleEventUrl,
+    googleMeetLink,
+    calendarEventLink,
+    recording_url,
+    resources,
+    ...rest
+  } = cls;
+  return { ...rest, participantsCount: participants?.length ?? 0 };
+}
 
 export async function GET(req) {
   try {
@@ -11,12 +58,20 @@ export async function GET(req) {
     const courseId = searchParams.get("courseId");
     const myClasses = searchParams.get("myClasses") === "true";
 
+    const session = courseId || showAll
+      ? await requireAdmin()
+      : myClasses
+        ? await requireSession()
+        : null;
+
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
 
-    // When filtering by courseId, return all classes for that course (admin use)
     if (courseId) {
+      if (!ObjectId.isValid(courseId)) {
+        throw new HttpError(400, "ID de curso inválido");
+      }
       const classes = await classesCollection
         .find({ courseId: new ObjectId(courseId) })
         .sort({ start_date: 1 })
@@ -24,39 +79,18 @@ export async function GET(req) {
 
       return Response.json({ success: true, data: classes }, { status: 200 });
     }
-
-    // User's own classes (enrolled or participant, any status)
+    
     if (myClasses) {
-      const session = await auth();
-      if (!session) {
-        return Response.json(
-          { success: false, message: "No autorizado" },
-          { status: 401 },
-        );
-      }
       let classes = await classesCollection
         .aggregate([
           { $match: { participants: new ObjectId(session.user.id) } },
-          {
-            $lookup: {
-              from: "courses",
-              localField: "courseId",
-              foreignField: "_id",
-              as: "courseData",
-            },
-          },
-          {
-            $addFields: {
-              courseTitle: { $arrayElemAt: ["$courseData.title", 0] },
-            },
-          },
-          { $unset: "courseData" },
+          ...courseTitleLookup,
           { $sort: { start_date: 1 } },
         ])
         .toArray();
 
-      // Strip Google links for classes in courses where user hasn't paid
-      if (session.user.role !== "admin") {
+      // Strip Google links / materials for classes in courses the user hasn't paid
+      if (!isAdmin(session)) {
         const enrollments = await db
           .collection("courseEnrollments")
           .find({ userId: new ObjectId(session.user.id) })
@@ -68,124 +102,45 @@ export async function GET(req) {
         classes = classes.map((cls) => {
           if (!cls.courseId) return cls;
           const paymentStatus = enrollmentMap[cls.courseId.toString()] ?? null;
-          const paid = paymentStatus === "paid";
-          return {
-            ...cls,
-            userCoursePaymentStatus: paymentStatus,
-            ...(paid
-              ? {}
-              : {
-                  googleEventId: undefined,
-                  googleMeetLink: undefined,
-                  calendarEventLink: undefined,
-                  recording_url: undefined,
-                  resources: undefined,
-                }),
-          };
+          const sanitized = { ...cls, userCoursePaymentStatus: paymentStatus };
+          if (paymentStatus !== "paid") {
+            PAID_ONLY_FIELDS.forEach((field) => delete sanitized[field]);
+          }
+          return sanitized;
         });
       }
 
       return Response.json({ success: true, data: classes }, { status: 200 });
     }
-
-    const currentDate = new Date();
 
     if (showAll) {
-      // Admin view: all classes (past and future) with courseTitle
-      const classes_raw = await classesCollection
-        .aggregate([
-          {
-            $lookup: {
-              from: "courses",
-              localField: "courseId",
-              foreignField: "_id",
-              as: "courseData",
-            },
-          },
-          {
-            $addFields: {
-              courseTitle: { $arrayElemAt: ["$courseData.title", 0] },
-            },
-          },
-          { $unset: "courseData" },
-          { $sort: { start_date: 1 } },
-        ])
+      const classes = await classesCollection
+        .aggregate([...courseTitleLookup, { $sort: { start_date: 1 } }])
         .toArray();
-
-      // Attach userCoursePaymentStatus and strip Google links for unpaid users
-      let classes = classes_raw;
-      const session = await auth();
-      if (session?.user?.id && session.user.role !== "admin") {
-        const enrollments = await db
-          .collection("courseEnrollments")
-          .find({ userId: new ObjectId(session.user.id) })
-          .project({ courseId: 1, paymentStatus: 1 })
-          .toArray();
-        const enrollmentMap = Object.fromEntries(
-          enrollments.map((e) => [e.courseId.toString(), e.paymentStatus]),
-        );
-        classes = classes.map((cls) => {
-          if (!cls.courseId) return cls;
-          const paymentStatus = enrollmentMap[cls.courseId.toString()] ?? null;
-          const paid = paymentStatus === "paid";
-          return {
-            ...cls,
-            userCoursePaymentStatus: paymentStatus,
-            ...(paid
-              ? {}
-              : {
-                  googleEventId: undefined,
-                  googleMeetLink: undefined,
-                  calendarEventLink: undefined,
-                  recording_url: undefined,
-                  resources: undefined,
-                }),
-          };
-        });
-      }
 
       return Response.json({ success: true, data: classes }, { status: 200 });
     }
 
-    // Public view: only upcoming standalone published classes
-    const baseFilter = {
-      start_date: { $gt: currentDate },
-      status: "published",
-    };
-
     const classes = await classesCollection
-      .find(baseFilter)
+      .find({ start_date: { $gt: new Date() }, status: "published" })
       .sort({ start_date: 1 })
       .toArray();
 
     return Response.json(
-      {
-        success: true,
-        data: classes,
-      },
+      { success: true, data: classes.map(toPublicClass) },
       { status: 200 },
     );
   } catch (error) {
-    return Response.json(
-      {
-        error: error.message,
-      },
-      { status: 500 },
-    );
+    return handleApiError(error, "Error al obtener las clases");
   }
 }
 
 export async function POST(req) {
   try {
-    const session = await auth();
+    const session = await requireAdmin();
     const body = await req.json();
 
-    // Dado que JSON convierte todo a string, vuelvo a darle el formato a la fechas
     if (body.start_date) body.start_date = new Date(body.start_date);
-    if (body.end_date) body.end_date = new Date(body.end_date);
-
-    // Extract courseId before validation so it doesn't interfere with form schema
-    const { courseId: courseIdRaw, ...bodyWithoutCourseId } = body;
 
     const parsedBody = ClassFormSchema.safeParse(body);
 
@@ -200,8 +155,14 @@ export async function POST(req) {
       );
     }
 
-    const now = new Date();
-    if (body.start_date <= now) {
+    const {
+      courseId: courseIdRaw,
+      googleEventId,
+      googleEventUrl,
+      ...classFields
+    } = parsedBody.data;
+
+    if (classFields.start_date && classFields.start_date <= new Date()) {
       return Response.json(
         {
           success: false,
@@ -216,33 +177,39 @@ export async function POST(req) {
     const db = client.db(process.env.MONGODB_DB_NAME);
     const classesCollection = db.collection("classes");
 
-    const classData = prepareClassForDB(
-      bodyWithoutCourseId,
-      session?.user?.id ? new ObjectId(session.user.id) : undefined,
-    );
-
-    // Assign to course if a valid courseId was provided
-    if (courseIdRaw && ObjectId.isValid(courseIdRaw)) {
-      classData.courseId = new ObjectId(courseIdRaw);
-      classData.status = "enrolled";
+    if (courseIdRaw && !ObjectId.isValid(courseIdRaw)) {
+      throw new HttpError(400, "courseId inválido");
     }
+
+    const adminId = new ObjectId(session.user.id);
+    const classData = prepareClassForDB(classFields, adminId);
 
     const result = await classesCollection.insertOne(classData);
 
-    // Create notification for admin
-    if (session?.user?.id) {
-      const notifications = db.collection("notifications");
-      const notification = prepareNotificationForDB({
-        userId: new ObjectId(session.user.id),
+    if (courseIdRaw) {
+      try {
+        await assignClassToCourse(
+          db,
+          { ...classData, _id: result.insertedId },
+          courseIdRaw,
+        );
+      } catch (error) {
+        await classesCollection.deleteOne({ _id: result.insertedId });
+        throw error;
+      }
+    }
+
+    await db.collection("notifications").insertOne(
+      prepareNotificationForDB({
+        userId: adminId,
         type: "class.created",
         title: "Nueva clase creada",
-        message: `Has creado la clase "${body.title}"`,
+        message: `Has creado la clase "${classFields.title}"`,
         relatedId: result.insertedId,
         relatedType: "class",
-        actorId: new ObjectId(session.user.id),
-      });
-      await notifications.insertOne(notification);
-    }
+        actorId: adminId,
+      }),
+    );
 
     return Response.json(
       {
@@ -255,7 +222,6 @@ export async function POST(req) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Error al crear la clase:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al crear la clase");
   }
 }

@@ -1,24 +1,19 @@
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/db";
-import { auth } from "@/lib/auth";
 import { prepareNotificationForDB } from "@/models/schemas";
+import { handleApiError, requireAdmin } from "@/lib/api/guards";
 
 // PATCH /api/courses/confirm-payment/[id]
 // Body: { userId }
-// Confirms payment for a pending enrollment, moving the user to fully enrolled.
-// Designed to be called by the frontend now and by a Mercado Pago webhook later.
+// Admin-only: confirms payment for a pending enrollment, moving the user to fully enrolled.
+// When a payment gateway (e.g. Mercado Pago) is integrated, its signed webhook
+// should call the same confirmation logic instead of this endpoint.
 export async function PATCH(req, { params }) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return Response.json(
-        { success: false, message: "No autenticado" },
-        { status: 401 },
-      );
-    }
+    await requireAdmin();
 
     const body = await req.json();
-    const { id } = params;
+    const { id } = await params;
     const { userId } = body;
 
     if (!ObjectId.isValid(id))
@@ -45,7 +40,7 @@ export async function PATCH(req, { params }) {
 
     if (!enrollment) {
       return Response.json(
-        { success: false, message: "No estás inscrito en este curso" },
+        { success: false, message: "El usuario no está inscripto en este curso" },
         { status: 404 },
       );
     }
@@ -114,7 +109,6 @@ export async function PATCH(req, { params }) {
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error al confirmar pago:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error al confirmar pago");
   }
 }

@@ -169,10 +169,12 @@ export const confirmDeleteItem = (type, title) => {
   });
 };
 
-export const confirmPayment = (courseTitle) => {
+export const confirmPayment = (courseTitle, participantName) => {
   return confirmMixin.fire({
     title: "Confirmar pago",
-    text: `¿Confirmar el pago para el curso "${courseTitle}"?`,
+    text: participantName
+      ? `¿Confirmar el pago de ${participantName} para el curso "${courseTitle}"?`
+      : `¿Confirmar el pago para el curso "${courseTitle}"?`,
     confirmButtonColor: "var(--success)",
     confirmButtonText: "Confirmar pago",
   });

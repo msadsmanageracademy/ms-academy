@@ -21,12 +21,6 @@ const RegisterForm = () => {
 
   const onSubmit = async (data) => {
     try {
-      console.log("Errores de formulario", errors); // Errores en el form
-
-      /* handleSubmit ya valida el form (según schema definido en Zod) por lo que no es necesario utilizar trigger() para validar manualmente */
-
-      /* Si la validación fue exitosa, hago el POST */
-
       const response = await fetch("/api/auth/register", {
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -36,7 +30,11 @@ const RegisterForm = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        return toastError(3000, "Ha habido un error", result.error);
+        return toastError(
+          3000,
+          "Ha habido un error",
+          result.message || result.error,
+        );
       }
 
       toastSuccess(3000, "Operación exitosa", "Su cuenta ha sido creada");
@@ -71,7 +69,6 @@ const RegisterForm = () => {
         />
       </div>
       <div className={styles.formCustomError}>{errors?.password?.message}</div>
-      <input {...register("role", { value: "user" })} type="hidden" />
       <PrimaryLink
         asButton
         className={styles.link}

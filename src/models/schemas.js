@@ -11,15 +11,8 @@ export const UserDBSchema = z.object({
   age: z.number().nullable().optional(),
   avatar: z.string().optional(),
   hasAuthorizedCalendar: z.boolean().optional(),
-  googleCalendarTokens: z
-    .object({
-      access_token: z.string(),
-      refresh_token: z.string().optional(),
-      expiry_date: z.number().optional(),
-      token_type: z.string().optional(),
-      scope: z.string().optional(),
-    })
-    .optional(),
+  // Encrypted (AES-256-GCM) Google Calendar tokens — see src/lib/google/calendarTokens.js
+  googleCalendarTokensEnc: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -110,6 +103,7 @@ export const NotificationDBSchema = z.object({
     "class.reminder",
     "class.recording_added",
     "class.resources_updated",
+    "class.cancelled",
     // Course - User notifications
     "course.pre_enrolled",
     "course.enrolled",
