@@ -1,0 +1,83 @@
+# Lint, tests and build on every push to main and on every pull request.
+# Needs no secrets: the tests use an in-memory MongoDB and the build doesn't connect to the DB.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push cancels the run still in progress for the same branch / PR
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Current LTS lines
+        node: [22, 24]
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Same version as tests/setup/global.mjs; downloaded once, then cached
+      - name: Cache MongoDB binary
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/mongodb-binaries
+          key: mongodb-7.0.14-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Tests
+        run: npm test
+        env:
+          MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/mongodb-binaries
+
+      - name: Cache Next.js build
+        uses: actions/cache@v5
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-node${{ matrix.node }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-node${{ matrix.node }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Build
+        run: npm run build
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      # Fails only on critical vulnerabilities in production dependencies
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=critical

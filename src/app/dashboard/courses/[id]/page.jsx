@@ -107,7 +107,7 @@ const CourseDetailPage = () => {
 
     try {
       const res = await fetch(
-        `/api/courses/${id}/remove-participant?userId=${participantId}`,
+        `/api/courses/${id}/enrollments/${participantId}`,
         {
           method: "DELETE",
         },
@@ -122,11 +122,13 @@ const CourseDetailPage = () => {
       }
 
       setParticipants(participants.filter((p) => p._id !== participantId));
-      setCourseData({
-        ...courseData,
-        participants: courseData.participants.filter(
-          (id) => id !== participantId,
-        ),
+      setCourseData((prev) => {
+        const { [participantId]: _removed, ...enrollmentMap } = prev.enrollmentMap || {};
+        return {
+          ...prev,
+          enrollmentMap,
+          enrollmentCount: Math.max((prev.enrollmentCount ?? 1) - 1, 0),
+        };
       });
 
       toastSuccess(
@@ -156,10 +158,10 @@ const CourseDetailPage = () => {
     toastLoading("Procesando solicitud", "Confirmando pago...");
 
     try {
-      const res = await fetch(`/api/courses/confirm-payment/${id}`, {
+      const res = await fetch(`/api/courses/${id}/enrollments/${participant._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: participant._id }),
+        body: JSON.stringify({ paymentStatus: "paid" }),
       });
       const data = await res.json();
       closeLoading();
@@ -285,7 +287,7 @@ const CourseDetailPage = () => {
                 <span className={styles.value}>
                   {!courseData.max_participants
                     ? "Sin límite"
-                    : `${courseData.participants?.length ?? 0} / ${courseData.max_participants}`}
+                    : `${courseData.enrollmentCount ?? 0} / ${courseData.max_participants}`}
                 </span>
               </div>
 

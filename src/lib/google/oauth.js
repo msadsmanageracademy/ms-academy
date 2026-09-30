@@ -1,6 +1,6 @@
-import { google } from "googleapis";
+import { auth } from "@googleapis/calendar";
 
-// Base URL of the app. AUTH_URL is the Auth.js v5 name; NEXTAUTH_URL is kept for compatibility.
+// Base URL of the app (Auth.js v5 variable)
 export function getAppUrl() {
   return process.env.AUTH_URL;
 }
@@ -15,7 +15,7 @@ export const CALENDAR_SCOPES = [
 export const OAUTH_STATE_COOKIE = "gcal_oauth_state";
 
 export function createOAuthClient() {
-  return new google.auth.OAuth2(
+  return new auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     `${getAppUrl()}${CALENDAR_CALLBACK_PATH}`,

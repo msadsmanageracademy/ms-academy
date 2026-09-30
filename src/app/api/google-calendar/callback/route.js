@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { logger } from "@/lib/logger";
 import { timingSafeEqual } from "crypto";
 import {
   CALENDAR_CALLBACK_PATH,
@@ -43,7 +44,7 @@ export async function GET(req) {
 
     // CSRF protection: the state must match the one issued to this browser
     if (!code || !statesMatch(state, expectedState)) {
-      console.error("Google Calendar OAuth: missing code or invalid state");
+      logger.warn("Google Calendar OAuth: missing code or invalid state");
       return redirectTo(req, "error=authorization_failed");
     }
 
@@ -58,7 +59,7 @@ export async function GET(req) {
     // Google only returns a refresh token on first consent; keep the stored one otherwise
     let refreshToken = tokens.refresh_token;
     if (!refreshToken) {
-      console.warn("Google Calendar OAuth: no refresh token received");
+      logger.warn("Google Calendar OAuth: no refresh token received", undefined, { userId: session.user.id });
       const previous = await getStoredCalendarTokens(session.user.id).catch(() => null);
       refreshToken = previous?.refresh_token;
     }
@@ -69,7 +70,7 @@ export async function GET(req) {
     return redirectTo(req, "calendar_connected=true");
   } catch (error) {
     // Details are logged server-side only; never reflected in the URL
-    console.error("Google Calendar OAuth Error:", error);
+    logger.error("Google Calendar OAuth error", error);
     return redirectTo(req, "error=token_exchange_failed");
   }
 }

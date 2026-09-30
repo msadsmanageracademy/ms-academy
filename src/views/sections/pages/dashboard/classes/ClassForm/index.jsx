@@ -134,7 +134,7 @@ const ClassForm = ({
       if (!isEditMode && addToCalendar && result.data?._id) {
         try {
           const calendarResponse = await fetch(
-            `/api/classes/${result.data._id}/add-to-calendar`,
+            `/api/classes/${result.data._id}/calendar-event`,
             {
               method: "POST",
             },

@@ -1,16 +1,12 @@
-import { Oval } from "react-loader-spinner";
+import styles from "./styles.module.css";
 
-export const OvalSpinner = ({ size }) => {
+export const OvalSpinner = ({ size = 80, label = "Cargando" }) => {
   return (
-    <Oval
-      visible
-      ariaLabel="oval-loading"
-      color="var(--color-3)"
-      height={size || "80"}
-      secondaryColor="var(--danger)"
-      width={size || "80"}
-      wrapperStyle={{}}
-      wrapperClass=""
+    <span
+      aria-label={label}
+      className={styles.spinner}
+      role="status"
+      style={{ height: size, width: size }}
     />
   );
 };

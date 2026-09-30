@@ -83,10 +83,8 @@ const CourseDetail = () => {
 
       toastLoading("Procesando tu solicitud", "Inscribiéndote al curso...");
 
-      const response = await fetch(`/api/courses/sign-up/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session.user.id }),
+      const response = await fetch(`/api/courses/${id}/enrollments`, {
+        method: "POST",
       });
 
       const responseData = await response.json();

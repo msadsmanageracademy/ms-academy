@@ -1,11 +1,11 @@
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { ObjectId } from "mongodb";
 import { authConfig } from "./auth.config";
-import clientPromise from "@/lib/db";
+import { createAuthAdapter } from "@/lib/authAdapter";
 import { compare } from "bcryptjs";
 import { config } from "@/config";
+import { getDb } from "@/lib/db";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import {
   getClientIp,
@@ -26,8 +26,7 @@ class RateLimitedSignin extends CredentialsSignin {
 }
 
 async function getUsersCollection() {
-  const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB_NAME).collection("users");
+  return (await getDb()).collection("users");
 }
 
 const emailQuery = (email) => ({
@@ -36,7 +35,7 @@ const emailQuery = (email) => ({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: MongoDBAdapter(clientPromise),
+  adapter: createAuthAdapter(),
   providers: [
     Credentials({
       name: "Credentials",
@@ -133,8 +132,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return existingUser ? true : "/login?error=registration_disabled";
     },
     async jwt({ token, trigger, session, user, account }) {
-      if (trigger === "update" && session?.name) {
-        return { ...token, name: session.name };
+      if (trigger === "update") {
+        const next = { ...token };
+        if (typeof session?.name === "string") next.name = session.name;
+        if (token.id && ObjectId.isValid(token.id)) {
+          const usersCollection = await getUsersCollection();
+          const fresh = await usersCollection.findOne(
+            { _id: new ObjectId(token.id) },
+            { projection: { role: 1, hasAuthorizedCalendar: 1 } },
+          );
+          if (fresh) {
+            next.role = fresh.role ?? DEFAULT_ROLE;
+            next.hasAuthorizedCalendar = fresh.hasAuthorizedCalendar || false;
+          }
+        }
+        return next;
       }
 
       if (user && account?.provider === "credentials") {
@@ -188,28 +200,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      let hasAuthorizedCalendar = token.hasAuthorizedCalendar || false;
-
-      if (token.id) {
-        try {
-          const usersCollection = await getUsersCollection();
-          const user = await usersCollection.findOne(
-            { _id: new ObjectId(token.id) },
-            { projection: { hasAuthorizedCalendar: 1 } },
-          );
-          if (user) hasAuthorizedCalendar = user.hasAuthorizedCalendar || false;
-        } catch (error) {
-          console.error("Error fetching calendar authorization status:", error);
-        }
-      }
-
       session.user = {
         name: token.name || null,
         id: token.id || null,
         email: token.email || null,
         image: token.image || null,
         role: token.role,
-        hasAuthorizedCalendar,
+        hasAuthorizedCalendar: token.hasAuthorizedCalendar || false,
       };
 
       return session;

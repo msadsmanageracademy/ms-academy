@@ -1,15 +1,8 @@
+import { HttpError } from "@/server/errors";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
-/**
- * Error with an HTTP status. Handlers throw it and `handleApiError` turns it into
- * a JSON response with that status. The message is user-facing (Spanish).
- */
-export class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
+export { HttpError };
 
 /** Returns the session or throws 401. */
 export async function requireSession() {
@@ -29,6 +22,12 @@ export async function requireAdmin() {
 
 export const isAdmin = (session) => session?.user?.role === "admin";
 
+/** The logged-in user (`session.user`) or null. Services do the authorization. */
+export async function getActor() {
+  const session = await auth();
+  return session?.user?.id ? session.user : null;
+}
+
 /**
  * Resolves which user the request acts on.
  * - No requested userId (or the session's own) → the current user.
@@ -42,19 +41,39 @@ export function resolveTargetUserId(session, requestedUserId) {
   throw new HttpError(403, "Acceso denegado");
 }
 
+/** Reads the JSON body. An empty body is `{}`; malformed JSON throws 400. */
+export async function readJson(req) {
+  const text = await req.text();
+  if (!text.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new HttpError(400, "El cuerpo de la solicitud no es JSON válido");
+  }
+}
+
+/** Success response: `{ success: true, ...payload }`. */
+export function ok(payload = {}, status = 200) {
+  return Response.json({ success: true, ...payload }, { status });
+}
+
 /**
  * Turns any error into a safe JSON response.
- * HttpErrors expose their message; anything else is logged and returns a generic 500
- * (`error.message` is never leaked to the client).
+ * HttpErrors expose their message (and validation details); anything else is logged
+ * and returns a generic 500 (`error.message` is never leaked to the client).
  */
 export function handleApiError(error, context = "API error") {
   if (error instanceof HttpError) {
     return Response.json(
-      { success: false, message: error.message },
+      {
+        success: false,
+        message: error.message,
+        ...(error.details !== undefined ? { details: error.details } : {}),
+      },
       { status: error.status },
     );
   }
-  console.error(`${context}:`, error);
+  logger.error(context, error);
   return Response.json(
     { success: false, message: "Error en el servidor" },
     { status: 500 },

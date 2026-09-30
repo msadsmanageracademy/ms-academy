@@ -49,7 +49,7 @@ const ContactForm = () => {
         toastError(
           4000,
           "Error al enviar",
-          json.message || json.error || "Intentá de nuevo más tarde.",
+          json.message || "Intentá de nuevo más tarde.",
         );
         return;
       }

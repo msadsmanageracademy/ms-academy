@@ -1,12 +1,9 @@
 // Shared helpers for API integration tests.
 import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { ensureIndexes } from "@/lib/db/indexes.mjs";
 
-export async function getDb() {
-  const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB_NAME);
-}
+export { getDb };
 
 /** Drops every collection and recreates the app indexes. */
 export async function resetDb() {
@@ -77,7 +74,7 @@ export async function createClass(db, overrides = {}) {
     price: 0,
     max_participants: null,
     status: "published",
-    participants: [],
+    ...(overrides.courseId ? {} : { participants: [] }),
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -96,7 +93,6 @@ export async function createCourse(db, overrides = {}) {
     max_participants: null,
     status: "published",
     type: "course",
-    participants: [],
     createdAt: now,
     updatedAt: now,
     ...overrides,

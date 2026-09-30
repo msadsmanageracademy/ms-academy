@@ -1,31 +1,12 @@
-import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { listMyReviews } from "@/server/reviews/service";
+import { getActor, handleApiError, ok } from "@/lib/api/guards";
 
-// GET /api/reviews — returns all reviews left by the current user
-// Returns: { courseId?, classId?, rating, comment, ... }[]
+// GET /api/reviews — reviews left by the current user
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return Response.json(
-        { success: false, message: "No autenticado" },
-        { status: 401 },
-      );
-    }
-
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME);
-
-    const reviews = await db
-      .collection("reviews")
-      .find({ userId: new ObjectId(session.user.id) })
-      .project({ courseId: 1, classId: 1, rating: 1, comment: 1, updatedAt: 1 })
-      .toArray();
-
-    return Response.json({ success: true, data: reviews }, { status: 200 });
+    const actor = await getActor();
+    return ok({ data: await listMyReviews(actor) });
   } catch (error) {
-    console.error("Error fetching user reviews:", error);
-    return Response.json({ error: "Error en el servidor" }, { status: 500 });
+    return handleApiError(error, "Error fetching user reviews");
   }
 }

@@ -138,7 +138,7 @@ const ClassDetailPage = () => {
 
     try {
       const res = await fetch(
-        `/api/classes/${id}/remove-participant?userId=${participantId}`,
+        `/api/classes/${id}/participants/${participantId}`,
         {
           method: "DELETE",
         },
@@ -190,7 +190,7 @@ const ClassDetailPage = () => {
     toastLoading("Enviando recordatorio", "Enviando email...");
 
     try {
-      const res = await fetch(`/api/classes/${id}/notify`, {
+      const res = await fetch(`/api/classes/${id}/reminders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ participantIds: [participantId] }),
@@ -226,7 +226,7 @@ const ClassDetailPage = () => {
     toastLoading("Enviando recordatorios", "Enviando emails...");
 
     try {
-      const res = await fetch(`/api/classes/${id}/notify`, {
+      const res = await fetch(`/api/classes/${id}/reminders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -245,7 +245,7 @@ const ClassDetailPage = () => {
       toastSuccess(
         3000,
         "Emails enviados",
-        `Se notificó a ${data.notifiedCount} participante${data.notifiedCount > 1 ? "s" : ""}`,
+        `Se notificó a ${data.data.notifiedCount} participante${data.data.notifiedCount > 1 ? "s" : ""}`,
       );
     } catch (err) {
       console.error("Error notifying all participants:", err);
@@ -308,8 +308,8 @@ const ClassDetailPage = () => {
     setResourcesSaving(true);
     toastLoading("Guardando materiales", "Actualizando lista...");
     try {
-      const res = await fetch(`/api/classes/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/classes/${id}/resources`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resources }),
       });
@@ -341,11 +341,17 @@ const ClassDetailPage = () => {
     setRecordingUrlSaving(true);
     toastLoading("Guardando grabación", "Actualizando URL...");
     try {
-      const res = await fetch(`/api/classes/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recording_url: recordingUrl }),
-      });
+      const url = recordingUrl.trim();
+      const res = await fetch(
+        `/api/classes/${id}/recording`,
+        url
+          ? {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url }),
+            }
+          : { method: "DELETE" },
+      );
       const data = await res.json();
       closeLoading();
       if (!res.ok) {
@@ -700,14 +706,16 @@ const ClassDetailPage = () => {
                                     handleNotifyParticipant(participant._id)
                                   }
                                 />
-                                <IconLink
-                                  asButton
-                                  danger
-                                  icon="UserMinus"
-                                  onClick={() =>
-                                    handleRemoveParticipant(participant._id)
-                                  }
-                                />
+                                {!classData.courseId && (
+                                  <IconLink
+                                    asButton
+                                    danger
+                                    icon="UserMinus"
+                                    onClick={() =>
+                                      handleRemoveParticipant(participant._id)
+                                    }
+                                  />
+                                )}
                               </div>
                             </td>
                           </tr>

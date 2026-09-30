@@ -77,8 +77,10 @@ const NotificationsPage = () => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const res = await fetch("/api/notifications/mark-all-read", {
+      const res = await fetch("/api/notifications", {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read: true }),
       });
 
       if (!res.ok) throw new Error("Error marking all as read");

@@ -11,7 +11,6 @@ export const UserDBSchema = z.object({
   age: z.number().nullable().optional(),
   avatar: z.string().optional(),
   hasAuthorizedCalendar: z.boolean().optional(),
-  // Encrypted (AES-256-GCM) Google Calendar tokens — see src/lib/google/calendarTokens.js
   googleCalendarTokensEnc: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -24,7 +23,7 @@ export const ClassDBSchema = z.object({
   short_description: z.string(),
   duration: z.number().positive(),
   start_date: z.date().optional().nullable(),
-  participants: z.array(z.instanceof(Object)).default([]),
+  participants: z.array(z.instanceof(Object)).optional(),
   max_participants: z.number().nonnegative().nullable(),
   price: z.number().nonnegative(),
   status: z.enum(["draft", "published", "enrolled"]).default("draft"),
@@ -48,12 +47,11 @@ export const CourseDBSchema = z.object({
   title: z.string(),
   short_description: z.string(),
   full_description: z.string(),
-  participants: z.array(z.instanceof(Object)).default([]),
   max_participants: z.number().nonnegative().nullable(),
   price: z.number().nonnegative(),
   status: z.enum(["draft", "published"]).default("draft"),
   type: z.literal("course"),
-  courseSeriesId: z.instanceof(Object).optional(), // ObjectId — links iterations of the same course
+  courseSeriesId: z.instanceof(Object).optional(),
   createdBy: z.instanceof(Object).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -62,8 +60,8 @@ export const CourseDBSchema = z.object({
 // ==================== COURSE ENROLLMENT SCHEMAS ====================
 
 export const CourseEnrollmentDBSchema = z.object({
-  userId: z.instanceof(Object), // ObjectId
-  courseId: z.instanceof(Object), // ObjectId
+  userId: z.instanceof(Object),
+  courseId: z.instanceof(Object),
   paymentStatus: z.enum(["pending", "paid"]).default("pending"),
   paidAt: z.date().optional(),
   createdAt: z.date(),
@@ -84,7 +82,7 @@ export function prepareCourseEnrollmentForDB(userId, courseId) {
 // ==================== NOTIFICATION SCHEMAS ====================
 
 export const NotificationDBSchema = z.object({
-  userId: z.instanceof(Object), // ObjectId - Who receives the notification
+  userId: z.instanceof(Object),
   type: z.enum([
     // Class - User notifications
     "class.enrolled",
@@ -168,12 +166,10 @@ export function prepareCourseForDB(formData, userId) {
     type: "course",
     status: "draft",
     createdBy: userId,
-    participants: [],
     max_participants:
       formData.max_participants === 0 ? null : formData.max_participants,
     createdAt: now,
     updatedAt: now,
-    // courseSeriesId is set to the doc's own _id after insertion
   };
 }
 

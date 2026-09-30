@@ -33,7 +33,7 @@ const RegisterForm = () => {
         return toastError(
           3000,
           "Ha habido un error",
-          result.message || result.error,
+          result.message,
         );
       }
 

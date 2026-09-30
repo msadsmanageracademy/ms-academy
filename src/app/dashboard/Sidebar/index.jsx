@@ -5,7 +5,6 @@ import SIDEBAR_MENU from "./menu";
 import Swal from "sweetalert2";
 import styles from "./styles.module.css";
 import { usePathname } from "next/navigation";
-import withReactContent from "sweetalert2-react-content";
 import {
   Bell,
   Courses,
@@ -29,10 +28,8 @@ const ICONS = {
 const Sidebar = () => {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const MySwal = withReactContent(Swal);
-
   const handleLogout = () => {
-    MySwal.fire({
+    Swal.fire({
       title: "Cerrar sesión",
       text: "¿Está seguro que desea cerrar la sesión?",
       icon: "info",

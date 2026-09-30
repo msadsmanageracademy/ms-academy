@@ -1,24 +1,30 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
-const options = {};
+// The connection opens lazily, on the first query. Importing this module (e.g. during
+// `next build`, or in CI without a database) doesn't connect nor require MONGODB_URI.
 
-if (!uri) {
-  throw new Error("⚠️ MONGODB_URI no está definida en el archivo .env.local");
+function connect() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error("MONGODB_URI is not set (check .env.local)");
+  return new MongoClient(uri)
+    .connect()
+    .catch((error) => {
+      // A failed attempt is not cached: the next query tries again
+      globalThis._mongoClientPromise = undefined;
+      throw error;
+    });
 }
 
-let client;
-let clientPromise;
-
-if (process.env.NODE_ENV === "development") {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect();
-  }
-  clientPromise = global._mongoClientPromise;
-} else {
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+/**
+ * Returns the shared, connected MongoClient (needed e.g. to start transactions).
+ * Cached on globalThis so dev hot reloads reuse the same connection.
+ */
+export function getClient() {
+  globalThis._mongoClientPromise ??= connect();
+  return globalThis._mongoClientPromise;
 }
 
-export default clientPromise; // next-auth requiere clientPromise como default
+/** Returns the app database (MONGODB_DB_NAME) from the shared client. */
+export async function getDb() {
+  return (await getClient()).db(process.env.MONGODB_DB_NAME);
+}

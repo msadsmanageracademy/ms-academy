@@ -50,7 +50,7 @@ const CoursesPage = () => {
 
     try {
       const res = await fetch(
-        `/api/courses/sign-up/${courseId}?userId=${session.user.id}`,
+        `/api/courses/${courseId}/enrollments/${session.user.id}`,
         {
           method: "DELETE",
         },
@@ -109,8 +109,8 @@ const CoursesPage = () => {
     if (!result.isConfirmed) return;
     toastLoading("Procesando tu solicitud", "Cambiando estado...");
     try {
-      const res = await fetch(`/api/courses/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/courses/${id}/status`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });

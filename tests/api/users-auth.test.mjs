@@ -90,7 +90,7 @@ describe("other session-protected endpoints", () => {
   it("unread notification count requires a session", async () => {
     expect((await callRoute(unreadCountRoute.GET)).status).toBe(401);
     setSession(user);
-    expect((await callRoute(unreadCountRoute.GET)).json.count).toBe(0);
+    expect((await callRoute(unreadCountRoute.GET)).json.data.count).toBe(0);
   });
 });
 

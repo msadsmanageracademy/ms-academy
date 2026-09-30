@@ -6,7 +6,7 @@ import {
   OAUTH_STATE_COOKIE,
   createOAuthClient,
 } from "@/lib/google/oauth";
-import { handleApiError, requireAdmin } from "@/lib/api/guards";
+import { handleApiError, ok, requireAdmin } from "@/lib/api/guards";
 
 // GET /api/google-calendar — admin only. Returns the Google consent URL.
 // A random `state` is stored in an httpOnly cookie and verified in the callback (CSRF protection).
@@ -32,7 +32,7 @@ export async function GET() {
       prompt: "consent", // Force consent screen to get refresh token
     });
 
-    return Response.json({ success: true, authUrl }, { status: 200 });
+    return ok({ data: { authUrl } });
   } catch (error) {
     return handleApiError(error, "Error starting Calendar authorization");
   }

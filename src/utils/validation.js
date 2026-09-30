@@ -128,6 +128,29 @@ export const ClassResourcesUpdateSchema = z.object({
   ),
 });
 
+// Bodies of the dedicated sub-resource endpoints
+export const StatusUpdateSchema = z.object({
+  status: z.enum(["draft", "published"], { message: "Estado inválido" }),
+});
+
+export const CourseLinkSchema = z.object({
+  courseId: z.string({ message: "courseId inválido" }).min(1, "courseId inválido"),
+});
+
+export const RecordingUpdateSchema = z.object({
+  url: z.string({ message: "URL de grabación inválida" }).url("URL de grabación inválida"),
+});
+
+export const PaymentUpdateSchema = z.object({
+  paymentStatus: z.enum(["paid"], { message: "Solo se puede confirmar el pago" }),
+});
+
+export const ReminderSchema = z.object({
+  participantIds: z
+    .array(z.string(), { message: "participantIds debe ser una lista" })
+    .optional(),
+});
+
 export const ReviewFormSchema = z.object({
   rating: z.number().int().min(1, "Seleccioná una puntuación").max(5),
   comment: z

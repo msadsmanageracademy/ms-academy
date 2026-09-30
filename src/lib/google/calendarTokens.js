@@ -1,8 +1,9 @@
 import { ObjectId } from "mongodb";
-import { google } from "googleapis";
-import clientPromise from "@/lib/db";
-import { decryptJSON, encryptJSON } from "@/lib/crypto";
+import { calendar } from "@googleapis/calendar";
 import { createOAuthClient } from "@/lib/google/oauth";
+import { getDb } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import { decryptJSON, encryptJSON } from "@/lib/crypto";
 
 // Google Calendar tokens are stored encrypted (AES-256-GCM) in
 // `users.googleCalendarTokensEnc`. They're never stored or returned in plaintext.
@@ -18,8 +19,7 @@ export class CalendarAuthError extends Error {
 const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
 async function usersCollection() {
-  const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB_NAME).collection("users");
+  return (await getDb()).collection("users");
 }
 
 async function readStoredTokens(userId) {
@@ -33,7 +33,7 @@ async function readStoredTokens(userId) {
     return decryptJSON(user.googleCalendarTokensEnc);
   } catch (error) {
     // Wrong/rotated TOKEN_ENCRYPTION_KEY or corrupted value: force re-authorization
-    console.error("Could not decrypt Calendar tokens:", error.message);
+    logger.error("Could not decrypt Calendar tokens", error, { userId });
     await clearCalendarTokens(userId);
     return null;
   }
@@ -111,12 +111,12 @@ export async function getCalendarClient(userId) {
       };
       await saveCalendarTokens(userId, tokens);
     } catch (error) {
-      console.error("Failed to refresh Google Calendar token:", error.message);
+      logger.error("Failed to refresh Google Calendar token", error, { userId });
       await clearCalendarTokens(userId);
       throw new CalendarAuthError("CALENDAR_TOKEN_REVOKED");
     }
   }
 
   oauthClient.setCredentials(tokens);
-  return google.calendar({ version: "v3", auth: oauthClient });
+  return calendar({ version: "v3", auth: oauthClient });
 }

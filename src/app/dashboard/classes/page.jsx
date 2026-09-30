@@ -27,7 +27,7 @@ import { getClassStatus } from "@/utils/classStatus";
 import { useEffect, useState } from "react";
 
 const ClassesPage = () => {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const { incrementCount } = useNotifications();
   const [addingToCalendar, setAddingToCalendar] = useState(null);
   const [allCourses, setAllCourses] = useState([]);
@@ -59,6 +59,8 @@ const ClassesPage = () => {
       // Clean URL
       window.history.replaceState({}, "", "/dashboard/classes");
       setHasCalendarAccess(true);
+      // The session caches the Calendar flag: refresh it from the server
+      updateSession();
     }
     if (params.get("error")) {
       const errorType = params.get("error");
@@ -76,7 +78,8 @@ const ClassesPage = () => {
       toastError(4000, "Error de autorización", errorMessage);
       window.history.replaceState({}, "", "/dashboard/classes");
     }
-  }, []);
+    // Runs once per visit: the query params are removed right away
+  }, [updateSession]);
 
   const handleUnenroll = async (classId) => {
     const result = await confirmUnenroll(
@@ -90,7 +93,7 @@ const ClassesPage = () => {
 
     try {
       const res = await fetch(
-        `/api/classes/sign-up/${classId}?userId=${session.user.id}`,
+        `/api/classes/${classId}/participants/${session.user.id}`,
         {
           method: "DELETE",
         },
@@ -129,7 +132,7 @@ const ClassesPage = () => {
       const res = await fetch("/api/google-calendar");
       const data = await res.json();
 
-      if (!res.ok || !data.authUrl) {
+      if (!res.ok || !data.data?.authUrl) {
         return toastError(
           3000,
           "Ha habido un error",
@@ -138,7 +141,7 @@ const ClassesPage = () => {
       }
 
       // Redirect to Google OAuth
-      window.location.href = data.authUrl;
+      window.location.href = data.data.authUrl;
     } catch (err) {
       console.error("Error connecting calendar:", err);
       toastError(
@@ -171,8 +174,8 @@ const ClassesPage = () => {
     setLinkModalClassId(null);
     toastLoading("Procesando tu solicitud", "Vinculando clase al curso...");
     try {
-      const res = await fetch(`/api/classes/${linkModalClassId}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/classes/${linkModalClassId}/course`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ courseId: selectedCourseId }),
       });
@@ -208,10 +211,8 @@ const ClassesPage = () => {
     if (!result.isConfirmed) return;
     toastLoading("Procesando tu solicitud", "Desvinculando clase del curso...");
     try {
-      const res = await fetch(`/api/classes/${classId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId: null }),
+      const res = await fetch(`/api/classes/${classId}/course`, {
+        method: "DELETE",
       });
       const data = await res.json();
       closeLoading();
@@ -267,7 +268,7 @@ const ClassesPage = () => {
     toastLoading("Procesando tu solicitud", "Agregando a Google Calendar");
 
     try {
-      const res = await fetch(`/api/classes/${classId}/add-to-calendar`, {
+      const res = await fetch(`/api/classes/${classId}/calendar-event`, {
         method: "POST",
       });
 
@@ -286,8 +287,8 @@ const ClassesPage = () => {
             setHasCalendarAccess(false);
             const authRes = await fetch("/api/google-calendar");
             const authData = await authRes.json();
-            if (authData.authUrl) {
-              window.location.href = authData.authUrl;
+            if (authData.data?.authUrl) {
+              window.location.href = authData.data.authUrl;
             }
           }
           return;
@@ -302,9 +303,7 @@ const ClassesPage = () => {
           c._id === classId
             ? {
                 ...c,
-                googleEventId: data.googleEventId,
-                googleMeetLink: data.googleMeetLink,
-                calendarEventLink: data.calendarEventLink,
+                ...data.data,
               }
             : c,
         ),
@@ -313,7 +312,7 @@ const ClassesPage = () => {
       toastSuccess(
         4000,
         "Operación exitosa",
-        data.googleMeetLink ? "Clase creada con Google Meet" : "Clase creada",
+        data.data.googleMeetLink ? "Clase creada con Google Meet" : "Clase creada",
       );
 
       // Notification created for admin
@@ -365,8 +364,8 @@ const ClassesPage = () => {
     if (!result.isConfirmed) return;
     toastLoading("Procesando tu solicitud", "Cambiando estado...");
     try {
-      const res = await fetch(`/api/classes/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/classes/${id}/status`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -512,7 +511,7 @@ const ClassesPage = () => {
                               : `$${classItem.price}`}
                           </td>
                           <td>
-                            {classItem.participants?.length || 0} /{" "}
+                            {classItem.participantsCount ?? 0} /{" "}
                             {classItem.max_participants || "∞"}
                           </td>
                           <td>

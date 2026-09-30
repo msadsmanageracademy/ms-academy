@@ -80,10 +80,8 @@ const ContentPage = () => {
 
       toastLoading("Procesando tu solicitud", "Inscribiéndote a la clase...");
 
-      const response = await fetch(`/api/classes/sign-up/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session.user.id }),
+      const response = await fetch(`/api/classes/${id}/participants`, {
+        method: "POST",
       });
 
       const responseData = await response.json();

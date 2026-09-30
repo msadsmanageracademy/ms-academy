@@ -37,7 +37,7 @@ export const NotificationProvider = ({ children }) => {
       const response = await fetch("/api/notifications/unread-count");
       if (response.ok) {
         const data = await response.json();
-        setUnreadCount(data.count);
+        setUnreadCount(data.data?.count ?? 0);
       }
     } catch (error) {
       console.error("Error fetching unread count:", error);

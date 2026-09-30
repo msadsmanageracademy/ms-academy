@@ -36,12 +36,12 @@ const AccountForm = ({ userData, userId, onUpdate }) => {
         return toastError(
           3000,
           "Ha habido un error",
-          result.message || result.error,
+          result.message,
         );
       }
 
-      if (result.name && onUpdate) {
-        await onUpdate({ name: result.name });
+      if (result.data?.first_name && onUpdate) {
+        await onUpdate({ name: result.data.first_name });
       }
 
       toastSuccess(3000, "Operación exitosa", result.message);

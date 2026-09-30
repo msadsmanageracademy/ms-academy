@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
-import clientPromise from "@/lib/db";
+import { getDb } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 // Fixed-window rate limiter backed by MongoDB.
 // Each (scope, key, window) is one document in `rateLimits`; a TTL index removes
@@ -9,13 +10,12 @@ const COLLECTION = "rateLimits";
 let indexReady;
 
 async function getCollection() {
-  const client = await clientPromise;
-  const collection = client.db(process.env.MONGODB_DB_NAME).collection(COLLECTION);
+  const collection = (await getDb()).collection(COLLECTION);
   indexReady ??= collection
     .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
     .catch((error) => {
       indexReady = undefined; // retry on next call
-      console.error("Rate limit: could not create the TTL index:", error.message);
+      logger.error("Rate limit: could not create the TTL index", error);
     });
   await indexReady;
   return collection;
@@ -39,7 +39,7 @@ export async function peekRateLimit({ scope, key, windowSec }) {
     const doc = await collection.findOne({ _id }, { projection: { count: 1 } });
     return doc?.count ?? 0;
   } catch (error) {
-    console.error("Rate limit (peek) failed, allowing the request:", error.message);
+    logger.error("Rate limit (peek) failed, allowing the request", error);
     return 0; // fail open: the limiter must never lock everyone out
   }
 }
@@ -49,16 +49,13 @@ export async function hitRateLimit({ scope, key, limit, windowSec }) {
   const { _id, expiresAt } = windowDoc(scope, key, windowSec);
   try {
     const collection = await getCollection();
-    const update = async () => {
-      const result = await collection.findOneAndUpdate(
+    // mongodb v6 returns the document directly
+    const update = () =>
+      collection.findOneAndUpdate(
         { _id },
         { $inc: { count: 1 }, $setOnInsert: { expiresAt } },
-        // includeResultMetadata:false → returns the document in driver v5 and v6
-        { upsert: true, returnDocument: "after", includeResultMetadata: false },
+        { upsert: true, returnDocument: "after" },
       );
-      // Defensive: older drivers may still wrap the document in { value, ok }
-      return result && "ok" in result && "value" in result ? result.value : result;
-    };
     let doc;
     try {
       doc = await update();
@@ -72,7 +69,7 @@ export async function hitRateLimit({ scope, key, limit, windowSec }) {
       retryAfterSec: Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / 1000)),
     };
   } catch (error) {
-    console.error("Rate limit (hit) failed, allowing the request:", error.message);
+    logger.error("Rate limit (hit) failed, allowing the request", error);
     return { allowed: true, retryAfterSec: 0 };
   }
 }
@@ -83,7 +80,7 @@ export async function resetRateLimit({ scope, key, windowSec }) {
     const collection = await getCollection();
     await collection.deleteOne({ _id: windowDoc(scope, key, windowSec)._id });
   } catch (error) {
-    console.error("Rate limit (reset) failed:", error.message);
+    logger.error("Rate limit (reset) failed", error);
   }
 }
 
