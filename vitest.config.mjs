@@ -8,7 +8,7 @@ export default defineConfig({
   esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.{js,mjs}"],
+    include: ["tests/**/*.test.{js,mjs,jsx}"],
     globalSetup: ["tests/setup/global.mjs"],
     setupFiles: ["tests/setup/env.mjs"],
     testTimeout: 20000,

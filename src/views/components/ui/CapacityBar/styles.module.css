@@ -1,0 +1,14 @@
+.bar {
+  background: var(--color-1);
+  border-radius: 0.5rem;
+  height: 1.5rem;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.fill {
+  background: linear-gradient(90deg, var(--success), var(--success-hover));
+  height: 100%;
+  transition: width 0.3s ease;
+}

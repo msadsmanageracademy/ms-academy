@@ -58,7 +58,7 @@ const Sidebar = () => {
   );
 
   return (
-    <nav className={styles.sidebar}>
+    <nav className={`${styles.sidebar} dark-surface`} aria-label="Panel">
       <ul>
         {filteredMenu.map((item) => {
           const Icon = ICONS[item.iconKey];
@@ -69,6 +69,7 @@ const Sidebar = () => {
           return (
             <li className={styles.item} key={item.href}>
               <Link
+                aria-current={active ? "page" : undefined}
                 href={item.href}
                 className={`${styles.link} ${active ? styles.active : ""}`}
               >
@@ -81,12 +82,11 @@ const Sidebar = () => {
             </li>
           );
         })}
-        <li
-          className={`${styles.item} ${styles.logoutContainer}`}
-          onClick={() => handleLogout()}
-        >
-          <Logout fill={"rgba(255, 255, 255, 0.7)"} size={28} />
-          <span>Cerrar sesión</span>
+        <li className={`${styles.item} ${styles.logoutContainer}`}>
+          <button className={styles.logoutButton} type="button" onClick={handleLogout}>
+            <Logout fill={"rgba(255, 255, 255, 0.7)"} size={28} />
+            <span>Cerrar sesión</span>
+          </button>
         </li>
       </ul>
     </nav>

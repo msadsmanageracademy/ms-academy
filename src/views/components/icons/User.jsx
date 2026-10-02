@@ -9,6 +9,8 @@ export const User = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       height={size || height || 24}
       fill={filled ? fill : "none"}
       stroke={fill}

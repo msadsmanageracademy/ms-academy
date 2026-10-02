@@ -1,6 +1,8 @@
 export const Refresh = ({ fill = "#fff", height = 24, width = 24, size }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       height={size || height}
       viewBox="0 0 24 24"
       width={size || width}

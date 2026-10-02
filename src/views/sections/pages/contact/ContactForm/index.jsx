@@ -73,6 +73,8 @@ const ContactForm = () => {
           <label htmlFor="contact-name">Nombre</label>
           <input
             id="contact-name"
+            aria-invalid={errors.name ? true : undefined}
+            aria-describedby={errors.name ? "contact-name-error" : undefined}
             type="text"
             autoComplete="name"
             className={styles.input}
@@ -80,13 +82,15 @@ const ContactForm = () => {
             {...register("name")}
           />
           {errors.name && (
-            <span className={styles.error}>{errors.name.message}</span>
+            <span className={styles.error} id="contact-name-error">{errors.name.message}</span>
           )}
         </div>
         <div className={styles.field}>
           <label htmlFor="contact-email">Email</label>
           <input
             id="contact-email"
+            aria-invalid={errors.email ? true : undefined}
+            aria-describedby={errors.email ? "contact-email-error" : undefined}
             type="email"
             autoComplete="email"
             className={styles.input}
@@ -94,7 +98,7 @@ const ContactForm = () => {
             {...register("email")}
           />
           {errors.email && (
-            <span className={styles.error}>{errors.email.message}</span>
+            <span className={styles.error} id="contact-email-error">{errors.email.message}</span>
           )}
         </div>
       </div>
@@ -102,25 +106,29 @@ const ContactForm = () => {
         <label htmlFor="contact-subject">Asunto</label>
         <input
           id="contact-subject"
+            aria-invalid={errors.subject ? true : undefined}
+            aria-describedby={errors.subject ? "contact-subject-error" : undefined}
           type="text"
           className={styles.input}
           placeholder="¿En qué puedo ayudarte?"
           {...register("subject")}
         />
         {errors.subject && (
-          <span className={styles.error}>{errors.subject.message}</span>
+          <span className={styles.error} id="contact-subject-error">{errors.subject.message}</span>
         )}
       </div>
       <div className={styles.field}>
         <label htmlFor="contact-message">Mensaje</label>
         <textarea
           id="contact-message"
+            aria-invalid={errors.message ? true : undefined}
+            aria-describedby={errors.message ? "contact-message-error" : undefined}
           className={`${styles.input} ${styles.textarea}`}
           placeholder="Contame más sobre lo que necesitás..."
           {...register("message")}
         />
         {errors.message && (
-          <span className={styles.error}>{errors.message.message}</span>
+          <span className={styles.error} id="contact-message-error">{errors.message.message}</span>
         )}
       </div>
       <PrimaryLink

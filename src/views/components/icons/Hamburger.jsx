@@ -8,6 +8,8 @@ export const Hamburger = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       width={size || width || 40}
       height={size || height || 40}
       viewBox="0 0 40 28"

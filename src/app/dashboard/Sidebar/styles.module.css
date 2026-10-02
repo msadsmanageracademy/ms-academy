@@ -129,3 +129,15 @@
     padding-right: 0;
   }
 }
+
+.logoutButton {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 0.5rem;
+  padding: 0;
+}

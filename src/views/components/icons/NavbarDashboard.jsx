@@ -8,6 +8,8 @@ export const NavbarDashboard = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       fill="transparent"
       height={size || height || 24}
       viewBox="0 0 24 24"

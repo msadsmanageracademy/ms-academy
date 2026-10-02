@@ -1,5 +1,6 @@
 "use client";
 
+import FormField from "@/views/components/ui/FormField";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { RegisterFormSchema } from "@/utils/validation";
 import styles from "./styles.module.css";
@@ -45,36 +46,37 @@ const RegisterForm = () => {
     }
   };
 
+  const hiddenLabel = { hideLabel: true, rowClassName: styles.formRow, errorClassName: styles.formCustomError };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <div className={styles.formRow}>
-        <input {...register("first_name")} placeholder="Nombre" />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.first_name?.message}
-      </div>
-      <div className={styles.formRow}>
-        <input {...register("last_name")} placeholder="Apellido" />
-      </div>
-      <div className={styles.formCustomError}>{errors?.last_name?.message}</div>
-      <div className={styles.formRow}>
-        <input {...register("email")} placeholder="Email" />
-      </div>
-      <div className={styles.formCustomError}>{errors?.email?.message}</div>
-      <div className={styles.formRow}>
-        <input
-          {...register("password")}
-          type="password"
-          placeholder="Contraseña"
-        />
-      </div>
-      <div className={styles.formCustomError}>{errors?.password?.message}</div>
-      <PrimaryLink
-        asButton
-        className={styles.link}
-        text={"Registrarse"}
-        type="submit"
-      />
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form} noValidate>
+      <FormField label="Nombre" error={errors?.first_name?.message} {...hiddenLabel}>
+        {(field) => (
+          <input {...register("first_name")} {...field} autoComplete="given-name" placeholder="Nombre" />
+        )}
+      </FormField>
+      <FormField label="Apellido" error={errors?.last_name?.message} {...hiddenLabel}>
+        {(field) => (
+          <input {...register("last_name")} {...field} autoComplete="family-name" placeholder="Apellido" />
+        )}
+      </FormField>
+      <FormField label="Email" error={errors?.email?.message} {...hiddenLabel}>
+        {(field) => (
+          <input {...register("email")} {...field} autoComplete="email" placeholder="Email" type="email" />
+        )}
+      </FormField>
+      <FormField label="Contraseña" error={errors?.password?.message} {...hiddenLabel}>
+        {(field) => (
+          <input
+            {...register("password")}
+            {...field}
+            autoComplete="new-password"
+            placeholder="Contraseña"
+            type="password"
+          />
+        )}
+      </FormField>
+      <PrimaryLink asButton className={styles.link} text="Registrarse" type="submit" />
     </form>
   );
 };

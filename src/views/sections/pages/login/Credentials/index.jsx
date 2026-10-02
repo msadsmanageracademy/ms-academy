@@ -5,7 +5,7 @@ import styles from "./styles.module.css";
 const CredentialsSection = ({ handleGoogleLogin }) => {
   return (
     <div className={styles.container}>
-      <div className={styles.title}>Ingresá a tu cuenta</div>
+      <h1 className={styles.title}>Ingresá a tu cuenta</h1>
       <PrimaryLink
         asButton
         dark

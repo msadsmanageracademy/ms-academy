@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import Navbar from "@/views/components/layout/Navbar";
 import { NotificationProvider } from "@/providers/NotificationProvider";
 import SessionWrapper from "@/providers/SessionWrapper";
+import SkipLink from "@/views/components/layout/SkipLink";
 
 export const metadata = {
   title: "MS - Academy",
@@ -19,10 +20,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es" className={inter.className}>
       <body>
+        {/* Keyboard users can jump over the navigation */}
+        <SkipLink />
         <SessionWrapper>
           <NotificationProvider>
             <Navbar />
-            {children}
+            <main id="main-content" tabIndex={-1}>
+              {children}
+            </main>
             <Footer />
           </NotificationProvider>
         </SessionWrapper>

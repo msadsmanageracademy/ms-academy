@@ -57,34 +57,43 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className={styles.pagination}>
+    <nav aria-label="Paginación" className={styles.pagination}>
       <IconLink
         asButton
         icon="Back"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
+        title="Página anterior"
       />
       <div className={styles.pageNumbers}>
-        {pageNumbers.map((page, index) => (
-          <button
-            key={index}
-            onClick={() => typeof page === "number" && onPageChange(page)}
-            disabled={page === "..." || page === currentPage}
-            className={`${styles.pageButton} ${
-              page === currentPage ? styles.active : ""
-            } ${page === "..." ? styles.ellipsis : ""}`}
-          >
-            {page}
-          </button>
-        ))}
+        {pageNumbers.map((page, index) =>
+          page === "..." ? (
+            <span key={index} aria-hidden="true" className={`${styles.pageButton} ${styles.ellipsis}`}>
+              …
+            </span>
+          ) : (
+            <button
+              key={index}
+              aria-current={page === currentPage ? "page" : undefined}
+              aria-label={`Página ${page}`}
+              className={`${styles.pageButton} ${page === currentPage ? styles.active : ""}`}
+              disabled={page === currentPage}
+              onClick={() => onPageChange(page)}
+              type="button"
+            >
+              {page}
+            </button>
+          ),
+        )}
       </div>
       <IconLink
         asButton
         disabled={currentPage === totalPages}
         icon="Forward"
         onClick={() => onPageChange(currentPage + 1)}
+        title="Página siguiente"
       />
-    </div>
+    </nav>
   );
 };
 

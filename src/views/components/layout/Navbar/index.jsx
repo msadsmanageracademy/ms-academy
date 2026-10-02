@@ -69,23 +69,24 @@ const Navbar = ({ menu = MENU }) => {
   };
 
   return (
-    <header className={styles.header}>
+    <header className={`${styles.header} dark-surface`}>
       <div className={styles.inner}>
         <div className={styles.logoContainer}>
-          <Link href="/" className={styles.logoLink} aria-label="">
+          <Link href="/" className={styles.logoLink} aria-label="MS Academy, inicio">
             <Image
-              alt="MS Academy Logo"
+              alt=""
               height={300}
               src="/images/logo-2.png"
               width={300}
             />
           </Link>
         </div>
-        <nav className={styles.nav} aria-label="Main navigation">
+        <nav className={styles.nav} aria-label="Navegación principal">
           <ul className={styles.desktopMenu}>
             {filteredMenu.map((item, i) => (
               <li key={i} className={styles.item}>
                 <Link
+                  aria-current={isActive(item) ? "page" : undefined}
                   href={item.href}
                   className={`${styles.link} ${
                     isActive(item) ? styles.active : ""
@@ -102,13 +103,16 @@ const Navbar = ({ menu = MENU }) => {
                   className={`${styles.link} ${styles.notificationLink} ${
                     pathname === "/dashboard/notifications" ? styles.active : ""
                   }`}
-                  aria-label={`Notifications ${
-                    unreadCount > 0 ? `(${unreadCount} unread)` : ""
-                  }`}
+                  aria-current={pathname === "/dashboard/notifications" ? "page" : undefined}
+                  aria-label={
+                    unreadCount > 0
+                      ? `Notificaciones (${unreadCount} sin leer)`
+                      : "Notificaciones"
+                  }
                 >
                   <Bell size={20} />
                   {unreadCount > 0 && (
-                    <span className={styles.badge}>{unreadCount}</span>
+                    <span aria-hidden="true" className={styles.badge}>{unreadCount}</span>
                   )}
                 </Link>
               </li>
@@ -120,7 +124,7 @@ const Navbar = ({ menu = MENU }) => {
             aria-controls="mobile-menu"
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
           >
             {!mobileOpen ? (
               <Hamburger width={24} height={20} />
@@ -146,6 +150,7 @@ const Navbar = ({ menu = MENU }) => {
               {filteredMenu.map((item, i) => (
                 <li key={i} className={styles.mobileListItem}>
                   <Link
+                    aria-current={isActive(item) ? "page" : undefined}
                     href={item.href}
                     className={`${styles.linkWithIcon} ${styles.mobile} ${
                       isActive(item) ? styles.active : ""

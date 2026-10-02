@@ -8,6 +8,8 @@ export const Forward = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       width={size || width || 25}
       height={size || height || 24}
       viewBox="0 0 25 24"

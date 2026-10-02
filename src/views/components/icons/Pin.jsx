@@ -9,6 +9,8 @@ export const Pin = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       fill={filled ? fill : "none"}
       height={size || height || 24}
       viewBox="0 0 24 24"

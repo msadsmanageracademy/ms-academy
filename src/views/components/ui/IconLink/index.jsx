@@ -8,7 +8,7 @@ const IconLink = ({
   danger = false,
   dark = false,
   disabled = false,
-  fill = "#fff",
+  fill,
   filled,
   google = false,
   icon,
@@ -17,6 +17,7 @@ const IconLink = ({
   spinning = false,
   success,
   text = "",
+  title,
   warning = false,
   ...props
 }) => {
@@ -28,31 +29,45 @@ const IconLink = ({
   if (warning) classes.push(`${styles.warning}`);
 
   const IconComponent = icon ? Icons[icon] : null;
+  const iconFill = fill === undefined ? (warning ? "var(--color-7)" : "#fff") : fill;
+  const a11yProps = { title, ...(!text && title ? { "aria-label": title } : {}) };
 
-  return asButton ? (
-    <button
+  const content = (
+    <>
+      {IconComponent && (
+        <span className={spinning ? styles.spinning : ""}>
+          <IconComponent fill={iconFill} filled={filled} size={size} />
+        </span>
+      )}
+      {text && <span className={styles.text}>{text}</span>}
+    </>
+  );
+
+  if (asButton) {
+    return (
+      <button
+        className={classes.join(" ")}
+        disabled={disabled}
+        type="button"
+        onClick={() => {
+          if (!disabled && onClick) onClick();
+        }}
+        {...a11yProps}
+        {...props}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link
       className={classes.join(" ")}
-      disabled={disabled}
-      onClick={() => {
-        if (!disabled && onClick) onClick();
-      }}
+      {...(disabled ? { "aria-disabled": true, tabIndex: -1 } : {})}
+      {...a11yProps}
       {...props}
     >
-      {IconComponent && (
-        <span className={spinning ? styles.spinning : ""}>
-          <IconComponent fill={fill} filled={filled} size={size} />
-        </span>
-      )}
-      {text && <span className={styles.text}>{text}</span>}
-    </button>
-  ) : (
-    <Link className={classes.join(" ")} {...props}>
-      {IconComponent && (
-        <span className={spinning ? styles.spinning : ""}>
-          <IconComponent fill={fill} filled={filled} size={size} />
-        </span>
-      )}
-      {text && <span className={styles.text}>{text}</span>}
+      {content}
     </Link>
   );
 };

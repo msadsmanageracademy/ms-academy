@@ -262,9 +262,9 @@ const NotificationsPage = () => {
           <p>No tienes notificaciones</p>
         </div>
       ) : (
-        <div className={styles.list}>
+        <ul className={styles.list} aria-label="Notificaciones">
           {notifications.map((notification) => (
-            <div
+            <li
               key={notification._id}
               className={`${styles.notification} ${
                 !notification.read ? styles.unread : ""
@@ -278,7 +278,10 @@ const NotificationsPage = () => {
                   )}
               </div>
               <div className={styles.content}>
-                <h3 className={styles.title}>{notification.title}</h3>
+                <h2 className={styles.title}>
+                  {!notification.read && <span className="visually-hidden">No leída: </span>}
+                  {notification.title}
+                </h2>
                 <p className={styles.message}>{notification.message}</p>
                 <span className={styles.date}>
                   {formatDateTime(notification.createdAt)}
@@ -302,9 +305,9 @@ const NotificationsPage = () => {
                   title="Eliminar"
                 />
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       <Pagination
         currentPage={pagination?.page}

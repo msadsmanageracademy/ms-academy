@@ -8,6 +8,8 @@ export const NavbarContact = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       fill="none"
       height={size || height || 24}
       viewBox="0 0 24 24"

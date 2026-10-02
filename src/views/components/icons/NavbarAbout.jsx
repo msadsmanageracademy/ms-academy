@@ -1,6 +1,8 @@
 export const NavbarAbout = ({ fill, size, height, width, label, ...props }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       fill="none"
       height={size || height || 24}
       viewBox="0 0 24 24"

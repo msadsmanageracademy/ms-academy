@@ -8,6 +8,8 @@ export const NavbarClasses = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       fill={fill}
       height={size || height || 24}
       viewBox="0 0 24 24"

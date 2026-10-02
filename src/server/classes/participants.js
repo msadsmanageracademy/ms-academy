@@ -1,9 +1,41 @@
 // Participants of standalone classes. Course classes are managed through the
 // course enrollments (see src/server/courses/enrollments.js).
+import { findUserContacts } from "@/server/users/queries";
 import { getDb } from "@/lib/db";
 import { notifyMany } from "@/server/notifications";
 import { HttpError, assertAdmin, assertUser, isAdminActor, toObjectId } from "@/server/errors";
 import { classObjectId, userObjectId } from "@/server/ids";
+
+/**
+ * Admin: who takes part in the class, with their contact data, in one request
+ * (replaces one /api/users/[id] call per participant). Course classes list the
+ * course enrollees with their payment status.
+ */
+export async function listClassParticipants(actor, id) {
+  assertAdmin(actor);
+  const classId = classObjectId(id);
+  const db = await getDb();
+  const classItem = await db
+    .collection("classes")
+    .findOne({ _id: classId }, { projection: { participants: 1, courseId: 1 } });
+  if (!classItem) throw new HttpError(404, "Clase no encontrada");
+
+  let rows;
+  if (classItem.courseId) {
+    const enrollments = await db
+      .collection("courseEnrollments")
+      .find({ courseId: classItem.courseId }, { projection: { userId: 1, paymentStatus: 1 }, sort: { _id: 1 } })
+      .toArray();
+    rows = enrollments.map((e) => ({ userId: e.userId, paymentStatus: e.paymentStatus }));
+  } else {
+    rows = (classItem.participants ?? []).map((userId) => ({ userId }));
+  }
+
+  const contacts = await findUserContacts(db, rows.map((r) => r.userId));
+  return rows
+    .filter((r) => contacts.has(r.userId.toString()))
+    .map(({ userId, ...rest }) => ({ ...contacts.get(userId.toString()), ...rest }));
+}
 
 const findUserName = (db, userId) =>
   db.collection("users").findOne({ _id: userId }, { projection: { first_name: 1, last_name: 1 } });

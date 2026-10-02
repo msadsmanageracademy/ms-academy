@@ -1,125 +1,32 @@
-"use client";
-
-import { Board } from "@/views/sections/pages/content/Board";
-import PageLoader from "@/views/components/layout/PageLoader";
+import ContentBoards from "./_components/ContentBoards";
 import PageWrapper from "@/views/components/layout/PageWrapper";
+import { getActor } from "@/lib/api/guards";
 import { getCourseTimeStatus } from "@/utils/classStatus";
-import { useNotifications } from "@/providers/NotificationProvider";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import {
-  closeLoading,
-  confirmSignUp,
-  toastError,
-  toastLoading,
-  toastSuccess,
-} from "@/utils/alerts";
-import { useEffect, useState } from "react";
+import { listClasses } from "@/server/classes/service";
+import { listCourses } from "@/server/courses/service";
+import { toPlain } from "@/server/serialize";
 
-const ContentPage = () => {
-  const { data: session } = useSession();
-  const { incrementCount } = useNotifications();
-  const router = useRouter();
-  const [classes, setClasses] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
+export const metadata = {
+  title: "Próximas actividades | MS Academy",
+  description: "Clases gratuitas y cursos de MS Academy con inscripción abierta.",
+};
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [classesRes, coursesRes] = await Promise.all([
-          fetch("/api/classes"),
-          fetch("/api/courses"),
-        ]);
-
-        if (!classesRes.ok || !coursesRes.ok) {
-          throw new Error("Error fetching data");
-        }
-
-        const classesData = await classesRes.json();
-        const coursesData = await coursesRes.json();
-
-        setClasses(classesData.data || []);
-        const allCourses = coursesData.data || [];
-        setCourses(
-          allCourses.filter((c) => {
-            const t = getCourseTimeStatus(c.start_date, c.end_date, c.status);
-            return t === "upcoming" || t === "in-progress";
-          }),
-        );
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const classSignUp = async (id) => {
-    try {
-      if (!session) {
-        return toastError(3000, "Acción no permitida", "Debe iniciar sesión");
-      }
-
-      if (session.user.role === "admin") {
-        return toastError(
-          3000,
-          "Acción no permitida",
-          "Admins no pueden inscribirse a clases",
-        );
-      }
-
-      const result = await confirmSignUp(
-        "¿Inscribirse a esta clase?",
-        "Confirma que deseas inscribirte a esta clase gratuita",
-      );
-
-      if (!result.isConfirmed) return;
-
-      toastLoading("Procesando tu solicitud", "Inscribiéndote a la clase...");
-
-      const response = await fetch(`/api/classes/${id}/participants`, {
-        method: "POST",
-      });
-
-      const responseData = await response.json();
-
-      closeLoading();
-
-      if (!response.ok)
-        return toastError(3000, "Ha habido un error", responseData.message);
-
-      toastSuccess(3000, "Inscripción exitosa", responseData.message);
-      // Notification created for user on signup
-      incrementCount();
-      router.push("/dashboard/classes");
-    } catch (error) {
-      closeLoading();
-      return toastError(
-        3000,
-        "Ha habido un error",
-        "Problema inesperado al procesar tu inscripción",
-      );
-    }
-  };
-
-  if (loading) {
-    return <PageLoader />;
-  }
+export default async function ContentPage() {
+  const actor = await getActor();
+  const [classes, courses] = await Promise.all([listClasses(actor), listCourses(actor)]);
+  const openCourses = courses.filter((c) => {
+    const status = getCourseTimeStatus(c.start_date, c.end_date, c.status);
+    return status === "upcoming" || status === "in-progress";
+  });
 
   return (
     <PageWrapper>
-      <Board
-        items={classes}
-        title="Clases gratuitas"
-        type="class"
-        onSignUp={classSignUp}
+      <h1 className="visually-hidden">Próximas actividades</h1>
+      <ContentBoards
+        classes={toPlain(classes)}
+        courses={toPlain(openCourses)}
+        viewerRole={actor?.role ?? null}
       />
-      <Board items={courses} title="Cursos" type="course" />
     </PageWrapper>
   );
-};
-
-export default ContentPage;
+}

@@ -1,5 +1,16 @@
-import { enrollInCourse } from "@/server/courses/enrollments";
+import { enrollInCourse, listCourseEnrollments } from "@/server/courses/enrollments";
 import { getActor, handleApiError, ok } from "@/lib/api/guards";
+
+// GET /api/courses/[id]/enrollments — admin: enrollees with contact data and payment status
+export async function GET(req, { params }) {
+  try {
+    const actor = await getActor();
+    const { id } = await params;
+    return ok({ data: await listCourseEnrollments(actor, id) });
+  } catch (error) {
+    return handleApiError(error, "Error listing course enrollments");
+  }
+}
 
 // POST /api/courses/[id]/enrollments — the current user pre-enrolls (payment pending)
 export async function POST(req, { params }) {

@@ -1,6 +1,6 @@
 .link {
   align-items: center;
-  background: var(--color-3);
+  background: var(--color-3-strong);
   border: var(--color-6) 1px solid;
   border-radius: 0.75rem;
   color: #fff;

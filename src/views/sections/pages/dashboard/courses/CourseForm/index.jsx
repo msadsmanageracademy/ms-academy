@@ -1,3 +1,4 @@
+import FormField from "@/views/components/ui/FormField";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 import { useForm } from "react-hook-form";
@@ -93,70 +94,64 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <div className={styles.formRow}>
-        <label>Título</label>
-        <input {...register("title")} className={`${styles.input}`} />
-      </div>
-      <div className={styles.formCustomError}>{errors?.title?.message}</div>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form} noValidate>
+      <FormField label="Título" error={errors?.title?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => <input {...register("title")} {...field} className={styles.input} />}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Descripción breve</label>
-        <textarea
-          {...register("short_description")}
-          className={`${styles.input} ${styles.textarea}`}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.short_description?.message}
-      </div>
+      <FormField label="Descripción breve" error={errors?.short_description?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <textarea
+            {...register("short_description")}
+            {...field}
+            className={`${styles.input} ${styles.textarea}`}
+          />
+        )}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Descripción extendida</label>
-        <textarea
-          {...register("full_description")}
-          className={`${styles.input} ${styles.textarea} ${styles.long}`}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.full_description?.message}
-      </div>
+      <FormField label="Descripción extendida" error={errors?.full_description?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <textarea
+            {...register("full_description")}
+            {...field}
+            className={`${styles.input} ${styles.textarea} ${styles.long}`}
+          />
+        )}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Máximo de participantes</label>
-        <input
-          {...register("max_participants", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
-          disabled={isPublished}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.max_participants?.message}
-      </div>
+      <FormField label="Máximo de participantes" error={errors?.max_participants?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <input
+            {...register("max_participants", { valueAsNumber: true })}
+            {...field}
+            className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
+            disabled={isPublished}
+            inputMode="numeric"
+          />
+        )}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Precio</label>
-        <input
-          {...register("price", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
-          disabled={isPublished}
-        />
-      </div>
-      <div className={styles.formCustomError}>{errors?.price?.message}</div>
+      <FormField label="Precio" error={errors?.price?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <input
+            {...register("price", { valueAsNumber: true })}
+            {...field}
+            className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
+            disabled={isPublished}
+            inputMode="decimal"
+          />
+        )}
+      </FormField>
 
       <div style={{ display: "flex", gap: "1rem" }}>
-        <PrimaryLink
-          asButton
-          text={isEditMode ? "Actualizar" : "Crear"}
-          type="submit"
-        />
+        <PrimaryLink asButton text={isEditMode ? "Actualizar" : "Crear"} type="submit" />
         {isEditMode && onCancel && (
-          <PrimaryLink
-            asButton
-            text={"Cancelar"}
-            type="button"
-            onClick={onCancel}
-          />
+          <PrimaryLink asButton text="Cancelar" type="button" onClick={onCancel} />
         )}
       </div>
     </form>

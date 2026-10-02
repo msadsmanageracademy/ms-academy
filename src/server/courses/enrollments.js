@@ -1,10 +1,37 @@
 // Course enrollments: pre-enrollment (pending payment), payment confirmation and removal.
 import { PaymentUpdateSchema } from "@/utils/validation";
+import { findUserContacts } from "@/server/users/queries";
 import { getDb } from "@/lib/db";
 import { prepareCourseEnrollmentForDB } from "@/models/schemas";
 import { HttpError, assertAdmin, assertUser, isAdminActor, parseOrThrow, toObjectId } from "@/server/errors";
 import { courseObjectId, userObjectId } from "@/server/ids";
 import { notify, notifyMany } from "@/server/notifications";
+
+/**
+ * Admin: the course enrollees (pending and paid) with their contact data, in
+ * enrollment order. Returns [{ _id, first_name, last_name, email, paymentStatus, enrolledAt, paidAt }].
+ */
+export async function listCourseEnrollments(actor, id) {
+  assertAdmin(actor);
+  const courseId = courseObjectId(id);
+  const db = await getDb();
+  const course = await db.collection("courses").findOne({ _id: courseId }, { projection: { _id: 1 } });
+  if (!course) throw new HttpError(404, "Curso no encontrado");
+
+  const enrollments = await db
+    .collection("courseEnrollments")
+    .find({ courseId }, { sort: { _id: 1 } })
+    .toArray();
+  const contacts = await findUserContacts(db, enrollments.map((e) => e.userId));
+  return enrollments
+    .filter((e) => contacts.has(e.userId.toString()))
+    .map((e) => ({
+      ...contacts.get(e.userId.toString()),
+      paymentStatus: e.paymentStatus,
+      enrolledAt: e.createdAt,
+      paidAt: e.paidAt ?? null,
+    }));
+}
 
 /**
  * Pre-enrolls the current user in a published course (payment pending).

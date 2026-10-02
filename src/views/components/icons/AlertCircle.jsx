@@ -9,6 +9,8 @@ export const AlertCircle = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       width={size || width || 48}
       height={size || height || 48}
       viewBox="0 0 48 48"

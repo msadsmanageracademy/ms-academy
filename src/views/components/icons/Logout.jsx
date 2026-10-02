@@ -8,6 +8,8 @@ export const Logout = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       fill="none"
       height={size || height || 24}
       stroke={fill}

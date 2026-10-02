@@ -1,56 +1,22 @@
-"use client";
-
 import AccountForm from "@/views/sections/pages/dashboard/account/AccountForm";
-import PageLoader from "@/views/components/layout/PageLoader";
+import { getActor } from "@/lib/api/guards";
+import { getUser } from "@/server/users/service";
+import { redirect } from "next/navigation";
 import styles from "./styles.module.css";
-import { toastError } from "@/utils/alerts";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { toPlain } from "@/server/serialize";
 
-const AccountPage = () => {
-  const { data: session, update } = useSession();
-  const userId = session?.user?.id;
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
+export const metadata = { title: "Mi cuenta | MS Academy" };
 
-  useEffect(() => {
-    const retrieveUserData = async () => {
-      try {
-        const response = await fetch(`/api/users/${userId}`);
-        const result = await response.json();
-
-        if (!response.ok)
-          return toastError(3000, "Ha habido un error", result.message);
-
-        setUserData(result.data);
-      } catch (err) {
-        toastError(3000, "Ha habido un error", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (userId) retrieveUserData();
-  }, [userId]);
-
-  if (loading) {
-    return <PageLoader />;
-  }
-
-  if (!userData) {
-    return (
-      <div className={styles.container}>
-        <div>No se pudo obtener la data del usuario</div>
-      </div>
-    );
-  }
+// Server Component: the form arrives filled in
+export default async function AccountPage() {
+  const actor = await getActor();
+  if (!actor) redirect("/login");
+  const user = await getUser(actor, actor.id);
 
   return (
     <div className={styles.container}>
       <h1>Mi Cuenta</h1>
-      <AccountForm userData={userData} userId={userId} onUpdate={update} />
+      <AccountForm userData={toPlain(user)} userId={actor.id} />
     </div>
   );
-};
-
-export default AccountPage;
+}

@@ -1,6 +1,8 @@
 export const Plus = ({ fill = "#fff", size, height, width, ...props }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       width={size || width || 16}
       height={size || height || 16}
       viewBox="0 0 16 16"

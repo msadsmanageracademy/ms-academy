@@ -20,6 +20,9 @@
   );
   --success: #16a34a;
   --success-hover: #12733c;
+  --color-2-on-light: #a66712;
+  --color-3-strong: #cc4a4a;
+  --focus-ring: var(--color-4);
   --warning: #eab308;
   --warning-hover: #ca9a06;
   --font-size-sm: 14px;
@@ -71,6 +74,68 @@ img {
 
 svg {
   vertical-align: middle;
+}
+
+/* ==================== Accessibility ==================== */
+
+/* Visible keyboard focus everywhere (mouse clicks don't show it) */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Dark surfaces (navbar, sidebar, footer, dark modals) use the orange ring */
+.dark-surface :focus-visible {
+  --focus-ring: var(--color-2);
+}
+
+/* Hidden on screen, read by screen readers */
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+/* "Skip to content": first focusable element, only visible when focused */
+.skip-link {
+  background: var(--color-7);
+  border-radius: 0 0 0.5rem 0.5rem;
+  color: #fff;
+  font-weight: 600;
+  left: 1rem;
+  padding: 0.75rem 1.25rem;
+  position: absolute;
+  top: 0;
+  transform: translateY(-120%);
+  z-index: 1000;
+}
+
+/* Skip targets receive focus only to move the reading position: no ring around the whole region */
+#main-content:focus,
+[data-skip-target]:focus {
+  outline: none;
+}
+
+.skip-link:focus-visible {
+  --focus-ring: var(--color-2);
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* SweetAlert2 Toast Styles */

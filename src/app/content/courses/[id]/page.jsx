@@ -1,135 +1,71 @@
-"use client";
-
-import PageLoader from "@/views/components/layout/PageLoader";
+import CourseSignUpButton from "./_components/CourseSignUpButton";
+import { HttpError } from "@/server/errors";
 import PageWrapper from "@/views/components/layout/PageWrapper";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
-import StarRating from "@/views/components/ui/StarRating";
+import { cache } from "react";
+import { formatDateTime } from "@/utils/dates";
+import { getActor } from "@/lib/api/guards";
+import { getCourseDetail } from "@/server/courses/service";
 import { getCourseTimeStatus } from "@/utils/classStatus";
+import { listCourseReviews } from "@/server/reviews/service";
+import { notFound } from "next/navigation";
 import styles from "./styles.module.css";
-import { useSession } from "next-auth/react";
-import {
-  closeLoading,
-  confirmSignUp,
-  toastError,
-  toastLoading,
-  toastSuccess,
-} from "@/utils/alerts";
-import { formatDate, formatDateTime } from "@/utils/dates";
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import ReviewList, { ReviewSummary } from "@/views/components/ui/ReviewList";
 
-const CourseDetail = () => {
-  const { data: session } = useSession();
+const STATUS_LABELS = { completed: "Finalizado", "in-progress": "En progreso", upcoming: "Por comenzar" };
 
-  const { id } = useParams();
-  const [course, setCourse] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState([]);
-  const router = useRouter();
-
-  useEffect(() => {
-    const fetchCourse = async () => {
-      try {
-        const response = await fetch(`/api/courses/${id}`);
-        const result = await response.json();
-        if (!response.ok)
-          return toastError(3000, "Ha habido un error", result.message);
-        setCourse(result.data);
-      } catch (err) {
-        toastError(3000, "Ha habido un error", err);
-        router.push("/content");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) fetchCourse();
-  }, [id, router]);
-
-  useEffect(() => {
-    if (!id) return;
-    fetch(`/api/courses/${id}/reviews?series=true`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setReviews(data.data);
-      })
-      .catch(() => {});
-  }, [id]);
-
-  const courseSignUp = async (id) => {
-    try {
-      if (!session) {
-        return toastError(
-          3000,
-          "Ha habido un error",
-          "Para inscribirse, primero debe iniciar sesión",
-        );
-      }
-
-      if (session.user.role === "admin") {
-        return toastError(
-          3000,
-          "Acción no permitida",
-          "Admins no pueden inscribirse a cursos",
-        );
-      }
-
-      const result = await confirmSignUp(
-        "¿Inscribirse a este curso?",
-        "Confirma que deseas inscribirte a este curso",
-      );
-
-      if (!result.isConfirmed) return;
-
-      toastLoading("Procesando tu solicitud", "Inscribiéndote al curso...");
-
-      const response = await fetch(`/api/courses/${id}/enrollments`, {
-        method: "POST",
-      });
-
-      const responseData = await response.json();
-
-      closeLoading();
-
-      if (!response.ok)
-        return toastError(3000, "Ha habido un error", responseData.message);
-
-      toastSuccess(3000, "Inscripción exitosa", responseData.message);
-      router.push("/dashboard/courses");
-    } catch (error) {
-      closeLoading();
-      return toastError(
-        3000,
-        "Ha habido un error",
-        "Problema inesperado al procesar tu inscripción",
-      );
+const loadCourse = cache(async (id) => {
+  const actor = await getActor();
+  try {
+    return { actor, course: await getCourseDetail(actor, id) };
+  } catch (error) {
+    if (error instanceof HttpError && (error.status === 400 || error.status === 404)) {
+      return { actor, course: null };
     }
-  };
-
-  if (loading) {
-    return <PageLoader />;
+    throw error;
   }
+});
 
-  if (!course) return <p>No se encontró el curso</p>;
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const { course } = await loadCourse(id);
+  // The page itself calls notFound(): calling it here would render the 404 outside the layout
+  if (!course) return { title: "Curso no encontrado | MS Academy" };
+  return { title: `${course.title} | MS Academy`, description: course.short_description };
+}
 
+const durationLabel = (minutes) =>
+  minutes < 60 ? `${minutes} minutos` : `${parseFloat((minutes / 60).toFixed(1))} horas`;
+
+function EnrollAction({ course, timeStatus, isFull, viewerRole }) {
+  if (viewerRole === "admin") return <PrimaryLink href="/dashboard/courses" text="Ir a Cursos" />;
+  if (course.userPaymentStatus === "paid") return <PrimaryLink disabled text="Ya estás inscripto" />;
+  if (course.userPaymentStatus === "pending") {
+    return <PrimaryLink disabled text="Inscripción pendiente de pago" />;
+  }
+  if (timeStatus === "in-progress") return <PrimaryLink disabled text="Curso en progreso" />;
+  if (isFull) return <PrimaryLink disabled text="Cupo completo" />;
+  return <CourseSignUpButton courseId={course._id.toString()} viewerRole={viewerRole} />;
+}
+
+const InfoItem = ({ label, children }) => (
+  <div className={styles.infoItem}>
+    <div className={styles.infoLabel}>{label}</div>
+    <div className={styles.infoValue}>{children}</div>
+  </div>
+);
+
+// Server Component: the course and its reviews are in the HTML (indexable)
+export default async function CourseDetailPage({ params }) {
+  const { id } = await params;
+  const { actor, course } = await loadCourse(id);
+  if (!course) notFound();
+
+  // Reviews of every iteration of the course
+  const reviews = await listCourseReviews(id, { series: true });
   const enrollmentCount = course.enrollmentCount ?? 0;
-  const isFull =
-    course.max_participants !== null &&
-    course.max_participants !== undefined &&
-    enrollmentCount >= course.max_participants;
-  const courseTimeStatus = getCourseTimeStatus(
-    course.start_date,
-    course.end_date,
-    course.status,
-  );
-  const courseStatusLabel =
-    courseTimeStatus === "completed"
-      ? "Finalizado"
-      : courseTimeStatus === "in-progress"
-        ? "En progreso"
-        : courseTimeStatus === "upcoming"
-          ? "Por comenzar"
-          : null;
+  const isFull = course.max_participants != null && enrollmentCount >= course.max_participants;
+  const timeStatus = getCourseTimeStatus(course.start_date, course.end_date, course.status);
 
   return (
     <PageWrapper>
@@ -149,124 +85,47 @@ const CourseDetail = () => {
         </div>
 
         <div className={styles.infoGrid}>
-          <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Fecha de inicio</div>
-            <div className={styles.infoValue}>
-              {course.start_date
-                ? formatDateTime(course.start_date)
-                : "No disponible"}
-            </div>
-          </div>
-
-          <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Fecha de finalización</div>
-            <div className={styles.infoValue}>
-              {course.end_date
-                ? formatDateTime(course.end_date)
-                : "No disponible"}
-            </div>
-          </div>
-
-          <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Cantidad de clases</div>
-            <div className={styles.infoValue}>{course.amount_of_classes}</div>
-          </div>
-
-          <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Duración total</div>
-            <div className={styles.infoValue}>
-              {course.total_duration < 60
-                ? `${course.total_duration} minutos`
-                : `${parseFloat((course.total_duration / 60).toFixed(1))} horas`}
-            </div>
-          </div>
-
-          <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Cupo</div>
-            <div className={styles.infoValue}>
-              {course.max_participants
-                ? `${enrollmentCount} / ${course.max_participants} inscriptos${isFull ? " — Lleno" : ""}`
-                : "Sin límite"}
-            </div>
-          </div>
-
-          {courseStatusLabel && (
-            <div className={styles.infoItem}>
-              <div className={styles.infoLabel}>Estado</div>
-              <div className={styles.infoValue}>{courseStatusLabel}</div>
-            </div>
-          )}
-
-          <div className={styles.infoItem}>
-            <div className={styles.infoLabel}>Precio</div>
-            <div className={styles.infoValue}>${course.price}</div>
-          </div>
+          <InfoItem label="Fecha de inicio">
+            {course.start_date ? formatDateTime(course.start_date) : "No disponible"}
+          </InfoItem>
+          <InfoItem label="Fecha de finalización">
+            {course.end_date ? formatDateTime(course.end_date) : "No disponible"}
+          </InfoItem>
+          <InfoItem label="Cantidad de clases">{course.amount_of_classes}</InfoItem>
+          <InfoItem label="Duración total">{durationLabel(course.total_duration)}</InfoItem>
+          <InfoItem label="Cupo">
+            {course.max_participants
+              ? `${enrollmentCount} / ${course.max_participants} inscriptos${isFull ? " — Lleno" : ""}`
+              : "Sin límite"}
+          </InfoItem>
+          {STATUS_LABELS[timeStatus] && <InfoItem label="Estado">{STATUS_LABELS[timeStatus]}</InfoItem>}
+          <InfoItem label="Precio">${course.price}</InfoItem>
         </div>
 
         <div className={styles.actionsContainer}>
-          {session?.user?.role === "admin" ? (
-            <PrimaryLink href={`/dashboard/courses`} text={"Ir a Cursos"} />
-          ) : course.userPaymentStatus === "paid" ? (
-            <PrimaryLink disabled text={"Ya estás inscripto"} />
-          ) : course.userPaymentStatus === "pending" ? (
-            <PrimaryLink disabled text={"Inscripción pendiente de pago"} />
-          ) : courseTimeStatus === "in-progress" ? (
-            <PrimaryLink disabled text={"Curso en progreso"} />
-          ) : isFull ? (
-            <PrimaryLink disabled text={"Cupo completo"} />
-          ) : (
-            <PrimaryLink
-              asButton
-              dark
-              text={"Inscribirse"}
-              onClick={() => courseSignUp(course._id)}
-            />
-          )}
+          <EnrollAction
+            course={course}
+            timeStatus={timeStatus}
+            isFull={isFull}
+            viewerRole={actor?.role ?? null}
+          />
         </div>
 
-        {/* Reviews section */}
         <div className={styles.section}>
           <div className={styles.subtitle}>
             Reseñas
-            {course.reviewCount > 0 && (
-              <span className={styles.reviewSummary}>
-                <StarRating
-                  value={Math.round(course.avgRating)}
-                  readOnly
-                  size="sm"
-                />
-                {course.avgRating} ({course.reviewCount})
-              </span>
-            )}
+            <ReviewSummary
+              className={styles.reviewSummary}
+              avgRating={course.avgRating}
+              reviewCount={course.reviewCount}
+            />
           </div>
-
-          {/* Reviews list */}
-          {reviews.length === 0 ? (
-            <p className={styles.noReviews}>
-              Todavía no hay reseñas para este curso.
-            </p>
-          ) : (
-            <ul className={styles.reviewList}>
-              {reviews.map((r) => (
-                <li key={r._id?.toString()} className={styles.reviewItem}>
-                  <div className={styles.reviewHeader}>
-                    <span className={styles.reviewAuthor}>{r.firstName}</span>
-                    <StarRating value={r.rating} readOnly size="sm" />
-                    <span className={styles.reviewDate}>
-                      {formatDate(r.createdAt)}
-                    </span>
-                  </div>
-                  {r.comment && (
-                    <p className={styles.reviewComment}>{r.comment}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
+          <ReviewList
+            reviews={reviews}
+            emptyText="Todavía no hay reseñas para este curso."
+          />
         </div>
       </div>
     </PageWrapper>
   );
-};
-
-export default CourseDetail;
+}

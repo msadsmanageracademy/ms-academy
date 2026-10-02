@@ -1,14 +1,17 @@
 "use client";
 
+import Modal from "@/views/components/ui/Modal";
 import StarRating from "@/views/components/ui/StarRating";
 import styles from "./styles.module.css";
-import { useState } from "react";
 import {
   closeLoading,
   toastError,
   toastLoading,
   toastSuccess,
 } from "@/utils/alerts";
+import { useId, useState } from "react";
+
+const MAX_COMMENT = 500;
 
 const ReviewModal = ({
   isOpen,
@@ -22,6 +25,9 @@ const ReviewModal = ({
   const [rating, setRating] = useState(existingReview?.rating ?? 0);
   const [comment, setComment] = useState(existingReview?.comment ?? "");
   const [saving, setSaving] = useState(false);
+  const ratingLabelId = useId();
+  const commentId = useId();
+  const counterId = useId();
 
   if (!isOpen) return null;
 
@@ -65,53 +71,56 @@ const ReviewModal = ({
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h3 className={styles.title}>
-          {existingReview ? "Editar reseña" : "Dejar una reseña"}
-        </h3>
-        <p className={styles.subtitle}>{entityTitle}</p>
+    <Modal
+      className={styles.modal}
+      onClose={onClose}
+      overlayClassName={styles.overlay}
+      title={existingReview ? "Editar reseña" : "Dejar una reseña"}
+      titleClassName={styles.title}
+    >
+      <p className={styles.subtitle}>{entityTitle}</p>
 
-        <div className={styles.field}>
-          <label className={styles.label}>Puntuación</label>
-          <StarRating value={rating} onChange={setRating} />
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label}>Comentario (opcional)</label>
-          <textarea
-            className={styles.textarea}
-            maxLength={500}
-            placeholder="Contá tu experiencia..."
-            rows={4}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-          <span className={styles.charCount}>{comment.length}/500</span>
-        </div>
-
-        <div className={styles.actions}>
-          <button
-            className={styles.cancelBtn}
-            disabled={saving}
-            onClick={onClose}
-          >
-            Cancelar
-          </button>
-          <button
-            className={styles.submitBtn}
-            disabled={saving || rating === 0}
-            onClick={handleSubmit}
-          >
-            {saving
-              ? "Guardando..."
-              : existingReview
-                ? "Actualizar"
-                : "Enviar reseña"}
-          </button>
-        </div>
+      <div className={styles.field}>
+        <span className={styles.label} id={ratingLabelId}>
+          Puntuación
+        </span>
+        <StarRating value={rating} onChange={setRating} labelledBy={ratingLabelId} />
       </div>
-    </div>
+
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor={commentId}>
+          Comentario (opcional)
+        </label>
+        <textarea
+          aria-describedby={counterId}
+          className={styles.textarea}
+          id={commentId}
+          maxLength={MAX_COMMENT}
+          placeholder="Contá tu experiencia..."
+          rows={4}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
+        <span className={styles.charCount} id={counterId}>
+          {comment.length}/{MAX_COMMENT}
+          <span className="visually-hidden"> caracteres</span>
+        </span>
+      </div>
+
+      <div className={styles.actions}>
+        <button className={styles.cancelBtn} disabled={saving} onClick={onClose} type="button">
+          Cancelar
+        </button>
+        <button
+          className={styles.submitBtn}
+          disabled={saving || rating === 0}
+          onClick={handleSubmit}
+          type="button"
+        >
+          {saving ? "Guardando..." : existingReview ? "Actualizar" : "Enviar reseña"}
+        </button>
+      </div>
+    </Modal>
   );
 };
 

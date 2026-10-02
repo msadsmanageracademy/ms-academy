@@ -14,7 +14,7 @@ const RegisterPage = () => {
   return (
     <PageWrapper>
       <div className={styles.container}>
-        <div className={styles.title}>Creá tu cuenta</div>
+        <h1 className={styles.title}>Creá tu cuenta</h1>
         <PrimaryLink
           asButton
           google

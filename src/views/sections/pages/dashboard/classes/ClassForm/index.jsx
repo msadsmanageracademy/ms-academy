@@ -1,11 +1,12 @@
 import "react-datepicker/dist/react-datepicker.css";
-import { ClassFormSchema, PublishedClassEditSchema } from "@/utils/validation";
 import DatePicker from "react-datepicker";
+import FormField from "@/views/components/ui/FormField";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ClassFormSchema, PublishedClassEditSchema } from "@/utils/validation";
 import { Controller, useForm } from "react-hook-form";
 import { GoogleCalendar, GoogleMeet } from "@/views/components/icons";
 import {
@@ -189,79 +190,89 @@ const ClassForm = ({
     }
   };
 
+  const disabledClass = isRestricted ? styles.inputDisabled : "";
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <div className={styles.formRow}>
-        <label>Título</label>
-        <input {...register("title")} className={`${styles.input}`} />
-      </div>
-      <div className={styles.formCustomError}>{errors?.title?.message}</div>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form} noValidate>
+      <FormField label="Título" error={errors?.title?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => <input {...register("title")} {...field} className={styles.input} />}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Descripción breve</label>
-        <textarea
-          {...register("short_description")}
-          className={`${styles.input} ${styles.textarea}`}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.short_description?.message}
-      </div>
+      <FormField label="Descripción breve" error={errors?.short_description?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <textarea
+            {...register("short_description")}
+            {...field}
+            className={`${styles.input} ${styles.textarea}`}
+          />
+        )}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Fecha y hora de inicio</label>
-        <Controller
-          name="start_date"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              {...field}
-              selected={field.value}
-              onChange={(date) => field.onChange(date)}
-              timeInputLabel="Hora:"
-              dateFormat="dd/MM/yyyy HH:mm"
-              showTimeInput
-              className={`${styles.input} ${isRestricted ? styles.inputDisabled : ""}`}
-              disabled={isRestricted}
-            />
-          )}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.start_date?.message}
-      </div>
+      <FormField label="Fecha y hora de inicio" error={errors?.start_date?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <Controller
+            name="start_date"
+            control={control}
+            render={({ field: controllerField }) => (
+              <DatePicker
+                {...controllerField}
+                ariaDescribedBy={field["aria-describedby"]}
+                ariaInvalid={field["aria-invalid"] ? "true" : undefined}
+                className={`${styles.input} ${disabledClass}`}
+                dateFormat="dd/MM/yyyy HH:mm"
+                disabled={isRestricted}
+                id={field.id}
+                onChange={(date) => controllerField.onChange(date)}
+                selected={controllerField.value}
+                showTimeInput
+                timeInputLabel="Hora:"
+              />
+            )}
+          />
+        )}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Duración (en minutos)</label>
-        <input
-          {...register("duration", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number} ${isRestricted ? styles.inputDisabled : ""}`}
-          disabled={isRestricted}
-        />
-      </div>
-      <div className={styles.formCustomError}>{errors?.duration?.message}</div>
+      <FormField label="Duración (en minutos)" error={errors?.duration?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <input
+            {...register("duration", { valueAsNumber: true })}
+            {...field}
+            className={`${styles.input} ${styles.number} ${disabledClass}`}
+            disabled={isRestricted}
+            inputMode="numeric"
+          />
+        )}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Máximo de participantes</label>
-        <input
-          {...register("max_participants", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number} ${isRestricted ? styles.inputDisabled : ""}`}
-          disabled={isRestricted}
-        />
-      </div>
-      <div className={styles.formCustomError}>
-        {errors?.max_participants?.message}
-      </div>
+      <FormField label="Máximo de participantes" error={errors?.max_participants?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <input
+            {...register("max_participants", { valueAsNumber: true })}
+            {...field}
+            className={`${styles.input} ${styles.number} ${disabledClass}`}
+            disabled={isRestricted}
+            inputMode="numeric"
+          />
+        )}
+      </FormField>
 
-      <div className={styles.formRow}>
-        <label>Precio</label>
-        <input
-          {...register("price", { valueAsNumber: true })}
-          className={`${styles.input} ${styles.number} ${isRestricted ? styles.inputDisabled : ""}`}
-          disabled={isRestricted}
-        />
-      </div>
-      <div className={styles.formCustomError}>{errors?.price?.message}</div>
+      <FormField label="Precio" error={errors?.price?.message} rowClassName={styles.formRow}
+        errorClassName={styles.formCustomError}>
+        {(field) => (
+          <input
+            {...register("price", { valueAsNumber: true })}
+            {...field}
+            className={`${styles.input} ${styles.number} ${disabledClass}`}
+            disabled={isRestricted}
+            inputMode="decimal"
+          />
+        )}
+      </FormField>
 
       {!isEditMode && hasCalendarAccess && (
         <div className={styles.checkboxRow}>
@@ -273,24 +284,16 @@ const ClassForm = ({
             className={styles.checkbox}
           />
           <label htmlFor="addToCalendar" className={styles.checkboxLabel}>
-            {<GoogleCalendar />} Calendar / {<GoogleMeet />} Meet
+            <GoogleCalendar /> Calendar / <GoogleMeet /> Meet
+            <span className="visually-hidden"> (crear el evento al guardar)</span>
           </label>
         </div>
       )}
 
       <div style={{ display: "flex", gap: "1rem" }}>
-        <PrimaryLink
-          asButton
-          text={isEditMode ? "Actualizar" : "Crear"}
-          type="submit"
-        />
+        <PrimaryLink asButton text={isEditMode ? "Actualizar" : "Crear"} type="submit" />
         {isEditMode && onCancel && (
-          <PrimaryLink
-            asButton
-            text={"Cancelar"}
-            type="button"
-            onClick={onCancel}
-          />
+          <PrimaryLink asButton text="Cancelar" type="button" onClick={onCancel} />
         )}
       </div>
     </form>

@@ -69,7 +69,13 @@ const LoginPage = () => {
       <div className={styles.text}>O ingresá con tu email y contraseña:</div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
+          <label className="visually-hidden" htmlFor="login-email">
+            Email
+          </label>
           <input
+            aria-describedby={error ? "login-error" : undefined}
+            autoComplete="email"
+            id="login-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -78,7 +84,13 @@ const LoginPage = () => {
           />
         </div>
         <div className={styles.formRow}>
+          <label className="visually-hidden" htmlFor="login-password">
+            Contraseña
+          </label>
           <input
+            aria-describedby={error ? "login-error" : undefined}
+            autoComplete="current-password"
+            id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -94,11 +106,13 @@ const LoginPage = () => {
           type="submit"
         />
       </form>
-      {error && (
-        <p style={{ color: "red", fontSize: "0.975rem", marginTop: "1rem" }}>
-          {error}
-        </p>
-      )}
+      <p
+        id="login-error"
+        role="alert"
+        style={{ color: "var(--danger)", fontSize: "0.975rem", marginTop: error ? "1rem" : 0 }}
+      >
+        {error}
+      </p>
     </div>
   );
 };

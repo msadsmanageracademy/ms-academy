@@ -37,6 +37,9 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // NEXT_DIST_DIR lets a verification build (`next build` / `next start`) use its own
+  // folder: sharing `.next` with a running `next dev` corrupts its chunks
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   images: {
     remotePatterns: [

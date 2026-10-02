@@ -2,6 +2,7 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { FlatCompat } from "@eslint/eslintrc";
 import globals from "globals";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,6 +15,7 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      ".next-verify/**",
       "node_modules/**",
       "out/**",
       "build/**",
@@ -33,6 +35,12 @@ const eslintConfig = [
     rules: {
       "no-undef": "error",
     },
+  },
+  {
+    // Accessibility: jsx-a11y's strict set (next/core-web-vitals only enables a few rules).
+    // The plugin itself is already registered by the Next.js config above.
+    files: ["**/*.{js,jsx}"],
+    rules: jsxA11y.flatConfigs.strict.rules,
   },
   {
     files: ["**/*.test.{js,jsx}", "tests/**/*.{js,mjs}", "scripts/**/*.mjs"],

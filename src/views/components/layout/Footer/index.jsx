@@ -19,7 +19,7 @@ const Footer = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className={styles.footer}>
+    <footer className={`${styles.footer} dark-surface`}>
       <div className={styles.inner}>
         <div className={styles.brand}>
           <Link href="/" className={styles.logoLink}>
@@ -35,8 +35,8 @@ const Footer = () => {
             Capacitaciones en publicidad digital 100% online.
           </p>
         </div>
-        <div className={styles.column}>
-          <h3 className={styles.columnTitle}>Navegación</h3>
+        <nav className={styles.column} aria-label="Navegación del pie">
+          <h2 className={styles.columnTitle}>Navegación</h2>
           <ul className={styles.linkList}>
             {navLinks.map(({ href, label }) => (
               <li key={href}>
@@ -46,9 +46,9 @@ const Footer = () => {
               </li>
             ))}
           </ul>
-        </div>
+        </nav>
         <div className={styles.column}>
-          <h3 className={styles.columnTitle}>Mi cuenta</h3>
+          <h2 className={styles.columnTitle}>Mi cuenta</h2>
           <ul className={styles.linkList}>
             {accountLinks.map(({ href, label }) => (
               <li key={href}>
@@ -60,7 +60,7 @@ const Footer = () => {
           </ul>
         </div>
         <div className={styles.column}>
-          <h3 className={styles.columnTitle}>Contacto</h3>
+          <h2 className={styles.columnTitle}>Contacto</h2>
           <ul className={styles.linkList}>
             <li>
               <Link href="/contact" className={styles.link}>

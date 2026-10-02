@@ -8,6 +8,8 @@ export const Clock = ({
 }) => {
   return (
     <svg
+      aria-hidden="true"
+      focusable="false"
       fill="none"
       height={size || height || 24}
       preserveAspectRatio="xMidYMid"

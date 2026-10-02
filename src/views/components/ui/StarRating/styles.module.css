@@ -17,7 +17,7 @@
 }
 
 .star {
-  color: #ccc;
+  color: #8f8f8f;
   cursor: pointer;
   transition:
     color 0.1s,
@@ -26,7 +26,16 @@
 }
 
 .filled {
-  color: #f5a623;
+  color: #c27a00;
+}
+
+.starButton {
+  background: none;
+  border: 0;
+  border-radius: 0.25rem;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
 }
 
 .readOnly .star {

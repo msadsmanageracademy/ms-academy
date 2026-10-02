@@ -63,6 +63,7 @@ export const Board = ({ items, title, type, onSignUp }) => {
                     </div>
                     {!isFull && (
                       <PrimaryLink
+                        aria-label={`Inscribirse a ${title}`}
                         asButton
                         dark
                         onClick={() => onSignUp(_id)}
@@ -133,6 +134,7 @@ export const Board = ({ items, title, type, onSignUp }) => {
                       </p>
                     </div>
                     <PrimaryLink
+                      aria-label={`Ver detalles de ${title}`}
                       dark
                       href={`/content/courses/${_id}`}
                       text={"Ver detalles"}

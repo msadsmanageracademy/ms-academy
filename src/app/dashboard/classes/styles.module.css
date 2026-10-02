@@ -249,8 +249,9 @@
   width: 90%;
 }
 
-.modal h3 {
+.modal h2 {
   color: var(--color-2);
+  font-size: 1.17em;
   margin: 0;
 }
 
@@ -281,7 +282,7 @@
 }
 
 .modalConfirm {
-  background: var(--success);
+  background: var(--success-strong);
   border: none;
   border-radius: 6px;
   color: #fff;

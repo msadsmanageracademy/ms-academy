@@ -22,6 +22,7 @@ export default function PrimaryLink({
   target = "_self",
   text = "Inscribirse",
   type = "button",
+  ...props
 }) {
   const classes = [styles.link, className];
   if (danger) classes.push(`${styles.danger}`);
@@ -32,6 +33,7 @@ export default function PrimaryLink({
       className={classes.join(" ")}
       disabled={disabled}
       type={type}
+      {...props}
       onClick={() => {
         if (!disabled && onClick) onClick();
       }}
@@ -48,6 +50,8 @@ export default function PrimaryLink({
       className={classes.join(" ")}
       href={href}
       target={target}
+      {...(disabled ? { tabIndex: -1 } : {})}
+      {...props}
     >
       {calendar ? <GoogleCalendar className={styles.iconLeft} /> : null}
       {google ? <Google className={styles.iconLeft} /> : null}

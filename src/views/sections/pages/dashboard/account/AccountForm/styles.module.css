@@ -32,7 +32,6 @@
 .input:focus {
   border-color: var(--color-2);
   box-shadow: 0 0 0 3px rgba(244, 164, 98, 0.1);
-  outline: none;
 }
 
 .input.number {
