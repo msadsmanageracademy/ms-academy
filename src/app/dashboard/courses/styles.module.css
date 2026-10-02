@@ -173,3 +173,17 @@
     padding: calc(var(--navbar-height) + 2rem) 0 2rem 2rem;
   }
 }
+
+.headerActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  max-width: 1200px;
+}
+
+.headerActions h2 {
+  margin-bottom: 0;
+}

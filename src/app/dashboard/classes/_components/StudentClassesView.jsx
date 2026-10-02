@@ -1,6 +1,8 @@
 "use client";
 
 import CourseFilter from "./CourseFilter";
+import Pagination from "@/views/components/ui/Pagination";
+import TableSearch from "@/views/components/ui/TableSearch";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import ReviewModal from "@/views/components/ui/ReviewModal";
 import StudentClassRow from "./StudentClassRow";
@@ -12,6 +14,9 @@ import { runApiAction } from "@/utils/api";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTableControls } from "@/hooks/useTableControls";
+
+const searchFields = (c) => [c.title, c.courseTitle];
 
 /**
  * Student view: the classes the user takes part in (standalone and of their courses).
@@ -22,6 +27,7 @@ const StudentClassesView = ({ classes, reviews }) => {
   const { incrementCount } = useNotifications();
   const [courseFilter, setCourseFilter] = useState("all");
   const [reviewing, setReviewing] = useState(null); // class being reviewed
+  const table = useTableControls(filterByCourse(classes, courseFilter), { fields: searchFields });
 
   const handleUnenroll = async (classItem) => {
     const confirmed = await confirmUnenroll(
@@ -46,7 +52,23 @@ const StudentClassesView = ({ classes, reviews }) => {
           <div className={styles.headerActions}>
             <h2>Clases Inscritas</h2>
             {classes.length > 0 && (
-              <CourseFilter classes={classes} value={courseFilter} onChange={setCourseFilter} />
+              <div className={styles.tableTools}>
+                <TableSearch
+                  filteredCount={table.filteredCount}
+                  label="Buscar clases"
+                  totalCount={table.totalCount}
+                  value={table.query}
+                  onChange={table.setQuery}
+                />
+                <CourseFilter
+                  classes={classes}
+                  value={courseFilter}
+                  onChange={(value) => {
+                    setCourseFilter(value);
+                    table.setPage(1);
+                  }}
+                />
+              </div>
             )}
           </div>
           {classes.length === 0 ? (
@@ -73,7 +95,12 @@ const StudentClassesView = ({ classes, reviews }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filterByCourse(classes, courseFilter).map((classItem) => (
+                  {table.pageItems.length === 0 && (
+                    <tr>
+                      <td colSpan={11}>Ninguna clase coincide con la búsqueda</td>
+                    </tr>
+                  )}
+                  {table.pageItems.map((classItem) => (
                     <StudentClassRow
                       key={classItem._id}
                       classItem={classItem}
@@ -84,6 +111,7 @@ const StudentClassesView = ({ classes, reviews }) => {
                   ))}
                 </tbody>
               </table>
+              <Pagination currentPage={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
             </div>
           )}
         </div>

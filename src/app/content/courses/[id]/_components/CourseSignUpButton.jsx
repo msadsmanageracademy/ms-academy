@@ -2,6 +2,7 @@
 
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { enrollInCourseAction } from "@/server/actions/courses";
+import { loginUrl } from "@/utils/redirects";
 import { runApiAction } from "@/utils/api";
 import { useRouter } from "next/navigation";
 import { confirmSignUp, toastError } from "@/utils/alerts";
@@ -10,9 +11,7 @@ const CourseSignUpButton = ({ courseId, viewerRole }) => {
   const router = useRouter();
 
   const handleSignUp = async () => {
-    if (!viewerRole) {
-      return toastError(3000, "Ha habido un error", "Para inscribirse, primero debe iniciar sesión");
-    }
+    if (!viewerRole) return router.push(loginUrl(`/content/courses/${courseId}`));
     if (viewerRole === "admin") {
       return toastError(3000, "Acción no permitida", "Admins no pueden inscribirse a cursos");
     }

@@ -15,7 +15,10 @@ export default auth((req) => {
 
   // All dashboard routes require authentication
   if (!session && path.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    // Come back to the requested page after logging in
+    const login = new URL("/login", req.url);
+    login.searchParams.set("callbackUrl", path + req.nextUrl.search);
+    return NextResponse.redirect(login);
   }
 
   // Detail pages are admin-only

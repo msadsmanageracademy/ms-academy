@@ -1,9 +1,20 @@
 .container {
   align-items: center;
+  /* Fast loads finish before the spinner appears, so it doesn't flash */
+  animation: appear 0.2s ease 0.15s both;
   background-color: #ffffff;
   display: flex;
   height: 100vh;
   inset: 0;
   justify-content: center;
   z-index: 1000;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

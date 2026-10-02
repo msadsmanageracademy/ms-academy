@@ -1,16 +1,22 @@
 import CapacityBar from "@/views/components/ui/CapacityBar";
 import IconLink from "@/views/components/ui/IconLink";
+import Pagination from "@/views/components/ui/Pagination";
+import TableSearch from "@/views/components/ui/TableSearch";
+import { useTableControls } from "@/hooks/useTableControls";
 import StatusBadge from "@/views/components/ui/StatusBadge";
 import { runApiAction } from "@/utils/api";
 import styles from "../styles.module.css";
 import { confirmCoursePaymentAction, removeCourseEnrollmentAction } from "@/server/actions/courses";
 import { confirmPayment, confirmUnenroll } from "@/utils/alerts";
 
+const searchFields = (e) => [e.first_name, e.last_name, e.email, e.paymentStatus === "paid" ? "pagado" : "pendiente"];
+
 const fullName = (e) => [e.first_name, e.last_name].filter(Boolean).join(" ") || e.email;
 
 /** Course enrollees: confirm payments (manual until a gateway exists) or remove pending ones. */
 const EnrollmentsSection = ({ course, enrollments }) => {
   const max = course.max_participants;
+  const table = useTableControls(enrollments, { fields: searchFields });
 
   const handleConfirmPayment = async (enrollment) => {
     const name = fullName(enrollment);
@@ -46,6 +52,17 @@ const EnrollmentsSection = ({ course, enrollments }) => {
         </h2>
       </div>
       <CapacityBar current={enrollments.length} max={max} />
+      {enrollments.length > 0 && (
+        <TableSearch
+            className={styles.tableSearch}
+          filteredCount={table.filteredCount}
+          label="Buscar inscriptos"
+          placeholder="Nombre, email, pagado o pendiente..."
+          totalCount={table.totalCount}
+          value={table.query}
+          onChange={table.setQuery}
+        />
+      )}
       {enrollments.length === 0 ? (
         <p className={styles.noParticipants}>No hay participantes inscritos</p>
       ) : (
@@ -61,7 +78,12 @@ const EnrollmentsSection = ({ course, enrollments }) => {
               </tr>
             </thead>
             <tbody>
-              {enrollments.map((enrollment) => {
+              {table.pageItems.length === 0 && (
+                    <tr>
+                      <td colSpan={5}>Ningún inscripto coincide con la búsqueda</td>
+                    </tr>
+                  )}
+              {table.pageItems.map((enrollment) => {
                 const paid = enrollment.paymentStatus === "paid";
                 return (
                   <tr key={enrollment._id}>
@@ -102,6 +124,7 @@ const EnrollmentsSection = ({ course, enrollments }) => {
               })}
             </tbody>
           </table>
+          <Pagination currentPage={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
         </div>
       )}
     </section>

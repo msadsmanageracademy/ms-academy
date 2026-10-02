@@ -1,5 +1,6 @@
 import Image from "next/image";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { config } from "@/config";
 import styles from "./styles.module.css";
 
 const HeroSection = () => {
@@ -23,10 +24,7 @@ const HeroSection = () => {
               href="/content"
               text="Ver próximas actividades"
             />
-            <PrimaryLink
-              href="/register"
-              text="Crear cuenta gratis"
-            />
+            <PrimaryLink {...(config.allowRegistration ? { href: "/register", text: "Crear cuenta gratis" } : { href: "/login", text: "Ingresar" })} />
           </div>
         </div>
 

@@ -1,14 +1,19 @@
 import CapacityBar from "@/views/components/ui/CapacityBar";
 import IconLink from "@/views/components/ui/IconLink";
+import Pagination from "@/views/components/ui/Pagination";
+import TableSearch from "@/views/components/ui/TableSearch";
 import { runApiAction } from "@/utils/api";
 import styles from "../styles.module.css";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useState } from "react";
+import { useTableControls } from "@/hooks/useTableControls";
 import { confirmNotify, confirmUnenroll, toastError } from "@/utils/alerts";
 import { downloadCsv, safeFilename, toCsv } from "@/utils/csv";
 import { removeClassParticipantAction, sendClassRemindersAction } from "@/server/actions/classes";
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const searchFields = (p) => [p.first_name, p.last_name, p.email];
 
 /** Shows a temporary "done" state on a button for `ms` milliseconds. */
 function useFlash(ms) {
@@ -29,6 +34,7 @@ const ParticipantsSection = ({ classData, participants }) => {
   const [notifiedAll, flashNotifiedAll] = useFlash(30000);
   const classId = classData._id;
   const max = classData.max_participants;
+  const table = useTableControls(participants, { fields: searchFields });
 
   const handleRemove = async (participant) => {
     const confirmed = await confirmUnenroll(
@@ -107,6 +113,17 @@ const ParticipantsSection = ({ classData, participants }) => {
           </h2>
         </div>
         <CapacityBar current={participants.length} max={max} />
+        {participants.length > 0 && (
+          <TableSearch
+            className={styles.tableSearch}
+            filteredCount={table.filteredCount}
+            label="Buscar participantes"
+            placeholder="Buscar por nombre o email..."
+            totalCount={table.totalCount}
+            value={table.query}
+            onChange={table.setQuery}
+          />
+        )}
         {participants.length === 0 ? (
           <p className={styles.noParticipants}>No hay participantes inscritos</p>
         ) : (
@@ -121,7 +138,12 @@ const ParticipantsSection = ({ classData, participants }) => {
                 </tr>
               </thead>
               <tbody>
-                {participants.map((participant) => {
+                {table.pageItems.length === 0 && (
+                    <tr>
+                      <td colSpan={4}>Ningún participante coincide con la búsqueda</td>
+                    </tr>
+                  )}
+                {table.pageItems.map((participant) => {
                   const isNotifying = notifying === participant._id;
                   return (
                     <tr key={participant._id}>
@@ -152,6 +174,7 @@ const ParticipantsSection = ({ classData, participants }) => {
                 })}
               </tbody>
             </table>
+            <Pagination currentPage={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
           </div>
         )}
       </section>

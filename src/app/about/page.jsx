@@ -1,15 +1,16 @@
-import Hero from "@/views/sections/pages/about/Hero";
-import PageWrapper from "@/views/components/layout/PageWrapper";
+import About from "@/views/sections/pages/home/About";
+import Features from "@/views/sections/pages/home/Features";
 
-export const metadata = { title: "Sobre mí | MS Academy" };
-
-const AboutPage = () => {
-  return (
-    <PageWrapper>
-      <h1 className="visually-hidden">Sobre mí</h1>
-      <Hero />
-    </PageWrapper>
-  );
+export const metadata = {
+  title: "Sobre mí | MS Academy",
+  description: "Maximiliano Setzes, especialista en publicidad digital (Google Ads y Meta Ads).",
 };
 
-export default AboutPage;
+export default function AboutPage() {
+  return (
+    <>
+      <About asPage />
+      <Features />
+    </>
+  );
+}

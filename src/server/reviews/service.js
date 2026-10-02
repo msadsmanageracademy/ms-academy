@@ -7,6 +7,27 @@ import { classObjectId, courseObjectId } from "@/server/ids";
 
 const newestFirst = { sort: { createdAt: -1 } };
 
+const ANONYMOUS_AUTHOR = "Alumno/a";
+
+/**
+ * Name shown on a public review. Older reviews stored the email when the user had
+ * no first name: an email is never shown.
+ */
+export const publicAuthorName = (name) =>
+  typeof name === "string" && name.trim() && !name.includes("@") ? name.trim() : ANONYMOUS_AUTHOR;
+
+/** Public shape of a review: no user id, no email. */
+export const toPublicReview = ({ _id, classId, courseId, rating, comment, firstName, createdAt, updatedAt }) => ({
+  _id,
+  ...(classId ? { classId } : {}),
+  ...(courseId ? { courseId } : {}),
+  rating,
+  comment: comment ?? "",
+  firstName: publicAuthorName(firstName),
+  createdAt,
+  updatedAt,
+});
+
 async function upsertReview(db, actor, target, input) {
   const { rating, comment } = parseOrThrow(ReviewFormSchema, input, { useIssueMessage: true });
   const userId = toObjectId(actor.id);
@@ -19,7 +40,7 @@ async function upsertReview(db, actor, target, input) {
         userId,
         rating,
         comment: comment ?? "",
-        firstName: actor.name ?? actor.email,
+        firstName: publicAuthorName(actor.name),
         updatedAt: now,
       },
       $setOnInsert: { createdAt: now },
@@ -32,7 +53,8 @@ async function upsertReview(db, actor, target, input) {
 export async function listClassReviews(id) {
   const classId = classObjectId(id);
   const db = await getDb();
-  return db.collection("reviews").find({ classId }, newestFirst).toArray();
+  const reviews = await db.collection("reviews").find({ classId }, newestFirst).toArray();
+  return reviews.map(toPublicReview);
 }
 
 /**
@@ -82,10 +104,11 @@ export async function listCourseReviews(id, { series = false } = {}) {
     const unique = new Map([courseId, ...siblings.map((c) => c._id)].map((oid) => [oid.toString(), oid]));
     courseIds = [...unique.values()];
   }
-  return db
+  const reviews = await db
     .collection("reviews")
     .find({ courseId: { $in: courseIds } }, newestFirst)
     .toArray();
+  return reviews.map(toPublicReview);
 }
 
 /** Creates or updates the user's review of a course. Only enrollees who paid (or admins). */

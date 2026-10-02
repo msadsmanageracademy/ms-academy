@@ -2,17 +2,23 @@
 
 import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import IconLink from "@/views/components/ui/IconLink";
+import PaymentInstructions from "@/views/components/ui/PaymentInstructions";
+import Pagination from "@/views/components/ui/Pagination";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import ReviewModal from "@/views/components/ui/ReviewModal";
 import StatusBadge from "@/views/components/ui/StatusBadge";
-import styles from "../styles.module.css";
+import TableSearch from "@/views/components/ui/TableSearch";
 import { cancelCourseEnrollmentAction } from "@/server/actions/courses";
 import { confirmUnenroll } from "@/utils/alerts";
 import { formatDate } from "@/utils/dates";
 import { getCourseTimeStatus } from "@/utils/classStatus";
 import { runApiAction } from "@/utils/api";
+import styles from "../styles.module.css";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTableControls } from "@/hooks/useTableControls";
+
+const searchFields = (c) => [c.title, c.short_description];
 
 /**
  * Student view: the courses the user enrolled in, with payment status and reviews.
@@ -21,6 +27,7 @@ import { useState } from "react";
 const StudentCoursesView = ({ courses, reviews }) => {
   const router = useRouter();
   const [reviewing, setReviewing] = useState(null); // course being reviewed
+  const table = useTableControls(courses, { fields: searchFields });
 
   const handleUnenroll = async (course) => {
     const confirmed = await confirmUnenroll(
@@ -40,8 +47,20 @@ const StudentCoursesView = ({ courses, reviews }) => {
     <>
       <div className={styles.container}>
         <h1>Mis Cursos</h1>
+        <PaymentInstructions courses={courses.filter((c) => c.userPaymentStatus === "pending")} />
         <div className={styles.listSection}>
-          <h2>Cursos Inscritos</h2>
+          <div className={styles.headerActions}>
+            <h2>Cursos Inscritos</h2>
+            {courses.length > 0 && (
+              <TableSearch
+                filteredCount={table.filteredCount}
+                label="Buscar cursos"
+                totalCount={table.totalCount}
+                value={table.query}
+                onChange={table.setQuery}
+              />
+            )}
+          </div>
           {courses.length === 0 ? (
             <div className={styles.noInscriptions}>
               <p>No estás inscrito en ningún curso</p>
@@ -63,7 +82,12 @@ const StudentCoursesView = ({ courses, reviews }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {courses.map((course) => {
+                  {table.pageItems.length === 0 && (
+                    <tr>
+                      <td colSpan={8}>Ningún curso coincide con la búsqueda</td>
+                    </tr>
+                  )}
+                  {table.pageItems.map((course) => {
                     const timeStatus = getCourseTimeStatus(course.start_date, course.end_date, course.status);
                     const paid = course.userPaymentStatus === "paid";
                     const review = reviews[course._id];
@@ -115,6 +139,7 @@ const StudentCoursesView = ({ courses, reviews }) => {
                   })}
                 </tbody>
               </table>
+              <Pagination currentPage={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
             </div>
           )}
         </div>

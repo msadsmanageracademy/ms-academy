@@ -2,7 +2,10 @@ import Image from "next/image";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 
-export default function About() {
+const LINKEDIN_URL = "https://www.linkedin.com/in/maximilianosetzes/";
+
+export default function About({ asPage = false }) {
+  const Title = asPage ? "h1" : "h2";
   return (
     <section className={styles.about}>
       <div className={styles.aboutInner}>
@@ -12,17 +15,18 @@ export default function About() {
               alt="Maximiliano Setzes"
               className={styles.image}
               height={380}
+              priority={asPage}
               src="/images/maximiliano.jpg"
               width={380}
             />
           </div>
         </div>
-
         <div className={styles.content}>
           <span className={styles.eyebrow}>Instructor</span>
-          <h2 className={styles.title}>
-            Sobre <span className={styles.accent}>Maximiliano</span>
-          </h2>
+          <Title className={styles.title}>
+            {asPage ? "Sobre mí: " : "Sobre "}
+            <span className={styles.accent}>Maximiliano</span>
+          </Title>
           <p className={styles.bio}>
             Especialista en publicidad digital con años de experiencia en
             campañas de Google Ads, Meta Ads y estrategias de marketing
@@ -34,7 +38,21 @@ export default function About() {
             con tus propias cuentas desde la primera clase.
           </p>
           <div className={styles.cta}>
-            <PrimaryLink href="/about" text="Conocé más" />
+            {asPage ? (
+              <>
+                <PrimaryLink href="/content" text="Ver próximas actividades" />
+                <PrimaryLink dark href="/contact" text="Escribime" />
+                <PrimaryLink
+                  dark
+                  href={LINKEDIN_URL}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  text="LinkedIn"
+                />
+              </>
+            ) : (
+              <PrimaryLink href="/about" text="Conocé más" />
+            )}
           </div>
         </div>
       </div>

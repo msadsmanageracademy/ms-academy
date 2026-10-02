@@ -3,16 +3,21 @@
 import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import CourseForm from "@/views/sections/pages/dashboard/courses/CourseForm";
 import IconLink from "@/views/components/ui/IconLink";
+import Pagination from "@/views/components/ui/Pagination";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import StatusBadge from "@/views/components/ui/StatusBadge";
+import TableSearch from "@/views/components/ui/TableSearch";
 import styles from "../styles.module.css";
 import { formatDate } from "@/utils/dates";
 import { getCourseTimeStatus } from "@/utils/classStatus";
 import { runApiAction } from "@/utils/api";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTableControls } from "@/hooks/useTableControls";
 import { confirmDeleteItem, confirmToggleStatus } from "@/utils/alerts";
 import { deleteCourseAction, setCourseStatusAction } from "@/server/actions/courses";
+
+const searchFields = (c) => [c.title, c.short_description];
 
 /**
  * Admin view: every course with enrollment/payment counts and publish/delete actions.
@@ -21,6 +26,7 @@ import { deleteCourseAction, setCourseStatusAction } from "@/server/actions/cour
 const AdminCoursesView = ({ courses }) => {
   const router = useRouter();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const table = useTableControls(courses, { fields: searchFields });
 
   const handleToggleStatus = async (course) => {
     const status = course.status === "published" ? "draft" : "published";
@@ -47,7 +53,18 @@ const AdminCoursesView = ({ courses }) => {
     <div className={styles.container}>
       <h1>Gestión de Cursos</h1>
       <div className={styles.listSection}>
-        <h2>Todos los Cursos</h2>
+        <div className={styles.headerActions}>
+          <h2>Todos los Cursos</h2>
+          {courses.length > 0 && (
+            <TableSearch
+              filteredCount={table.filteredCount}
+              label="Buscar cursos"
+              totalCount={table.totalCount}
+              value={table.query}
+              onChange={table.setQuery}
+            />
+          )}
+        </div>
         {courses.length === 0 ? (
           <p className={styles.noClasses}>No hay cursos disponibles</p>
         ) : (
@@ -68,7 +85,12 @@ const AdminCoursesView = ({ courses }) => {
                 </tr>
               </thead>
               <tbody>
-                {courses.map((course) => {
+                {table.pageItems.length === 0 && (
+                    <tr>
+                      <td colSpan={10}>Ningún curso coincide con la búsqueda</td>
+                    </tr>
+                  )}
+                {table.pageItems.map((course) => {
                   const published = course.status === "published";
                   return (
                     <tr key={course._id}>
@@ -133,6 +155,7 @@ const AdminCoursesView = ({ courses }) => {
                 })}
               </tbody>
             </table>
+            <Pagination currentPage={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
           </div>
         )}
         <PrimaryLink

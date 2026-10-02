@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { config } from "@/config";
 import styles from "./styles.module.css";
 
 const navLinks = [
@@ -11,7 +12,7 @@ const navLinks = [
 
 const accountLinks = [
   { href: "/login", label: "Ingresar" },
-  { href: "/register", label: "Crear cuenta" },
+  ...(config.allowRegistration ? [{ href: "/register", label: "Crear cuenta" }] : []),
   { href: "/dashboard", label: "Mi panel" },
 ];
 

@@ -1,4 +1,5 @@
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { config } from "@/config";
 import styles from "./styles.module.css";
 
 export default function CTA() {
@@ -10,11 +11,13 @@ export default function CTA() {
           <span className={styles.accent}>siguiente nivel</span>?
         </h2>
         <p className={styles.subtitle}>
-          Explorá las clases y cursos disponibles o creá tu cuenta y empezá hoy.
+          {config.allowRegistration
+            ? "Explorá las clases y cursos disponibles o creá tu cuenta y empezá hoy."
+            : "Explorá las clases y cursos disponibles o ingresá a tu cuenta."}
         </p>
         <div className={styles.buttons}>
           <PrimaryLink href="/content" text="Ver actividades" />
-          <PrimaryLink href="/register" text="Crear cuenta gratis" />
+          <PrimaryLink {...(config.allowRegistration ? { href: "/register", text: "Crear cuenta gratis" } : { href: "/login", text: "Ingresar" })} />
         </div>
       </div>
     </section>

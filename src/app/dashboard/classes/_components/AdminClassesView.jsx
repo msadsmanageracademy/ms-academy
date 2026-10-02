@@ -1,6 +1,8 @@
 "use client";
 
 import AdminClassRow from "./AdminClassRow";
+import Pagination from "@/views/components/ui/Pagination";
+import TableSearch from "@/views/components/ui/TableSearch";
 import ClassForm from "@/views/sections/pages/dashboard/classes/ClassForm";
 import CourseFilter from "./CourseFilter";
 import LinkCourseModal from "./LinkCourseModal";
@@ -12,6 +14,7 @@ import { useCalendarConnection } from "@/hooks/useCalendarConnection";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTableControls } from "@/hooks/useTableControls";
 import { confirmAddToCalendar, confirmDeleteItem, confirmToggleStatus, confirmUnlink } from "@/utils/alerts";
 import {
   createClassCalendarEventAction,
@@ -20,6 +23,9 @@ import {
   setClassStatusAction,
   unlinkClassFromCourseAction,
 } from "@/server/actions/classes";
+
+// Searchable text of each row (module level: stable across renders)
+const searchFields = (c) => [c.title, c.courseTitle, c.short_description];
 
 /**
  * Admin view: every class, with Calendar, course link, publish and delete actions.
@@ -100,7 +106,7 @@ const AdminClassesView = ({ classes, courses }) => {
     if (res) incrementCount(); // the server notifies the admin
   };
 
-  const visibleClasses = filterByCourse(classes, courseFilter);
+  const table = useTableControls(filterByCourse(classes, courseFilter), { fields: searchFields });
 
   return (
     <>
@@ -109,7 +115,23 @@ const AdminClassesView = ({ classes, courses }) => {
         <div className={styles.listSection}>
           <div className={styles.headerActions}>
             <h2>Clases</h2>
-            <CourseFilter classes={classes} value={courseFilter} onChange={setCourseFilter} />
+            <div className={styles.tableTools}>
+              <TableSearch
+                filteredCount={table.filteredCount}
+                label="Buscar clases"
+                totalCount={table.totalCount}
+                value={table.query}
+                onChange={table.setQuery}
+              />
+              <CourseFilter
+                classes={classes}
+                value={courseFilter}
+                onChange={(value) => {
+                  setCourseFilter(value);
+                  table.setPage(1);
+                }}
+              />
+            </div>
           </div>
           {classes.length === 0 ? (
             <p className={styles.noClasses}>No hay clases disponibles</p>
@@ -132,7 +154,12 @@ const AdminClassesView = ({ classes, courses }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleClasses.map((classItem) => (
+                  {table.pageItems.length === 0 && (
+                    <tr>
+                      <td colSpan={11}>Ninguna clase coincide con la búsqueda</td>
+                    </tr>
+                  )}
+                  {table.pageItems.map((classItem) => (
                     <AdminClassRow
                       key={classItem._id}
                       classItem={classItem}
@@ -148,6 +175,7 @@ const AdminClassesView = ({ classes, courses }) => {
                   ))}
                 </tbody>
               </table>
+              <Pagination currentPage={table.page} totalPages={table.totalPages} onPageChange={table.setPage} />
             </div>
           )}
           <PrimaryLink

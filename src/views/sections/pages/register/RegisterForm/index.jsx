@@ -7,6 +7,7 @@ import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { currentCallbackUrl, loginUrl } from "@/utils/redirects";
 import { toastError, toastSuccess } from "@/utils/alerts";
 
 const RegisterForm = () => {
@@ -40,7 +41,7 @@ const RegisterForm = () => {
 
       toastSuccess(3000, "Operación exitosa", "Su cuenta ha sido creada");
 
-      router.push("/login");
+      router.push(loginUrl(currentCallbackUrl()));
     } catch (err) {
       toastError(3000, "Ha habido un error", err.message);
     }

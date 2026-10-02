@@ -1,6 +1,8 @@
 "use client";
 
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { config } from "@/config";
+import { currentCallbackUrl } from "@/utils/redirects";
 import { signIn } from "next-auth/react";
 import styles from "./styles.module.css";
 import { useRouter } from "next/navigation";
@@ -20,10 +22,13 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [returnTo, setReturnTo] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    const errorCode = new URLSearchParams(window.location.search).get("error");
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("callbackUrl")) setReturnTo(currentCallbackUrl());
+    const errorCode = params.get("error");
     if (errorCode) {
       setError(
         AUTH_ERROR_MESSAGES[errorCode] ||
@@ -54,7 +59,7 @@ const LoginPage = () => {
       } else if (res.error) {
         setError("Credenciales incorrectas");
       } else {
-        router.push("/dashboard");
+        router.push(currentCallbackUrl());
       }
     } catch (error) {
       closeLoading();
@@ -66,6 +71,9 @@ const LoginPage = () => {
 
   return (
     <div className={styles.container}>
+      {returnTo?.startsWith("/content") && (
+        <p className={styles.text}>Ingresá para completar tu inscripción.</p>
+      )}
       <div className={styles.text}>O ingresá con tu email y contraseña:</div>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formRow}>
@@ -106,6 +114,12 @@ const LoginPage = () => {
           type="submit"
         />
       </form>
+      {config.allowRegistration && (
+        <p className={styles.text}>
+          ¿No tenés cuenta?{" "}
+          <a href={returnTo ? `/register?callbackUrl=${encodeURIComponent(returnTo)}` : "/register"}>Creá una</a>
+        </p>
+      )}
       <p
         id="login-error"
         role="alert"

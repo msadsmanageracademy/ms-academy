@@ -2,9 +2,11 @@ import "./globals.css";
 import Footer from "@/views/components/layout/Footer";
 import { Inter } from "next/font/google";
 import Navbar from "@/views/components/layout/Navbar";
+import NavigationProgress from "@/views/components/layout/NavigationProgress";
 import { NotificationProvider } from "@/providers/NotificationProvider";
 import SessionWrapper from "@/providers/SessionWrapper";
 import SkipLink from "@/views/components/layout/SkipLink";
+import { Suspense } from "react";
 
 export const metadata = {
   title: "MS - Academy",
@@ -20,7 +22,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es" className={inter.className}>
       <body>
-        {/* Keyboard users can jump over the navigation */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <SkipLink />
         <SessionWrapper>
           <NotificationProvider>

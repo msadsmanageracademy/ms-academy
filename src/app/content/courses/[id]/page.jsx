@@ -1,6 +1,7 @@
 import CourseSignUpButton from "./_components/CourseSignUpButton";
 import { HttpError } from "@/server/errors";
 import PageWrapper from "@/views/components/layout/PageWrapper";
+import PaymentInstructions from "@/views/components/ui/PaymentInstructions";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { cache } from "react";
 import { formatDateTime } from "@/utils/dates";
@@ -110,6 +111,12 @@ export default async function CourseDetailPage({ params }) {
             viewerRole={actor?.role ?? null}
           />
         </div>
+
+        {course.userPaymentStatus === "pending" && (
+          <PaymentInstructions
+            courses={[{ _id: course._id.toString(), title: course.title, price: course.price }]}
+          />
+        )}
 
         <div className={styles.section}>
           <div className={styles.subtitle}>

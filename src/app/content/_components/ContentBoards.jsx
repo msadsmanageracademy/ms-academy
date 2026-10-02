@@ -2,6 +2,7 @@
 
 import { Board } from "@/views/sections/pages/content/Board";
 import { enrollInClassAction } from "@/server/actions/classes";
+import { loginUrl } from "@/utils/redirects";
 import { runApiAction } from "@/utils/api";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
@@ -13,7 +14,7 @@ const ContentBoards = ({ classes, courses, viewerRole }) => {
   const router = useRouter();
 
   const handleClassSignUp = async (classId) => {
-    if (!viewerRole) return toastError(3000, "Acción no permitida", "Debe iniciar sesión");
+    if (!viewerRole) return router.push(loginUrl("/content"));
     if (viewerRole === "admin") {
       return toastError(3000, "Acción no permitida", "Admins no pueden inscribirse a clases");
     }

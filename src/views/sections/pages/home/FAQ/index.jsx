@@ -7,17 +7,17 @@ const faqs = [
   {
     question: "¿Cómo se reservan las clases?",
     answer:
-      "Una vez que creás tu cuenta en la plataforma, podés inscribirte a las clases disponibles desde tu dashboard personal. Recibirás una confirmación con el link de Google Meet.",
+      "Con tu cuenta, entrá a Próximas actividades y elegí una clase o un curso. Las clases gratuitas quedan confirmadas al instante; en los cursos tu lugar queda reservado hasta que se confirme el pago. Todo lo que tenés inscripto aparece en tu dashboard.",
   },
   {
     question: "¿Cuánto duran las sesiones?",
     answer:
-      "Las clases individuales tienen una duración de 60 minutos. Los cursos estructurados incluyen sesiones semanales de 90 minutos a lo largo de varias semanas.",
+      "Depende de cada actividad: la duración figura en cada clase, y en los cursos vas a ver la cantidad de clases y la duración total antes de inscribirte.",
   },
   {
     question: "¿Qué plataforma se usa para las clases online?",
     answer:
-      "Todas las clases se realizan vía Google Meet. El link se genera automáticamente y lo encontrás en tu dashboard personal antes de cada sesión.",
+      "Todas las clases se realizan vía Google Meet. El link aparece en Mis clases, en tu dashboard, antes de cada sesión (en los cursos, una vez confirmado el pago).",
   },
   {
     question: "¿Necesito experiencia previa en publicidad digital?",
@@ -27,7 +27,7 @@ const faqs = [
   {
     question: "¿Cuáles son los métodos de pago?",
     answer:
-      "Podés abonar por transferencia bancaria o mediante los métodos indicados al momento de confirmar tu inscripción. El pago se gestiona directamente con Maximiliano.",
+      "Al inscribirte a un curso, en Mis cursos vas a ver las instrucciones de pago. El pago se coordina directamente con Maximiliano y, cuando se confirma, se habilitan los links, las grabaciones y los materiales.",
   },
   {
     question: "¿Hay materiales de apoyo?",

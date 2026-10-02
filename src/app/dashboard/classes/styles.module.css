@@ -299,3 +299,10 @@
 .modalConfirm:not(:disabled):hover {
   filter: brightness(1.15);
 }
+
+.tableTools {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
