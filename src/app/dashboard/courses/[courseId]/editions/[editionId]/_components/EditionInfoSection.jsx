@@ -5,14 +5,10 @@ import { ReviewSummary } from "@/views/components/ui/ReviewList";
 import StatusBadge from "@/views/components/ui/StatusBadge";
 import { adminEditionNumber } from "@/utils/courseEditions";
 import { formatDate } from "@/utils/dates";
-import { formatPrice } from "@/utils/price";
 import styles from "../../../styles.module.css";
 import { deleteEditionError, editionEditError, publishEditionError, unpublishEditionError } from "@/server/courses/rules";
+import { formatAmount, formatPrice } from "@/utils/price";
 
-const amountFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
-
-/** 125000 → "$125.000" (revenue: $0 is a figure, not "Gratis") */
-const formatAmount = (value) => `$${amountFormatter.format(Number(value) || 0)}`;
 
 const InfoItem = ({ label, children, fullWidth = false }) => (
   <div className={`${styles.infoItem} ${fullWidth ? styles.fullWidth : ""}`}>

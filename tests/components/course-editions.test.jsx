@@ -289,7 +289,7 @@ describe("StudentCoursesView (editions of the student)", () => {
 
     const pending = within(rowOf("Meta Ads desde cero · Octubre 2030"));
     expect(pending.getByText("Pendiente")).toBeTruthy();
-    expect(pending.getByText("$35000")).toBeTruthy();
+    expect(pending.getByText("ARS 35.000")).toBeTruthy();
     expect(pending.getByRole("button", { name: "Cancelar inscripción" })).toBeTruthy();
 
     const paid = within(rowOf("Meta Ads desde cero · Marzo 2025"));

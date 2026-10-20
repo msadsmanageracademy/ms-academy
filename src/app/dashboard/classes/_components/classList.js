@@ -1,4 +1,5 @@
 import { editionName } from "@/utils/courseEditions";
+import { formatPrice } from "@/utils/price";
 import { getClassStatus } from "@/utils/classStatus";
 
 export const isCompleted = (cls) =>
@@ -41,4 +42,4 @@ export function filterByCourse(classes, filter) {
 export const patchClass = (classes, id, changes) =>
   classes.map((c) => (c._id === id ? { ...c, ...changes } : c));
 
-export const priceLabel = (price) => (price === 0 ? "Gratis" : `$${price}`);
+export const priceLabel = formatPrice;

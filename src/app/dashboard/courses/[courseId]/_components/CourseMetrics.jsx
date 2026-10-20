@@ -1,10 +1,8 @@
 import StarRating from "@/views/components/ui/StarRating";
+import { formatAmount } from "@/utils/price";
 import { formatRating } from "@/views/components/ui/ReviewList";
 import styles from "../styles.module.css";
 
-const amountFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
-
-const formatAmount = (value) => `$${amountFormatter.format(Number(value) || 0)}`;
 
 const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 

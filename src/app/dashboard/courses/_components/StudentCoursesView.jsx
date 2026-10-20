@@ -11,6 +11,7 @@ import TableSearch from "@/views/components/ui/TableSearch";
 import { cancelEditionEnrollmentAction } from "@/server/actions/courses";
 import { confirmUnenroll } from "@/utils/alerts";
 import { formatDate } from "@/utils/dates";
+import { formatPrice } from "@/utils/price";
 import { runApiAction } from "@/utils/api";
 import styles from "../styles.module.css";
 import { useRouter } from "next/navigation";
@@ -97,7 +98,7 @@ const StudentCoursesView = ({ editions, reviews }) => {
                         <td>{edition.start_date ? formatDate(edition.start_date) : "—"}</td>
                         <td>{edition.end_date ? formatDate(edition.end_date) : "—"}</td>
                         <td>{edition.amount_of_classes ?? 0}</td>
-                        <td>${edition.price}</td>
+                        <td>{formatPrice(edition.price)}</td>
                         <td>{timeStatus ? <ClassStatusBadge gender="f" status={timeStatus} /> : "—"}</td>
                         <td>
                           <StatusBadge status={paid ? "published" : "pending"}>

@@ -5,6 +5,7 @@ import { editionName } from "@/utils/courseEditions";
 import { es } from "date-fns/locale";
 import { formatDateAtTime } from "@/utils/dates";
 import { formatDistanceToNow } from "date-fns";
+import { formatPrice } from "@/utils/price";
 
 const STATUS_LABELS = { enrolled: "Asociada", published: "Publicada", draft: "Borrador" };
 
@@ -49,7 +50,7 @@ const ClassInfoSection = ({ classData, edition, onEdit }) => (
       </InfoItem>
       <InfoItem label="Precio">
         <span className={styles.value}>
-          {classData.price === 0 ? "Gratis" : `$${classData.price}`}
+          {formatPrice(classData.price)}
         </span>
       </InfoItem>
       <InfoItem label="Estado">

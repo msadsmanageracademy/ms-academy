@@ -122,7 +122,7 @@ describe("ContentView as a visitor", () => {
     expect(article("Curso en curso").getByText("Quedan 6 lugares")).toBeTruthy();
     expect(screen.getAllByText("19:00 · 60 min")).toHaveLength(4);
 
-    expect(article("Curso pago").getByText("$25.000")).toBeTruthy();
+    expect(article("Curso pago").getByText("ARS 25.000")).toBeTruthy();
     expect(article("Curso pendiente").getByText("Gratis")).toBeTruthy();
     expect(screen.getAllByText("Por comenzar")).toHaveLength(2);
     expect(article("Curso en curso").getByText("En curso")).toBeTruthy();
@@ -282,7 +282,7 @@ describe("PublicCourseView", () => {
     expect(info("Duración total")).toBe("4 horas");
     expect(info("Cupo")).toBe("3 / 10 inscriptos");
     expect(info("Estado")).toBe("Por comenzar");
-    expect(info("Precio")).toBe("$40.000");
+    expect(info("Precio")).toBe("ARS 40.000");
     // Rating of the whole course next to the heading
     expect(screen.getByRole("heading", { level: 2, name: /^Reseñas/ }).textContent).toContain("(12)");
     expect(screen.getAllByRole("listitem").filter((li) => li.textContent.includes("Reseña"))).toHaveLength(10);
@@ -338,7 +338,7 @@ describe("PublicCourseView", () => {
     expect(disabledAction("Inscripción pendiente de pago")).toBe("true");
     const payment = within(screen.getByRole("region", { name: "Pago pendiente" }));
     expect(payment.getByText("Meta Ads · Septiembre 2030")).toBeTruthy();
-    expect(payment.getByText(/\$40000/)).toBeTruthy();
+    expect(payment.getByText(/ARS 40\.000/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Inscribirse" })).toBeNull();
     await expectNoA11yViolations(container);
   });

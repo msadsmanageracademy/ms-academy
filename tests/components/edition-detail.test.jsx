@@ -143,10 +143,10 @@ describe("EditionDetailView: header and data", () => {
     expect(infoValue("Estado")).toBe("Borrador");
     expect(infoValue("Fechas")).toBe("Sin fechas (se definen con sus clases)");
     expect(infoValue("Clases")).toBe("2");
-    expect(infoValue("Precio")).toBe("$30.000");
+    expect(infoValue("Precio")).toBe("ARS 30.000");
     expect(infoValue("Cupo")).toBe("2 / 20");
     expect(infoValue("Alumnos pagos")).toBe("1");
-    expect(infoValue("Ingreso estimado")).toBe("$30.000");
+    expect(infoValue("Ingreso estimado")).toBe("ARS 30.000");
     expect(infoValue("Reseñas")).toBe("Sin reseñas");
     await expectNoA11yViolations(container);
   });

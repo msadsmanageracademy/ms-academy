@@ -1,6 +1,7 @@
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "./styles.module.css";
 import { config } from "@/config";
+import { formatPrice } from "@/utils/price";
 
 /**
  * How to pay a pending course enrollment. The text and payment data come from
@@ -20,7 +21,7 @@ const PaymentInstructions = ({ courses, headingLevel = 2 }) => {
       <ul className={styles.courses}>
         {courses.map((course) => (
           <li key={course._id}>
-            <strong>{course.title}</strong>: ${course.price}
+            <strong>{course.title}</strong>: {formatPrice(course.price)}
           </li>
         ))}
       </ul>

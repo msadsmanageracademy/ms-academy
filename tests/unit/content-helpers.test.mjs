@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LOW_SEATS_THRESHOLD, getSeatsInfo } from "@/utils/seats";
-import { formatPrice } from "@/utils/price";
+import { formatAmount, formatPrice } from "@/utils/price";
 import { getDateParts } from "@/utils/dates";
 
 describe("getSeatsInfo", () => {
@@ -65,10 +65,16 @@ describe("getSeatsInfo", () => {
 });
 
 describe("formatPrice", () => {
+  it("formatAmount shows any amount in ARS, including 0 (revenue is a figure, not 'Gratis')", () => {
+    expect(formatAmount(1625000)).toBe("ARS 1.625.000");
+    expect(formatAmount(0)).toBe("ARS 0");
+    expect(formatAmount(undefined)).toBe("ARS 0");
+  });
+
   it("formats positive amounts with es-AR thousands separators", () => {
-    expect(formatPrice(25000)).toBe("$25.000");
-    expect(formatPrice(1500)).toBe("$1.500");
-    expect(formatPrice(999)).toBe("$999");
+    expect(formatPrice(25000)).toBe("ARS 25.000");
+    expect(formatPrice(1500)).toBe("ARS 1.500");
+    expect(formatPrice(999)).toBe("ARS 999");
   });
 
   it.each([0, null, undefined])("%s → Gratis", (value) => {

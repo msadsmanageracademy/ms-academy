@@ -117,18 +117,18 @@ describe("CoursePageView: course data and metrics", () => {
     expect(stat("Veces dictado")).toBe("11");
     expect(stat("Alumnos inscriptos")).toBe("66");
     expect(stat("Alumnos pagos")).toBe("51");
-    expect(stat("Ingreso estimado")).toBe("$1.625.000");
+    expect(stat("Ingreso estimado")).toBe("ARS 1.625.000");
     expect(stat("Clases por edición")).toBe("4");
     expect(stat("Promedio de reseñas")).toMatch(/4,42\s*\(12 reseñas\)/);
     await expectNoA11yViolations(container);
   });
 
-  it("shows 'Sin reseñas' and $0 for a course without reviews or payments", () => {
+  it("shows 'Sin reseñas' and ARS 0 for a course without reviews or payments", () => {
     const metrics = { ...course().metrics, avgRating: null, reviewCount: 0, estimatedRevenue: 0 };
     render(<CoursePageView course={course({ metrics })} reviews={{ items: [], page: 1, totalPages: 1, total: 0 }} />);
     const stats = section("Métricas del curso");
     expect(stats.getByText("Promedio de reseñas").nextElementSibling.textContent).toBe("Sin reseñas");
-    expect(stats.getByText("Ingreso estimado").nextElementSibling.textContent).toBe("$0");
+    expect(stats.getByText("Ingreso estimado").nextElementSibling.textContent).toBe("ARS 0");
   });
 
   it("archives an active course and reactivates an archived one", async () => {
@@ -249,7 +249,7 @@ describe("CoursePageView: editions table", () => {
     expect(fifth.getByText("Finalizada")).toBeTruthy();
     expect(fifth.getByText("6 / 20")).toBeTruthy();
     expect(fifth.getByText("5 pagos")).toBeTruthy();
-    expect(fifth.getByText("$25.000")).toBeTruthy();
+    expect(fifth.getByText("ARS 25.000")).toBeTruthy();
     expect(fifth.getByText(/3,5 \(2\)/)).toBeTruthy();
     await expectNoA11yViolations(container);
 

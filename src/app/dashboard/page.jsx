@@ -2,6 +2,7 @@ import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import { editionName } from "@/utils/courseEditions";
 import { es } from "date-fns/locale";
 import { formatDistanceToNow } from "date-fns";
+import { formatPrice } from "@/utils/price";
 import { formatWeekdayDateTime } from "@/utils/dates";
 import { getActor } from "@/lib/api/guards";
 import { getDashboardSummary } from "./_lib/summary";
@@ -38,7 +39,7 @@ function NextClassCard({ cls }) {
           </span>
         ) : (
           <span>
-            <Money {...iconProps} /> {cls.price === 0 ? "Gratis" : `$${cls.price}`}
+            <Money {...iconProps} /> {formatPrice(cls.price)}
           </span>
         )}
         <span>
@@ -63,7 +64,7 @@ function NextCourseCard({ course }) {
           {course.amount_of_classes} clases
         </span>
         <span>
-          <Money {...iconProps} /> ${course.price}
+          <Money {...iconProps} /> {formatPrice(course.price)}
         </span>
       </div>
     </div>
