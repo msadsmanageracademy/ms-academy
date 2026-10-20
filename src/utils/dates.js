@@ -2,6 +2,8 @@
 // Dates are stored in UTC; they must always be displayed in Argentina time, both in
 // the browser (whatever the user's device zone) and on the server (Vercel runs in UTC,
 // which used to shift the times in reminder emails by 3 hours).
+import { es } from "date-fns/locale";
+import { format } from "date-fns";
 
 export const APP_TIME_ZONE = "America/Argentina/Buenos_Aires";
 const LOCALE = "es-AR";
@@ -57,6 +59,32 @@ export function formatWeekdayDateTime(date) {
 export function formatDateAtTime(date) {
   if (!isValid(date)) return "—";
   return `${formatDate(date)} a las ${formatTime(date)}`;
+}
+
+// Fixed abbreviations: Intl short names vary between ICU versions ("sep" vs "sept")
+const WEEKDAY_ABBR = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+const MONTH_ABBR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/** { weekday: "mar", day: "29", month: "sep" } (calendar blocks), or null */
+export function getDateParts(date) {
+  if (!isValid(date)) return null;
+  const p = getParts(date, { year: "numeric", month: "numeric", day: "numeric" });
+  const year = Number(p.year);
+  const month = Number(p.month);
+  const day = Number(p.day);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return { weekday: WEEKDAY_ABBR[weekday], day: String(day), month: MONTH_ABBR[month - 1] };
+}
+
+/**
+ * "Septiembre 2026" (edition labels), or null. Month and year are read in Argentina
+ * time and formatted from a local date, so the result doesn't depend on the process zone.
+ */
+export function formatMonthYearLong(date) {
+  if (!isValid(date)) return null;
+  const p = getParts(date, { year: "numeric", month: "numeric" });
+  const text = format(new Date(Number(p.year), Number(p.month) - 1, 1), "MMMM yyyy", { locale: es });
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** martes 30 de septiembre de 2026 a las 18:30 (emails) */

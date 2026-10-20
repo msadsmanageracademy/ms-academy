@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { config } from "@/config";
 import * as classReviewsRoute from "@/app/api/classes/[id]/reviews/route";
-import * as courseReviewsRoute from "@/app/api/courses/[id]/reviews/route";
+import * as editionReviewsRoute from "@/app/api/editions/[id]/reviews/route";
 import * as myReviewsRoute from "@/app/api/reviews/route";
 import * as notificationsRoute from "@/app/api/notifications/route";
 import * as notificationRoute from "@/app/api/notifications/[id]/route";
@@ -14,10 +14,11 @@ import {
   callRoute,
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
   daysFromNow,
-  enroll,
+  enrollInEditionDoc,
   ObjectId,
   resetDb,
   setSession,
@@ -56,14 +57,17 @@ const expectError = (res, status) => {
 };
 
 describe("reviews", () => {
-  it("course reviews: only paid enrollees; the series listing covers every iteration", async () => {
-    const first = await createCourse(db);
-    await db.collection("courses").updateOne({ _id: first._id }, { $set: { courseSeriesId: first._id } });
-    const second = await createCourse(db, { courseSeriesId: first._id });
-    await enroll(db, user, first, "paid");
-    await enroll(db, other, second, "pending");
-    const review = (course, body = { rating: 4, comment: "Bien" }) =>
-      callRoute(courseReviewsRoute.POST, { method: "POST", body, params: { id: course._id.toString() } });
+  it("edition reviews: only paid enrollees of a finished edition; the list is one page per edition", async () => {
+    const course = await createCourseDoc(db);
+    const first = await createEdition(db, course);
+    const second = await createEdition(db, course);
+    for (const edition of [first, second]) {
+      await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(-3), duration: 60 });
+    }
+    await enrollInEditionDoc(db, user, first, "paid");
+    await enrollInEditionDoc(db, other, second, "pending");
+    const review = (edition, body = { rating: 4, comment: "Bien" }) =>
+      callRoute(editionReviewsRoute.POST, { method: "POST", body, params: { id: edition._id.toString() } });
 
     expectError(await review(first), 401);
     setSession(other);
@@ -77,11 +81,25 @@ describe("reviews", () => {
     await review(first, { rating: 5 });
     expect(await db.collection("reviews").countDocuments()).toBe(1);
 
-    await db.collection("reviews").insertOne({ courseId: second._id, userId: admin._id, rating: 3, createdAt: new Date() });
-    const list = (params, path = "/") => callRoute(courseReviewsRoute.GET, { params, path });
-    expect((await list({ id: second._id.toString() })).json.data).toHaveLength(1);
-    expect((await list({ id: second._id.toString() }, "/?series=true")).json.data).toHaveLength(2);
-    expectError(await list({ id: "nope" }), 400);
+    await db.collection("reviews").insertOne({
+      courseId: course._id,
+      editionId: second._id,
+      userId: other._id,
+      rating: 3,
+      createdAt: new Date(),
+    });
+    const list = (edition) => callRoute(editionReviewsRoute.GET, { params: { id: edition._id.toString() } });
+    const page = await list(second);
+    expect(page.json).toMatchObject({ success: true, data: { page: 1, totalPages: 1, total: 1 } });
+    // Both editions start the same day: the second one is told apart by its suffix
+    expect(page.json.data.items).toEqual([
+      expect.objectContaining({ rating: 3, editionLabel: expect.stringMatching(/^\S+ \d{4} \(2\)$/) }),
+    ]);
+    expect((await list(first)).json.data.items).toEqual([
+      expect.objectContaining({ rating: 5, editionLabel: expect.stringMatching(/^\S+ \d{4}$/) }),
+    ]);
+    expect(page.json.data.items[0]).not.toHaveProperty("editionNumber");
+    expectError(await callRoute(editionReviewsRoute.GET, { params: { id: "nope" } }), 400);
   });
 
   it("class reviews list and my reviews use the same envelope", async () => {

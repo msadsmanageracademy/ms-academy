@@ -10,14 +10,20 @@ import {
   callRoute,
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
-  enroll,
+  enrollInEditionDoc,
   resetDb,
   setSession,
 } from "../helpers.mjs";
 
 const MEET = "https://meet.google.com/test-link";
+
+/** A published edition of a new course. */
+async function newEdition(db, courseOverrides = {}) {
+  return createEdition(db, await createCourseDoc(db, courseOverrides));
+}
 let db, admin, user, other;
 
 beforeEach(async () => {
@@ -72,7 +78,7 @@ describe("admin-only mutations", () => {
     expect((await db.collection("classes").findOne({ _id: cls._id })).participants).toHaveLength(1);
   });
 
-  it.each([["status"], ["courseId"], ["recording_url"], ["resources"]])(
+  it.each([["status"], ["editionId"], ["recording_url"], ["resources"]])(
     "PATCH rejects %s (it has its own endpoint)",
     async (field) => {
       const cls = await createClass(db, { status: "draft" });
@@ -110,13 +116,61 @@ describe("listings", () => {
     expect(pub).not.toHaveProperty("googleMeetLink");
   });
 
+  it("public listing flags only the viewer's own participation", async () => {
+    await createClass(db, { participants: [user._id], createdBy: admin._id });
+    const list = async (session) => {
+      setSession(session);
+      const res = await callRoute(classesRoute.GET, { path: "/api/classes" });
+      expect(res.status).toBe(200);
+      const [pub] = res.json.data;
+      expect(pub.participantsCount).toBe(1);
+      expect(pub).not.toHaveProperty("participants");
+      expect(pub).not.toHaveProperty("createdBy");
+      expect(JSON.stringify(res.json.data)).not.toContain(user._id.toString());
+      return pub;
+    };
+    expect((await list(null)).isParticipant).toBe(false);
+    expect((await list(user)).isParticipant).toBe(true);
+    expect((await list(other)).isParticipant).toBe(false);
+  });
+
   it.each([
     ["/api/classes?showAll=true"],
-    ["/api/classes?courseId=507f1f77bcf86cd799439011"],
+    ["/api/classes?editionId=507f1f77bcf86cd799439011"],
   ])("%s: anonymous 401, user 403", async (path) => {
     expect((await callRoute(classesRoute.GET, { path })).status).toBe(401);
     setSession(user);
     expect((await callRoute(classesRoute.GET, { path })).status).toBe(403);
+  });
+
+  it("the admin listing adds course id, course title and edition date label to edition classes", async () => {
+    const course = await createCourseDoc(db, { title: "Meta Ads" });
+    const first = await createEdition(db, course);
+    const second = await createEdition(db, course);
+    await createClass(db, { status: "enrolled", editionId: first._id, start_date: new Date("2030-09-02T22:00:00Z") });
+    await createClass(db, {
+      status: "enrolled",
+      editionId: second._id,
+      title: "Edition class",
+      start_date: new Date("2030-09-20T22:00:00Z"),
+    });
+    await createClass(db, { title: "Standalone" });
+
+    setSession(admin);
+    const rows = (await callRoute(classesRoute.GET, { path: "/api/classes?showAll=true" })).json.data;
+    const byTitle = Object.fromEntries(rows.map((r) => [r.title, r]));
+    expect(byTitle["Edition class"]).toMatchObject({
+      courseId: course._id.toString(),
+      courseTitle: "Meta Ads",
+      editionLabel: "Septiembre 2030 (2)",
+      editionId: second._id.toString(),
+    });
+    expect(byTitle["Edition class"]).not.toHaveProperty("editionNumber");
+    expect(byTitle.Standalone).not.toHaveProperty("courseId");
+    expect(byTitle.Standalone).not.toHaveProperty("editionLabel");
+
+    const editionRows = (await callRoute(classesRoute.GET, { path: `/api/classes?editionId=${second._id}` })).json.data;
+    expect(editionRows.map((r) => r.title)).toEqual(["Edition class"]);
   });
 
   it("myClasses requires a session", async () => {
@@ -138,24 +192,44 @@ describe("paywall on class detail", () => {
     expect(res.json.data).not.toHaveProperty("participants");
   });
 
-  it("course class: the link only shows up once payment is confirmed", async () => {
-    const course = await createCourse(db);
+  it("edition class: the link only shows up once that edition is paid", async () => {
+    const edition = await newEdition(db, { title: "Meta Ads" });
     const cls = await createClass(db, {
       status: "enrolled",
-      courseId: course._id,
+      editionId: edition._id,
       googleMeetLink: MEET,
       recording_url: "https://example.test/rec",
     });
-    await enroll(db, user, course, "pending");
+    await enrollInEditionDoc(db, user, edition, "pending");
     setSession(user);
     let data = (await getDetail(cls)).json.data;
     expect(data.googleMeetLink).toBeUndefined();
     expect(data.recording_url).toBeUndefined();
+    expect(data).toMatchObject({
+      userEditionPaymentStatus: "pending",
+      courseTitle: "Meta Ads",
+      editionLabel: expect.stringMatching(/^[A-ZÁÉÍÓÚ][a-záéíóú]+ \d{4}$/),
+    });
+    expect(data).not.toHaveProperty("editionNumber");
 
     await db.collection("courseEnrollments").updateOne({ userId: user._id }, { $set: { paymentStatus: "paid" } });
     data = (await getDetail(cls)).json.data;
     expect(data.googleMeetLink).toBe(MEET);
     expect(data.recording_url).toBe("https://example.test/rec");
+    expect(data.userEditionPaymentStatus).toBe("paid");
+  });
+
+  it("edition class: paying another edition of the same course gives no access", async () => {
+    const course = await createCourseDoc(db);
+    const first = await createEdition(db, course);
+    const second = await createEdition(db, course);
+    const cls = await createClass(db, { status: "enrolled", editionId: second._id, googleMeetLink: MEET });
+    await enrollInEditionDoc(db, user, first, "paid");
+    setSession(user);
+    const data = (await getDetail(cls)).json.data;
+    expect(data.googleMeetLink).toBeUndefined();
+    expect(data.userEditionPaymentStatus).toBeNull();
+    expect(data.isParticipant).toBe(false);
   });
 
   it("admin sees everything, including participants", async () => {
@@ -185,8 +259,8 @@ describe("class enrollment", () => {
     setSession(user);
     expect((await signUp(await createClass(db, { status: "draft" }))).status).toBe(400);
     expect((await signUp(await createClass(db, { start_date: new Date(Date.now() - 86400000) }))).status).toBe(400);
-    const course = await createCourse(db);
-    expect((await signUp(await createClass(db, { status: "enrolled", courseId: course._id }))).status).toBe(400);
+    const edition = await newEdition(db);
+    expect((await signUp(await createClass(db, { status: "enrolled", editionId: edition._id }))).status).toBe(400);
     setSession(admin);
     expect((await signUp(await createClass(db))).status).toBe(403);
   });
@@ -220,10 +294,10 @@ describe("class enrollment", () => {
     ]);
   });
 
-  it("course classes are managed from the course", async () => {
-    const course = await createCourse(db);
-    const cls = await createClass(db, { status: "enrolled", courseId: course._id });
-    await enroll(db, user, course, "pending");
+  it("edition classes are managed from the edition", async () => {
+    const edition = await newEdition(db);
+    const cls = await createClass(db, { status: "enrolled", editionId: edition._id });
+    await enrollInEditionDoc(db, user, edition, "pending");
     setSession(admin);
     expect((await leave(cls, user._id)).status).toBe(400);
   });

@@ -4,6 +4,7 @@ import styles from "./styles.module.css";
 import { useRef, useState } from "react";
 
 const STARS = [1, 2, 3, 4, 5];
+const ratingFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
 const starsLabel = (n) => `${n} ${n === 1 ? "estrella" : "estrellas"}`;
 
 const StarRating = ({ value = 0, onChange, readOnly = false, size = "md", labelledBy }) => {
@@ -15,17 +16,26 @@ const StarRating = ({ value = 0, onChange, readOnly = false, size = "md", labell
   const starClass = (star) => `${styles.star} ${display >= star ? styles.filled : styles.empty}`;
 
   if (readOnly) {
+    const rating = Math.min(5, Math.max(0, Number(value) || 0));
     return (
       <span
-        aria-label={`${value} de 5 estrellas`}
+        aria-label={`${ratingFormatter.format(rating)} de 5 estrellas`}
         className={`${styles.stars} ${styles[size]} ${styles.readOnly}`}
         role="img"
       >
-        {STARS.map((star) => (
-          <span key={star} aria-hidden="true" className={starClass(star)}>
-            {glyph(star)}
-          </span>
-        ))}
+        {STARS.map((star) => {
+          const fill = Math.min(1, Math.max(0, rating - (star - 1)));
+          return (
+            <span key={star} aria-hidden="true" className={`${styles.star} ${styles.partial}`}>
+              <span className={styles.empty}>★</span>
+              {fill > 0 && (
+                <span className={`${styles.fill} ${styles.filled}`} style={{ width: `${fill * 100}%` }}>
+                  ★
+                </span>
+              )}
+            </span>
+          );
+        })}
       </span>
     );
   }

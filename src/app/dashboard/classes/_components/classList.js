@@ -1,3 +1,4 @@
+import { editionName } from "@/utils/courseEditions";
 import { getClassStatus } from "@/utils/classStatus";
 
 export const isCompleted = (cls) =>
@@ -13,7 +14,12 @@ export function sortClasses(classes) {
   });
 }
 
-/** Distinct courses present in the list, for the course filter. */
+export const classEditionTitle = (cls) =>
+  cls.courseId ? editionName(cls.courseTitle || "Curso", cls.editionLabel) : null;
+
+export const classEditionHref = (cls) =>
+  cls.courseId && cls.editionId ? `/dashboard/courses/${cls.courseId}/editions/${cls.editionId}` : null;
+
 export function getCourseOptions(classes) {
   return [
     ...new Map(

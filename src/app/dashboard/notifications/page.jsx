@@ -227,15 +227,6 @@ const NotificationsPage = () => {
           </p>
         </div>
         <div className={styles.actions}>
-          <IconLink
-            asButton
-            fill="var(--color-4)"
-            icon="Refresh"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            spinning={refreshing}
-            text="Actualizar"
-          />
           {unreadCount > 0 && (
             <IconLink
               asButton
@@ -254,6 +245,15 @@ const NotificationsPage = () => {
               onClick={handleDeleteAllRead}
             />
           )}
+          <IconLink
+            asButton
+            fill="var(--color-4)"
+            icon="Refresh"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            spinning={refreshing}
+            text="Actualizar"
+          />
         </div>
       </div>
 

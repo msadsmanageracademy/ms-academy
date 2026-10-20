@@ -2,8 +2,8 @@ import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import IconLink from "@/views/components/ui/IconLink";
 import { getClassStatus } from "@/utils/classStatus";
 import styles from "../styles.module.css";
+import { classEditionTitle, isCompleted, priceLabel } from "./classList";
 import { formatDate, formatTime } from "@/utils/dates";
-import { isCompleted, priceLabel } from "./classList";
 
 const ExternalLinks = ({ links }) =>
   links.length === 0 ? (
@@ -20,9 +20,9 @@ const ExternalLinks = ({ links }) =>
     </ul>
   );
 
-/** Meet link, or why it isn't available yet. */
+/** Meet link, or why it isn't available yet (edition classes: only once the edition is paid). */
 const MeetCell = ({ classItem }) => {
-  if (classItem.courseId && classItem.userCoursePaymentStatus !== "paid") {
+  if (classItem.editionId && classItem.userEditionPaymentStatus !== "paid") {
     return <span className={styles.lockedMeet}>🔒 Pago pendiente</span>;
   }
   if (!classItem.googleEventId) return "Próximamente";
@@ -39,16 +39,30 @@ const MeetCell = ({ classItem }) => {
   );
 };
 
+const PAYMENT_LABELS = { paid: "Pagado", pending: "Pago pendiente" };
+
 const StudentClassRow = ({ classItem, review, onReview, onUnenroll }) => {
   const completed = isCompleted(classItem);
+  const edition = classEditionTitle(classItem); // "Curso · Septiembre 2026", or null if standalone
   return (
     <tr>
       <td>{classItem.title}</td>
-      <td>{classItem.courseTitle || "—"}</td>
+      <td>
+        {edition ? (
+          <div className={styles.courseCell}>
+            <span>{edition}</span>
+            {PAYMENT_LABELS[classItem.userEditionPaymentStatus] && (
+              <span className={styles.courseCellEdition}>{PAYMENT_LABELS[classItem.userEditionPaymentStatus]}</span>
+            )}
+          </div>
+        ) : (
+          "—"
+        )}
+      </td>
       <td>{classItem.start_date ? formatDate(classItem.start_date) : "—"}</td>
       <td>{classItem.start_date ? formatTime(classItem.start_date) : "—"}</td>
       <td>{classItem.duration} min</td>
-      <td>{classItem.courseTitle ? "Incluido en el curso" : priceLabel(classItem.price)}</td>
+      <td>{classItem.editionId ? "Incluido en el curso" : priceLabel(classItem.price)}</td>
       <td>
         <ClassStatusBadge
           status={getClassStatus(classItem.start_date, classItem.duration, classItem.status)}
@@ -67,8 +81,7 @@ const StudentClassRow = ({ classItem, review, onReview, onUnenroll }) => {
       </td>
       <td>
         <div className={styles.actionButtons}>
-          {/* Course classes are reviewed through the course */}
-          {!classItem.courseId && (
+          {!classItem.editionId && (
             <IconLink
               asButton
               disabled={!completed}

@@ -74,7 +74,7 @@ export async function createClass(db, overrides = {}) {
     price: 0,
     max_participants: null,
     status: "published",
-    ...(overrides.courseId ? {} : { participants: [] }),
+    ...(overrides.editionId ? {} : { participants: [] }),
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -83,16 +83,16 @@ export async function createClass(db, overrides = {}) {
   return { ...cls, _id: insertedId };
 }
 
-export async function createCourse(db, overrides = {}) {
+// ---------- Factories: courses (product) and editions ----------
+
+/** Course of the editions model: content and status only. */
+export async function createCourseDoc(db, overrides = {}) {
   const now = new Date();
   const course = {
     title: "Test course",
     short_description: "Short description",
     full_description: "Full course description",
-    price: 1000,
-    max_participants: null,
-    status: "published",
-    type: "course",
+    status: "active",
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -101,15 +101,34 @@ export async function createCourse(db, overrides = {}) {
   return { ...course, _id: insertedId };
 }
 
-export async function enroll(db, user, course, paymentStatus = "pending") {
+/** Edition of `course` (published by default). Editions store no number: they are labelled by date. */
+export async function createEdition(db, course, overrides = {}) {
   const now = new Date();
-  await db.collection("courseEnrollments").insertOne({
-    userId: user._id,
+  const edition = {
     courseId: course._id,
-    paymentStatus,
+    price: 1000,
+    max_participants: null,
+    status: "published",
     createdAt: now,
     updatedAt: now,
-  });
+    ...overrides,
+  };
+  const { insertedId } = await db.collection("courseEditions").insertOne(edition);
+  return { ...edition, _id: insertedId };
+}
+
+export async function enrollInEditionDoc(db, user, edition, paymentStatus = "pending") {
+  const now = new Date();
+  const enrollment = {
+    userId: user._id,
+    editionId: edition._id,
+    paymentStatus,
+    ...(paymentStatus === "paid" ? { paidAt: now } : {}),
+    createdAt: now,
+    updatedAt: now,
+  };
+  const { insertedId } = await db.collection("courseEnrollments").insertOne(enrollment);
+  return { ...enrollment, _id: insertedId };
 }
 
 export { daysFromNow, ObjectId };

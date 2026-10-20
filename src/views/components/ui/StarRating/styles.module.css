@@ -45,3 +45,18 @@
 .stars:not(.readOnly) .star:hover {
   transform: scale(1.15);
 }
+.partial {
+  display: inline-block;
+  position: relative;
+}
+
+.partial > :first-child {
+  color: #d4d4d4;
+}
+
+.fill {
+  inset: 0 auto 0 0;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}

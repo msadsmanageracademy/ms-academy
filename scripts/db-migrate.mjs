@@ -3,7 +3,7 @@
 // Reads MONGODB_URI / MONGODB_DB_NAME from the environment or from .env.local.
 import { existsSync, readFileSync } from "fs";
 import { MongoClient } from "mongodb";
-import { ensureIndexes } from "../src/lib/db/indexes.mjs";
+import { dropObsoleteIndexes, ensureIndexes } from "../src/lib/db/indexes.mjs";
 import { runDataFixes } from "../src/lib/db/dataFixes.mjs";
 
 if (existsSync(".env.local")) {
@@ -23,6 +23,10 @@ const db = client.db(process.env.MONGODB_DB_NAME);
 let failed = false;
 
 try {
+  // Before creating the new ones: an old unique index could reject the new documents
+  for (const { collection, name } of await dropObsoleteIndexes(db)) {
+    console.log(`✓ dropped obsolete index ${collection}.${name}`);
+  }
   for (const { collection, name, key, error } of await ensureIndexes(db)) {
     if (error) {
       failed = true;

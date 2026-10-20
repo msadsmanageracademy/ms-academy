@@ -7,13 +7,16 @@ import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import FormField from "@/views/components/ui/FormField";
 import IconLink from "@/views/components/ui/IconLink";
-import LinkCourseModal from "@/app/dashboard/classes/_components/LinkCourseModal";
+import LinkEditionModal from "@/app/dashboard/classes/_components/LinkEditionModal";
 import Modal from "@/views/components/ui/Modal";
 import Pagination from "@/views/components/ui/Pagination";
 import RegisterForm from "@/views/sections/pages/register/RegisterForm";
 import LoginForm from "@/views/sections/pages/login/Credentials/components/LoginForm";
+import PublicCourseView from "@/app/content/courses/[courseId]/_components/PublicCourseView";
 import ReviewModal from "@/views/components/ui/ReviewModal";
 import StarRating from "@/views/components/ui/StarRating";
+
+vi.mock("@/server/actions/courses", () => ({ enrollInEditionAction: vi.fn() }));
 
 describe("StarRating", () => {
   const Controlled = ({ initial = 0, onChange }) => {
@@ -33,6 +36,13 @@ describe("StarRating", () => {
     const { container } = render(<StarRating value={4} readOnly />);
     expect(screen.getByRole("img", { name: "4 de 5 estrellas" })).toBeTruthy();
     await expectNoA11yViolations(container);
+  });
+
+  it("read-only: averages fill the stars continuously", () => {
+    const { container } = render(<StarRating value={4.75} readOnly />);
+    expect(screen.getByRole("img", { name: "4,75 de 5 estrellas" })).toBeTruthy();
+    const fills = [...container.querySelectorAll("[style]")].map((el) => el.style.width);
+    expect(fills).toEqual(["100%", "100%", "100%", "100%", "75%"]);
   });
 
   it("editable: a radio group operable with the keyboard", async () => {
@@ -98,16 +108,17 @@ describe("Modal", () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  it("LinkCourseModal and ReviewModal pass axe and label their controls", async () => {
+  it("LinkEditionModal and ReviewModal pass axe and label their controls", async () => {
     const { container, unmount } = render(
-      <LinkCourseModal
+      <LinkEditionModal
         classTitle="Clase"
-        courses={[{ _id: "c1", title: "Curso" }]}
+        editions={[{ _id: "e1", courseId: "c1", courseTitle: "Curso", adminNumber: 1, label: "Sin fecha", status: "draft" }]}
         onCancel={() => {}}
         onConfirm={() => {}}
       />,
     );
     expect(screen.getByRole("combobox", { name: "Curso" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Edición" })).toBeTruthy();
     await expectNoA11yViolations(container);
     unmount();
 
@@ -117,6 +128,66 @@ describe("Modal", () => {
     expect(screen.getByRole("radiogroup", { name: "Puntuación" })).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Comentario (opcional)" })).toBeTruthy();
     await expectNoA11yViolations(review.container);
+    review.unmount();
+
+    // Reviewing an edition: same form, editing the existing review
+    const edition = render(
+      <ReviewModal
+        isOpen
+        entityId="e2"
+        entityTitle="Meta Ads · Septiembre 2030"
+        entityType="edition"
+        existingReview={{ rating: 4, comment: "Muy bueno" }}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByRole("dialog", { name: "Editar reseña" })).toBeTruthy();
+    expect(screen.getByText("Meta Ads · Septiembre 2030")).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /4/ }).getAttribute("aria-checked")).toBe("true");
+    await expectNoA11yViolations(edition.container);
+  });
+});
+
+describe("public course page", () => {
+  const course = {
+    _id: "k1",
+    title: "Meta Ads",
+    short_description: "Anuncios",
+    full_description: "Todo sobre Meta Ads",
+    status: "active",
+    avgRating: 5,
+    reviewCount: 1,
+    openEdition: {
+      _id: "e2",
+      label: "Septiembre 2030",
+      price: 40000,
+      max_participants: null,
+      start_date: "2030-09-17T22:00:00.000Z",
+      end_date: "2030-10-01T22:00:00.000Z",
+      amount_of_classes: 3,
+      total_duration: 180,
+      enrollmentCount: 0,
+      timeStatus: "upcoming",
+      userPaymentStatus: "pending",
+    },
+  };
+  const reviews = {
+    items: [{ _id: "r1", rating: 5, comment: "Excelente", firstName: "Ana", createdAt: "2030-01-01T00:00:00.000Z" }],
+    page: 1,
+    totalPages: 3,
+    total: 21,
+  };
+
+  it("one h1, a named region per section and the edition data as a description list", async () => {
+    const { container } = render(<PublicCourseView course={course} reviews={reviews} viewerRole="user" />);
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Meta Ads"]);
+    for (const name of ["Resumen", "Descripción completa", "Próxima edición: Septiembre 2030", "Pago pendiente"]) {
+      expect(screen.getByRole("region", { name })).toBeTruthy();
+    }
+    expect(screen.getByRole("region", { name: /^Reseñas/ })).toBeTruthy();
+    expect(screen.getAllByRole("term").map((t) => t.textContent)).toContain("Precio");
+    expect(screen.getByRole("navigation", { name: "Paginación de reseñas" })).toBeTruthy();
+    await expectNoA11yViolations(container);
   });
 });
 

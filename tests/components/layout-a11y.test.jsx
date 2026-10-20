@@ -73,7 +73,7 @@ describe("dashboard rows", () => {
         />,
       ),
     );
-    for (const name of ["Ver detalles", "Vincular a curso", "Publicar", "Eliminar", "Agregar"]) {
+    for (const name of ["Ver detalles", "Vincular a una edición", "Publicar", "Eliminar", "Agregar"]) {
       expect(screen.getByRole(name === "Ver detalles" ? "link" : "button", { name })).toBeTruthy();
     }
     await expectNoA11yViolations(container);

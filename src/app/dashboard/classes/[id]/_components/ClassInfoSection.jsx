@@ -1,6 +1,7 @@
 import IconLink from "@/views/components/ui/IconLink";
 import StatusBadge from "@/views/components/ui/StatusBadge";
 import styles from "../styles.module.css";
+import { editionName } from "@/utils/courseEditions";
 import { es } from "date-fns/locale";
 import { formatDateAtTime } from "@/utils/dates";
 import { formatDistanceToNow } from "date-fns";
@@ -14,7 +15,7 @@ const InfoItem = ({ label, children }) => (
   </div>
 );
 
-const ClassInfoSection = ({ classData, courseTitle, onEdit }) => (
+const ClassInfoSection = ({ classData, edition, onEdit }) => (
   <section className={styles.section}>
     <div className={styles.sectionHeader}>
       <h2>Información de la Clase</h2>
@@ -65,16 +66,18 @@ const ClassInfoSection = ({ classData, courseTitle, onEdit }) => (
       </InfoItem>
       <InfoItem label="Curso">
         <span className={styles.value}>
-          {courseTitle ? (
+          {edition ? (
             <span className={styles.linkedValue}>
-              {courseTitle}
+              {editionName(edition.courseTitle, edition.label)}
               <IconLink
                 fill="var(--color-4)"
-                href={`/dashboard/courses/${classData.courseId}`}
+                href={`/dashboard/courses/${edition.courseId}/editions/${edition._id}`}
                 icon="Eye"
-                title="Ver curso"
+                title="Ver edición"
               />
             </span>
+          ) : classData.editionId ? (
+            "Edición no disponible"
           ) : (
             "Clase independiente"
           )}

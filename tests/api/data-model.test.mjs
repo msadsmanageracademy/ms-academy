@@ -1,19 +1,21 @@
-// 2.3: courseEnrollments is the single source of course participants.
+// courseEnrollments (per edition) is the single source of edition class participants.
+// course-editions: edition indexes, removal of obsolete indexes and the db:migrate data fixes.
 import { beforeEach, describe, expect, it } from "vitest";
 import * as classesRoute from "@/app/api/classes/route";
 import * as classRoute from "@/app/api/classes/[id]/route";
 import * as classReviewsRoute from "@/app/api/classes/[id]/reviews/route";
-import * as coursesRoute from "@/app/api/courses/route";
-import * as courseRoute from "@/app/api/courses/[id]/route";
+import { getAdminCourse, getCourseDetail, listAdminCourses } from "@/server/courses/service";
 import { runDataFixes } from "@/lib/db/dataFixes.mjs";
+import { OBSOLETE_INDEXES, dropObsoleteIndexes, ensureIndexes } from "@/lib/db/indexes.mjs";
 import {
   callRoute,
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
   daysFromNow,
-  enroll,
+  enrollInEditionDoc,
   resetDb,
   setSession,
 } from "../helpers.mjs";
@@ -28,12 +30,12 @@ beforeEach(async () => {
   setSession(null);
 });
 
-describe("course classes derive their participants from the enrollments", () => {
+describe("edition classes derive their participants from the edition enrollments", () => {
   it("admin detail lists the enrollees; students only get the count", async () => {
-    const course = await createCourse(db);
-    const cls = await createClass(db, { status: "enrolled", courseId: course._id });
-    await enroll(db, user, course, "paid");
-    await enroll(db, other, course, "pending");
+    const edition = await createEdition(db, await createCourseDoc(db));
+    const cls = await createClass(db, { status: "enrolled", editionId: edition._id });
+    await enrollInEditionDoc(db, user, edition, "paid");
+    await enrollInEditionDoc(db, other, edition, "pending");
 
     setSession(admin);
     let data = (await callRoute(classRoute.GET, { params: { id: cls._id.toString() } })).json.data;
@@ -41,25 +43,29 @@ describe("course classes derive their participants from the enrollments", () => 
 
     setSession(other);
     data = (await callRoute(classRoute.GET, { params: { id: cls._id.toString() } })).json.data;
-    expect(data).toMatchObject({ participantsCount: 2, isParticipant: true, userCoursePaymentStatus: "pending" });
+    expect(data).toMatchObject({ participantsCount: 2, isParticipant: true, userEditionPaymentStatus: "pending" });
     expect(data).not.toHaveProperty("participants");
   });
 
-  it("admin listings count enrollees for course classes and stored participants otherwise", async () => {
-    const course = await createCourse(db);
-    await createClass(db, { status: "enrolled", courseId: course._id, title: "Course class" });
+  it("admin listings count enrollees for edition classes and stored participants otherwise", async () => {
+    const course = await createCourseDoc(db);
+    const edition = await createEdition(db, course);
+    const otherEdition = await createEdition(db, course);
+    await createClass(db, { status: "enrolled", editionId: edition._id, title: "Edition class" });
     await createClass(db, { participants: [other._id], title: "Standalone" });
-    await enroll(db, user, course);
-    await enroll(db, other, course);
+    await enrollInEditionDoc(db, user, edition);
+    await enrollInEditionDoc(db, other, edition);
+    // Enrollees of another edition of the same course do not count
+    await enrollInEditionDoc(db, admin, otherEdition);
 
     setSession(admin);
     const rows = (await callRoute(classesRoute.GET, { path: "/api/classes?showAll=true" })).json.data;
     const count = (title) => rows.find((r) => r.title === title).participantsCount;
-    expect(count("Course class")).toBe(2);
+    expect(count("Edition class")).toBe(2);
     expect(count("Standalone")).toBe(1);
 
-    const courseRows = (await callRoute(classesRoute.GET, { path: `/api/classes?courseId=${course._id}` })).json.data;
-    expect(courseRows[0].participantsCount).toBe(2);
+    const editionRows = (await callRoute(classesRoute.GET, { path: `/api/classes?editionId=${edition._id}` })).json.data;
+    expect(editionRows[0].participantsCount).toBe(2);
   });
 
   it("myClasses never exposes other students' ids", async () => {
@@ -72,24 +78,25 @@ describe("course classes derive their participants from the enrollments", () => 
   });
 
   it("course responses never include a legacy participants field", async () => {
-    const course = await createCourse(db, { participants: [user._id] });
-    setSession(admin);
-    const [row] = (await callRoute(coursesRoute.GET, { path: "/api/courses?showAll=true" })).json.data;
+    const course = await createCourseDoc(db, { participants: [user._id] });
+    await createEdition(db, course);
+    const actor = { id: admin._id.toString(), role: "admin" };
+    const [row] = await listAdminCourses(actor);
     expect(row).not.toHaveProperty("participants");
-    const detail = (await callRoute(courseRoute.GET, { params: { id: course._id.toString() } })).json.data;
-    expect(detail).not.toHaveProperty("participants");
+    expect(await getAdminCourse(actor, course._id.toString())).not.toHaveProperty("participants");
+    expect(await getCourseDetail(actor, course._id.toString())).not.toHaveProperty("participants");
   });
 
-  it("only paid enrollees can review an ended course class", async () => {
-    const course = await createCourse(db);
+  it("only paid enrollees can review an ended edition class", async () => {
+    const edition = await createEdition(db, await createCourseDoc(db));
     const cls = await createClass(db, {
       status: "enrolled",
-      courseId: course._id,
+      editionId: edition._id,
       start_date: daysFromNow(-2),
       duration: 60,
     });
-    await enroll(db, user, course, "paid");
-    await enroll(db, other, course, "pending");
+    await enrollInEditionDoc(db, user, edition, "paid");
+    await enrollInEditionDoc(db, other, edition, "pending");
     const review = () =>
       callRoute(classReviewsRoute.POST, { method: "POST", body: { rating: 5 }, params: { id: cls._id.toString() } });
 
@@ -98,48 +105,148 @@ describe("course classes derive their participants from the enrollments", () => 
     setSession(user);
     expect((await review()).status).toBe(200);
   });
+  // Deleting a course with enrollments is now refused (archive instead): see course-service.test.mjs
+});
 
-  it("deleting a course removes its enrollments and notifies the enrollees", async () => {
-    const course = await createCourse(db, { status: "draft" });
-    const cls = await createClass(db, { status: "enrolled", courseId: course._id, title: "Clase C" });
-    await enroll(db, user, course, "paid");
+describe("course editions indexes", () => {
+  it("allows one enrollment per user and edition, and the same user in two editions", async () => {
+    const course = await createCourseDoc(db);
+    const first = await createEdition(db, course);
+    const second = await createEdition(db, course);
+    await enrollInEditionDoc(db, user, first);
+    await enrollInEditionDoc(db, other, first, "paid");
+    await expect(enrollInEditionDoc(db, user, first)).rejects.toMatchObject({ code: 11000 });
+    await enrollInEditionDoc(db, user, second);
+    expect(await db.collection("courseEnrollments").countDocuments({ editionId: first._id })).toBe(2);
+    expect(await db.collection("courseEnrollments").countDocuments({ userId: user._id })).toBe(2);
+  });
 
-    setSession(admin);
-    expect((await callRoute(courseRoute.DELETE, { method: "DELETE", params: { id: course._id.toString() } })).status).toBe(200);
-    expect(await db.collection("courseEnrollments").countDocuments()).toBe(0);
-    const saved = await db.collection("classes").findOne({ _id: cls._id });
-    expect(saved).toMatchObject({ status: "draft", participants: [] });
-    expect(saved.courseId).toBeUndefined();
-    const [notification] = await db.collection("notifications").find({ userId: user._id }).toArray();
-    expect(notification.relatedId.equals(cls._id)).toBe(true);
+  it("no longer defines the per-course indexes and lists them as obsolete", async () => {
+    const names = async (collection) => (await db.collection(collection).indexes()).map((i) => i.name);
+    expect(await names("courseEnrollments")).not.toContain("user_course_unique");
+    expect(await names("courseEnrollments")).not.toContain("course_payment");
+    expect(await names("classes")).not.toContain("course_start");
+    expect(await names("reviews")).not.toContain("user_course_review");
+    expect(await names("courseEditions")).not.toContain("course_number_unique");
+    expect(OBSOLETE_INDEXES).toMatchObject({
+      courseEnrollments: expect.arrayContaining(["user_course_unique", "course_payment"]),
+      classes: ["course_start"],
+      reviews: ["user_course_review"],
+      courseEditions: ["course_number_unique"],
+    });
+
+    // A database migrated from the per-course model loses them
+    await db.collection("courseEnrollments").createIndex({ userId: 1, courseId: 1 }, { unique: true, name: "user_course_unique" });
+    await db.collection("classes").createIndex({ courseId: 1, start_date: 1 }, { name: "course_start" });
+    await db.collection("reviews").createIndex(
+      { userId: 1, courseId: 1 },
+      { unique: true, name: "user_course_review", partialFilterExpression: { courseId: { $exists: true } } },
+    );
+    // ...and a database from the numbered-editions model loses the unique edition number
+    await db.collection("courseEditions").createIndex({ courseId: 1, number: 1 }, { unique: true, name: "course_number_unique" });
+    const dropped = await dropObsoleteIndexes(db);
+    expect(dropped).toEqual(
+      expect.arrayContaining([
+        { collection: "courseEnrollments", name: "user_course_unique" },
+        { collection: "classes", name: "course_start" },
+        { collection: "reviews", name: "user_course_review" },
+        { collection: "courseEditions", name: "course_number_unique" },
+      ]),
+    );
+    expect(await names("courseEditions")).not.toContain("course_number_unique");
+    expect(await names("courseEnrollments")).not.toContain("user_course_unique");
+    expect(await names("reviews")).not.toContain("user_course_review");
+  });
+
+  it("lets a student review two editions of the same course", async () => {
+    const course = await createCourseDoc(db);
+    const first = await createEdition(db, course);
+    const second = await createEdition(db, course);
+    const now = new Date();
+    const review = (edition) => ({ userId: user._id, courseId: course._id, editionId: edition._id, rating: 5, createdAt: now });
+    await db.collection("reviews").insertMany([review(first), review(second)]);
+    await expect(db.collection("reviews").insertOne(review(first))).rejects.toMatchObject({ code: 11000 });
+    expect(await db.collection("reviews").countDocuments({ userId: user._id, courseId: course._id })).toBe(2);
+  });
+
+  it("creates the edition indexes", async () => {
+    const names = async (collection) => (await db.collection(collection).indexes()).map((i) => i.name);
+    expect(await names("courseEditions")).toContain("course_created");
+    expect(await names("courseEditions")).not.toContain("course_number_unique");
+    expect(await names("courseEnrollments")).toEqual(expect.arrayContaining(["user_edition_unique", "edition_payment"]));
+    expect(await names("classes")).toContain("edition_start");
+    expect(await names("reviews")).toEqual(expect.arrayContaining(["user_edition_review", "course_reviews"]));
+
+    const index = async (collection, name) => (await db.collection(collection).indexes()).find((i) => i.name === name);
+    const created = await index("courseEditions", "course_created");
+    expect(created.key).toEqual({ courseId: 1, createdAt: 1 });
+    expect(created).not.toHaveProperty("unique");
+    expect(await index("courseEnrollments", "user_edition_unique")).toMatchObject({
+      key: { userId: 1, editionId: 1 },
+      unique: true,
+    });
+    expect(await index("reviews", "user_edition_review")).toMatchObject({
+      key: { userId: 1, editionId: 1 },
+      unique: true,
+      partialFilterExpression: { editionId: { $exists: true } },
+    });
+  });
+});
+
+describe("dropObsoleteIndexes", () => {
+  const obsolete = { courseEnrollments: ["legacy_unique"], classes: ["legacy_start"], missingCollection: ["x"] };
+
+  it("drops the listed indexes and is idempotent", async () => {
+    await db.collection("courseEnrollments").createIndex({ userId: 1, legacy: 1 }, { unique: true, name: "legacy_unique" });
+    await db.collection("classes").createIndex({ legacy: 1 }, { name: "legacy_start" });
+
+    expect(await dropObsoleteIndexes(db, obsolete)).toEqual([
+      { collection: "courseEnrollments", name: "legacy_unique" },
+      { collection: "classes", name: "legacy_start" },
+    ]);
+    const names = (await db.collection("courseEnrollments").indexes()).map((i) => i.name);
+    expect(names).not.toContain("legacy_unique");
+    // The app indexes are kept
+    expect(names).toContain("user_edition_unique");
+
+    // Second run (indexes and collection already gone): nothing to drop, no error
+    expect(await dropObsoleteIndexes(db, obsolete)).toEqual([]);
+  });
+
+  it("is a no-op on a database without the old indexes, then ensureIndexes still succeeds", async () => {
+    await db.dropDatabase();
+    expect(await dropObsoleteIndexes(db, obsolete)).toEqual([]);
+    expect(await dropObsoleteIndexes(db)).toEqual([]);
+    expect((await ensureIndexes(db)).filter((r) => r.error)).toEqual([]);
   });
 });
 
 describe("db:migrate data fixes", () => {
-  it("backfills paid enrollments, removes the copies and is idempotent", async () => {
-    const course = await createCourse(db, { participants: [user._id, other._id] });
-    await enroll(db, other, course, "pending");
-    const courseClass = await createClass(db, { status: "enrolled", courseId: course._id, participants: [user._id] });
-    const standalone = await createClass(db, { participants: [user._id] });
+  it("removes plaintext Calendar tokens, renames old notification types and is idempotent", async () => {
+    const legacy = await createAdmin(db, { googleCalendarTokens: { access_token: "plain" } });
+    const migrated = await createAdmin(db, { googleCalendarTokens: { access_token: "plain" }, googleCalendarTokensEnc: "enc" });
+    const now = new Date();
+    await db.collection("notifications").insertMany([
+      { userId: user._id, type: "class_cancelled", createdAt: now },
+      { userId: user._id, type: "class.cancelled", createdAt: now },
+    ]);
 
-    const byDescription = Object.fromEntries(
-      (await runDataFixes(db)).map(({ description, affected }) => [description, affected]),
-    );
-    expect(byDescription["Paid enrollments created for legacy course participants without one"]).toBe(1);
-    expect(byDescription["Removed courses.participants (enrollments are the source)"]).toBe(1);
-    expect(byDescription["Removed participants copied into course classes"]).toBe(1);
-
-    const enrollments = await db.collection("courseEnrollments").find({ courseId: course._id }).toArray();
-    const status = (u) => enrollments.find((e) => e.userId.equals(u._id)).paymentStatus;
-    expect(status(user)).toBe("paid");
-    // An existing enrollment is left as it was
-    expect(status(other)).toBe("pending");
-
-    expect((await db.collection("courses").findOne({ _id: course._id })).participants).toBeUndefined();
-    expect((await db.collection("classes").findOne({ _id: courseClass._id })).participants).toBeUndefined();
-    expect((await db.collection("classes").findOne({ _id: standalone._id })).participants).toHaveLength(1);
+    expect(await runDataFixes(db)).toEqual([
+      { description: "Removed plaintext Google Calendar tokens (Calendar must be reconnected)", affected: 2 },
+      { description: "Notifications with type 'class_cancelled' → 'class.cancelled'", affected: 1 },
+    ]);
+    const after = (u) => db.collection("users").findOne({ _id: u._id });
+    expect(await after(legacy)).toMatchObject({ hasAuthorizedCalendar: false });
+    expect(await after(migrated)).toMatchObject({ hasAuthorizedCalendar: true, googleCalendarTokensEnc: "enc" });
+    expect(await db.collection("users").countDocuments({ googleCalendarTokens: { $exists: true } })).toBe(0);
+    expect(await db.collection("notifications").countDocuments({ type: "class.cancelled" })).toBe(2);
 
     const second = await runDataFixes(db);
     expect(second.every(({ affected }) => affected === 0)).toBe(true);
+  });
+
+  it("no longer runs the per-course participants fixes", async () => {
+    const descriptions = (await runDataFixes(db)).map((r) => r.description).join("\n");
+    expect(descriptions).not.toMatch(/participants/i);
   });
 });

@@ -51,6 +51,11 @@
   margin-left: auto;
 }
 
+.edition {
+  color: var(--color-5);
+  font-size: 0.8rem;
+}
+
 .comment {
   color: var(--color-6);
   font-size: 0.9rem;

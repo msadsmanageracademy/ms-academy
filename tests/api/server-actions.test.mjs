@@ -5,22 +5,31 @@ import {
   createClassCalendarEventAction,
   enrollInClassAction,
   leaveClassAction,
+  linkClassToEditionAction,
   saveClassRecordingAction,
   setClassStatusAction,
+  unlinkClassFromEditionAction,
 } from "@/server/actions/classes";
 import {
-  cancelCourseEnrollmentAction,
-  cloneCourseAction,
-  confirmCoursePaymentAction,
-  enrollInCourseAction,
+  cancelEditionEnrollmentAction,
+  confirmEditionPaymentAction,
+  createEditionAction,
+  deleteCourseAction,
+  deleteEditionAction,
+  enrollInEditionAction,
+  removeEditionEnrollmentAction,
+  setCourseStatusAction,
+  setEditionStatusAction,
 } from "@/server/actions/courses";
 import { actionResult } from "@/server/actions/result";
 import {
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
-  enroll,
+  daysFromNow,
+  enrollInEditionDoc,
   resetDb,
   setSession,
 } from "../helpers.mjs";
@@ -82,8 +91,8 @@ describe("class actions", () => {
   });
 
   it("saving an empty recording URL removes it", async () => {
-    const course = await createCourse(db);
-    const cls = await createClass(db, { status: "enrolled", courseId: course._id, recording_url: "https://example.test/r" });
+    const edition = await createEdition(db, await createCourseDoc(db));
+    const cls = await createClass(db, { status: "enrolled", editionId: edition._id, recording_url: "https://example.test/r" });
     setSession(admin);
     expect(await saveClassRecordingAction(cls._id.toString(), "  ")).toMatchObject({ ok: true, message: "Grabación eliminada" });
     expect((await db.collection("classes").findOne({ _id: cls._id })).recording_url).toBeUndefined();
@@ -97,28 +106,114 @@ describe("class actions", () => {
   });
 });
 
-describe("course actions", () => {
-  it("pre-enroll, admin confirms the payment, a paid enrollment can't be cancelled", async () => {
-    const course = await createCourse(db);
-    const courseId = course._id.toString();
+describe("class ↔ edition actions", () => {
+  it("link and unlink a draft class (admin only), with plain data", async () => {
+    const edition = await createEdition(db, await createCourseDoc(db), { status: "draft" });
+    const cls = await createClass(db, { status: "draft", createdBy: admin._id });
+    const classId = cls._id.toString();
+    const editionId = edition._id.toString();
+
     setSession(user);
-    expect(await enrollInCourseAction(courseId)).toMatchObject({ ok: true, data: { paymentStatus: "pending" } });
-    expect(await confirmCoursePaymentAction(courseId, user._id.toString())).toMatchObject({ ok: false, status: 403 });
+    expect(await linkClassToEditionAction(classId, editionId)).toMatchObject({ ok: false, status: 403 });
+    setSession(admin);
+    expect(await linkClassToEditionAction(classId, "nope")).toMatchObject({ ok: false, status: 400 });
+    expect(await linkClassToEditionAction(classId, editionId)).toMatchObject({
+      ok: true,
+      message: "Clase vinculada a la edición",
+      data: { _id: classId, editionId, status: "enrolled" },
+    });
+    expect(await unlinkClassFromEditionAction(classId)).toMatchObject({
+      ok: true,
+      message: "Clase desvinculada de la edición",
+      data: { status: "draft" },
+    });
+    expect((await db.collection("classes").findOne({ _id: cls._id })).editionId).toBeUndefined();
+  });
+});
+
+describe("course and edition actions", () => {
+  /** Published edition with one class in a week. */
+  async function openEdition(course) {
+    const edition = await createEdition(db, course);
+    await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(7) });
+    return edition;
+  }
+
+  it("pre-enroll, admin confirms the payment, a paid enrollment can't be cancelled", async () => {
+    const edition = await openEdition(await createCourseDoc(db));
+    const editionId = edition._id.toString();
+    setSession(user);
+    expect(await enrollInEditionAction(editionId)).toMatchObject({ ok: true, data: { paymentStatus: "pending" } });
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    expect(await confirmEditionPaymentAction(editionId, user._id.toString())).toMatchObject({ ok: false, status: 403 });
 
     setSession(admin);
-    expect(await confirmCoursePaymentAction(courseId, user._id.toString())).toMatchObject({ ok: true });
+    expect(await confirmEditionPaymentAction(editionId, user._id.toString())).toMatchObject({
+      ok: true,
+      data: { paymentStatus: "paid" },
+    });
 
     setSession(user);
-    expect(await cancelCourseEnrollmentAction(courseId)).toMatchObject({ ok: false, status: 403 });
+    expect(await cancelEditionEnrollmentAction(editionId)).toMatchObject({ ok: false, status: 403 });
   });
 
-  it("clone returns the new id as a string", async () => {
-    const course = await createCourse(db);
-    await enroll(db, user, course);
+  it("the student cancels a pending enrollment; the admin removes another one", async () => {
+    const edition = await openEdition(await createCourseDoc(db));
+    const editionId = edition._id.toString();
+    const other = await createUser(db);
+    await enrollInEditionDoc(db, user, edition, "pending");
+    await enrollInEditionDoc(db, other, edition, "pending");
+
+    setSession(user);
+    expect(await removeEditionEnrollmentAction(editionId, other._id.toString())).toMatchObject({ ok: false, status: 403 });
+    expect(await cancelEditionEnrollmentAction(editionId)).toMatchObject({ ok: true, message: "Inscripción cancelada con éxito" });
     setSession(admin);
-    const res = await cloneCourseAction(course._id.toString());
-    expect(res.ok).toBe(true);
+    expect(await removeEditionEnrollmentAction(editionId, other._id.toString())).toMatchObject({
+      ok: true,
+      message: "Participante removido con éxito",
+    });
+    expect(await db.collection("courseEnrollments").countDocuments()).toBe(0);
+  });
+
+  it("createEdition returns the new id as a string (and no number)", async () => {
+    const course = await createCourseDoc(db);
+    await openEdition(course);
+    setSession(user);
+    expect(await createEditionAction(course._id.toString())).toMatchObject({ ok: false, status: 403 });
+    setSession(admin);
+    const res = await createEditionAction(course._id.toString());
+    expect(res).toMatchObject({ ok: true, message: "Edición creada con éxito", data: { _id: expect.any(String) } });
+    expect(res.data).not.toHaveProperty("number");
     expect(typeof res.data._id).toBe("string");
-    expect(await db.collection("courses").countDocuments()).toBe(2);
+    expect(await db.collection("courseEditions").countDocuments({ courseId: course._id })).toBe(2);
+  });
+
+  it("edition status and deletion follow the service rules", async () => {
+    const course = await createCourseDoc(db);
+    const published = await openEdition(course);
+    const draft = await createEdition(db, course, { status: "draft" });
+    setSession(admin);
+    expect(await setEditionStatusAction(draft._id.toString(), "published")).toMatchObject({ ok: false, status: 400 });
+    expect(await deleteEditionAction(published._id.toString())).toMatchObject({ ok: false, status: 400 });
+    expect(await setEditionStatusAction(published._id.toString(), "draft")).toMatchObject({
+      ok: true,
+      data: { _id: published._id.toString(), status: "draft" },
+    });
+    expect(await deleteEditionAction(draft._id.toString())).toMatchObject({ ok: true, message: "Edición eliminada con éxito" });
+    expect(await db.collection("courseEditions").countDocuments()).toBe(1);
+  });
+
+  it("course status and deletion", async () => {
+    const course = await createCourseDoc(db);
+    await createEdition(db, course, { status: "draft" });
+    const courseId = course._id.toString();
+    setSession(user);
+    expect(await setCourseStatusAction(courseId, "archived")).toMatchObject({ ok: false, status: 403 });
+    setSession(admin);
+    expect(await setCourseStatusAction(courseId, "draft")).toMatchObject({ ok: false, status: 400 });
+    expect(await setCourseStatusAction(courseId, "archived")).toMatchObject({ ok: true, data: { status: "archived" } });
+    expect(await deleteCourseAction(courseId)).toMatchObject({ ok: true, message: "Curso eliminado con éxito" });
+    expect(await db.collection("courses").countDocuments()).toBe(0);
+    expect(await db.collection("courseEditions").countDocuments()).toBe(0);
   });
 });

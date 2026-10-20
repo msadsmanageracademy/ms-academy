@@ -3,20 +3,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Collection } from "mongodb";
 import * as classesRoute from "@/app/api/classes/route";
 import * as courseRoute from "@/app/api/courses/[id]/route";
-import * as cloneRoute from "@/app/api/courses/[id]/clone/route";
-import * as enrollmentRoute from "@/app/api/courses/[id]/enrollments/[userId]/route";
+import { confirmEditionPayment, removeEditionEnrollment } from "@/server/courses/enrollments";
+import { linkClassToEdition } from "@/server/classes/service";
 import { withTransaction } from "@/server/transactions";
 import {
   callRoute,
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
-  enroll,
+  enrollInEditionDoc,
   ObjectId,
   resetDb,
   setSession,
 } from "../helpers.mjs";
+
+const actorOf = (u) => ({ id: u._id.toString(), role: u.role, email: u.email });
 
 let db, admin, user;
 
@@ -84,26 +87,26 @@ describe("withTransaction", () => {
 
 describe("conditional writes under concurrency", () => {
   it("confirming a payment while the student cancels: exactly one of them wins", async () => {
-    const course = await createCourse(db);
-    await enroll(db, user, course, "pending");
-    const params = { id: course._id.toString(), userId: user._id.toString() };
+    const edition = await createEdition(db, await createCourseDoc(db));
+    await enrollInEditionDoc(db, user, edition, "pending");
+    const id = edition._id.toString();
 
-    setSession(admin);
-    const confirm = callRoute(enrollmentRoute.PATCH, { method: "PATCH", body: { paymentStatus: "paid" }, params });
-    setSession(user);
-    const cancel = callRoute(enrollmentRoute.DELETE, { method: "DELETE", params });
-    const statuses = (await Promise.all([confirm, cancel])).map((r) => r.status);
+    const results = await Promise.allSettled([
+      confirmEditionPayment(actorOf(admin), id, user._id.toString(), { paymentStatus: "paid" }),
+      removeEditionEnrollment(actorOf(user), id, user._id.toString()),
+    ]);
 
-    expect(statuses.filter((s) => s === 200)).toHaveLength(1);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     const left = await db.collection("courseEnrollments").find().toArray();
     // Either paid and kept, or cancelled and gone: never "cancelled" but paid
-    if (statuses[0] === 200) expect(left).toMatchObject([{ paymentStatus: "paid" }]);
+    if (results[0].status === "fulfilled") expect(left).toMatchObject([{ paymentStatus: "paid" }]);
     else expect(left).toEqual([]);
   });
 });
 
+// Creating an edition from the previous one is covered in course-editions.test.mjs
 describe("rollback of real operations", () => {
-  it("creating a class linked to a missing course creates nothing", async () => {
+  it("creating a class linked to a missing edition creates nothing", async () => {
     const res = await callRoute(classesRoute.POST, {
       method: "POST",
       body: {
@@ -112,7 +115,7 @@ describe("rollback of real operations", () => {
         start_date: new Date(Date.now() + 7 * 86400000).toISOString(),
         duration: 60,
         price: 0,
-        courseId: new ObjectId().toString(),
+        editionId: new ObjectId().toString(),
       },
     });
     expect(res.status).toBe(404);
@@ -120,45 +123,53 @@ describe("rollback of real operations", () => {
     expect(await db.collection("notifications").countDocuments()).toBe(0);
   });
 
-  it("a failure while deleting a course leaves the course, its classes and enrollments intact", async () => {
-    const course = await createCourse(db, { status: "draft" });
-    const cls = await createClass(db, { status: "enrolled", courseId: course._id });
-    await enroll(db, user, course, "paid");
+  it("creating a class in an edition links it in the same transaction", async () => {
+    const edition = await createEdition(db, await createCourseDoc(db), { status: "draft" });
+    const res = await callRoute(classesRoute.POST, {
+      method: "POST",
+      body: {
+        title: "Linked class",
+        short_description: "Class description",
+        start_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+        duration: 60,
+        price: 0,
+        editionId: edition._id.toString(),
+      },
+    });
+    expect(res.status).toBe(201);
+    const saved = await db.collection("classes").findOne({ _id: new ObjectId(res.json.data._id) });
+    expect(saved).toMatchObject({ status: "enrolled", max_participants: null });
+    expect(saved.editionId.equals(edition._id)).toBe(true);
+    expect(saved).not.toHaveProperty("participants");
+  });
+
+  it("a failure while deleting a course leaves the course, its editions and classes intact", async () => {
+    const course = await createCourseDoc(db);
+    const edition = await createEdition(db, course, { status: "draft" });
+    const cls = await createClass(db, { status: "enrolled", editionId: edition._id });
     vi.spyOn(console, "error").mockImplementation(() => {});
     failOn("deleteOne", "courses");
 
     const res = await callRoute(courseRoute.DELETE, { method: "DELETE", params: { id: course._id.toString() } });
     expect(res.status).toBe(500);
     expect(await db.collection("courses").countDocuments({ _id: course._id })).toBe(1);
-    expect((await db.collection("classes").findOne({ _id: cls._id })).courseId.equals(course._id)).toBe(true);
-    expect(await db.collection("courseEnrollments").countDocuments({ courseId: course._id })).toBe(1);
+    expect(await db.collection("courseEditions").countDocuments({ _id: edition._id })).toBe(1);
+    expect((await db.collection("classes").findOne({ _id: cls._id })).editionId.equals(edition._id)).toBe(true);
     expect(await db.collection("notifications").countDocuments()).toBe(0);
   });
 
-  it("a failure while copying the classes leaves no half-cloned course", async () => {
-    const course = await createCourse(db, { status: "draft" });
-    await createClass(db, { status: "enrolled", courseId: course._id });
+  it("a failure while linking a class keeps it a standalone draft", async () => {
+    const edition = await createEdition(db, await createCourseDoc(db), { status: "draft" });
+    const cls = await createClass(db, { status: "draft", createdBy: admin._id });
     vi.spyOn(console, "error").mockImplementation(() => {});
-    failOn("insertMany", "classes");
+    failOn("updateOne", "classes");
 
-    const res = await callRoute(cloneRoute.POST, { method: "POST", params: { id: course._id.toString() } });
-    expect(res.status).toBe(500);
-    expect(await db.collection("courses").countDocuments()).toBe(1);
-    expect(await db.collection("classes").countDocuments()).toBe(1);
-  });
-
-  it("a successful clone copies the course and its classes in the same series", async () => {
-    const course = await createCourse(db, { status: "published" });
-    await db.collection("courses").updateOne({ _id: course._id }, { $set: { courseSeriesId: course._id } });
-    await createClass(db, { status: "enrolled", courseId: course._id, recording_url: "https://example.test/r" });
-
-    const res = await callRoute(cloneRoute.POST, { method: "POST", params: { id: course._id.toString() } });
-    expect(res.status).toBe(201);
-    const copy = await db.collection("courses").findOne({ _id: new ObjectId(res.json.data._id) });
-    expect(copy).toMatchObject({ status: "draft" });
-    expect(copy.courseSeriesId.equals(course._id)).toBe(true);
-    const [copiedClass] = await db.collection("classes").find({ courseId: copy._id }).toArray();
-    expect(copiedClass).toMatchObject({ status: "enrolled", start_date: null, resources: [] });
-    expect(copiedClass.recording_url).toBeUndefined();
+    await expect(linkClassToEdition(actorOf(admin), cls._id.toString(), { editionId: edition._id.toString() })).rejects.toThrow(
+      "simulated",
+    );
+    const saved = await db.collection("classes").findOne({ _id: cls._id });
+    expect(saved).toMatchObject({ status: "draft", participants: [] });
+    expect(saved).not.toHaveProperty("editionId");
+    expect(await db.collection("notifications").countDocuments()).toBe(0);
   });
 });

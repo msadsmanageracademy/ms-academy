@@ -5,7 +5,7 @@ import { toPublicReview } from "./service";
 /**
  * Best recent reviews written by students (4+ stars, with a comment), for the home
  * testimonials. Admin reviews are left out. Each one carries the title of the class
- * or course it is about.
+ * or course it is about (edition reviews: the course, through their denormalized courseId).
  *
  * Never throws: the home must render even without a database (e.g. `next build` in CI);
  * it just shows no testimonials.

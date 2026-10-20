@@ -4,92 +4,55 @@ import styles from "./styles.module.css";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  CourseFormSchema,
-  PublishedCourseEditSchema,
-} from "@/utils/validation";
+import { CourseCreateSchema, CourseFormSchema } from "@/utils/validation";
 import { toastError, toastSuccess } from "@/utils/alerts";
 
 const CourseForm = ({ courseData, onSuccess, onCancel }) => {
   const isEditMode = !!courseData;
-  const isPublished = courseData?.status === "published";
 
   const {
     formState: { errors },
     handleSubmit,
     register,
   } = useForm({
-    resolver: zodResolver(
-      isPublished ? PublishedCourseEditSchema : CourseFormSchema,
-    ),
-    defaultValues: courseData
+    resolver: zodResolver(isEditMode ? CourseFormSchema : CourseCreateSchema),
+    defaultValues: isEditMode
       ? {
           title: courseData.title,
           short_description: courseData.short_description,
           full_description: courseData.full_description,
-          max_participants: courseData.max_participants || 0,
-          price: courseData.price || 0,
         }
-      : {
-          max_participants: 0,
-          price: 0,
-        },
+      : { max_participants: 0, price: 0 },
   });
 
   const router = useRouter();
+  const errorTitle = isEditMode ? "Error al actualizar curso" : "Error al crear curso";
 
-  const onSubmit = async ({
-    title,
-    short_description,
-    full_description,
-    max_participants,
-    price,
-  }) => {
+  const onSubmit = async (values) => {
     try {
-      const url = isEditMode
-        ? `/api/courses/${courseData._id}`
-        : "/api/courses/";
-      const method = isEditMode ? "PATCH" : "POST";
-
-      const body = isPublished
+      const url = isEditMode ? `/api/courses/${courseData._id}` : "/api/courses/";
+      const { title, short_description, full_description, max_participants, price } = values;
+      const body = isEditMode
         ? { title, short_description, full_description }
-        : {
-            title,
-            short_description,
-            full_description,
-            max_participants,
-            price,
-          };
+        : { title, short_description, full_description, max_participants, price };
 
       const response = await fetch(url, {
         headers: { "Content-Type": "application/json" },
-        method,
+        method: isEditMode ? "PATCH" : "POST",
         body: JSON.stringify(body),
       });
-
       const result = await response.json();
 
-      if (!response.ok) {
-        return toastError(
-          3000,
-          isEditMode ? "Error al actualizar curso" : "Error al crear curso",
-          result.message,
-        );
-      }
+      if (!response.ok) return toastError(3000, errorTitle, result.message);
 
       toastSuccess(3000, "Operación exitosa", result.message);
-
       if (onSuccess) {
-        onSuccess();
+        onSuccess(result.data);
       } else {
         router.push("/dashboard");
       }
     } catch (err) {
-      toastError(
-        3000,
-        isEditMode ? "Error al actualizar curso" : "Error al crear curso",
-        err.message,
-      );
+      toastError(3000, errorTitle, err.message);
     }
   };
 
@@ -122,37 +85,37 @@ const CourseForm = ({ courseData, onSuccess, onCancel }) => {
         )}
       </FormField>
 
-      <FormField label="Máximo de participantes" error={errors?.max_participants?.message} rowClassName={styles.formRow}
-        errorClassName={styles.formCustomError}>
-        {(field) => (
-          <input
-            {...register("max_participants", { valueAsNumber: true })}
-            {...field}
-            className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
-            disabled={isPublished}
-            inputMode="numeric"
-          />
-        )}
-      </FormField>
+      {!isEditMode && (
+        <>
+          <FormField label="Precio de la Edición 1" error={errors?.price?.message} rowClassName={styles.formRow}
+            errorClassName={styles.formCustomError}>
+            {(field) => (
+              <input
+                {...register("price", { valueAsNumber: true })}
+                {...field}
+                className={`${styles.input} ${styles.number}`}
+                inputMode="decimal"
+              />
+            )}
+          </FormField>
 
-      <FormField label="Precio" error={errors?.price?.message} rowClassName={styles.formRow}
-        errorClassName={styles.formCustomError}>
-        {(field) => (
-          <input
-            {...register("price", { valueAsNumber: true })}
-            {...field}
-            className={`${styles.input} ${styles.number} ${isPublished ? styles.inputDisabled : ""}`}
-            disabled={isPublished}
-            inputMode="decimal"
-          />
-        )}
-      </FormField>
+          <FormField label="Cupo (0 = sin límite)" error={errors?.max_participants?.message} rowClassName={styles.formRow}
+            errorClassName={styles.formCustomError}>
+            {(field) => (
+              <input
+                {...register("max_participants", { valueAsNumber: true })}
+                {...field}
+                className={`${styles.input} ${styles.number}`}
+                inputMode="numeric"
+              />
+            )}
+          </FormField>
+        </>
+      )}
 
       <div style={{ display: "flex", gap: "1rem" }}>
-        <PrimaryLink asButton text={isEditMode ? "Actualizar" : "Crear"} type="submit" />
-        {isEditMode && onCancel && (
-          <PrimaryLink asButton text="Cancelar" type="button" onClick={onCancel} />
-        )}
+        <PrimaryLink asButton text={isEditMode ? "Actualizar" : "Crear curso"} type="submit" />
+        {onCancel && <PrimaryLink asButton text="Cancelar" type="button" onClick={onCancel} />}
       </div>
     </form>
   );

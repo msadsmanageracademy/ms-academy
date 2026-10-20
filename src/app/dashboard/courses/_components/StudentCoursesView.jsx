@@ -8,36 +8,36 @@ import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import ReviewModal from "@/views/components/ui/ReviewModal";
 import StatusBadge from "@/views/components/ui/StatusBadge";
 import TableSearch from "@/views/components/ui/TableSearch";
-import { cancelCourseEnrollmentAction } from "@/server/actions/courses";
+import { cancelEditionEnrollmentAction } from "@/server/actions/courses";
 import { confirmUnenroll } from "@/utils/alerts";
 import { formatDate } from "@/utils/dates";
-import { getCourseTimeStatus } from "@/utils/classStatus";
 import { runApiAction } from "@/utils/api";
 import styles from "../styles.module.css";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTableControls } from "@/hooks/useTableControls";
 
-const searchFields = (c) => [c.title, c.short_description];
+const searchFields = (e) => [e.title, e.short_description];
 
 /**
- * Student view: the courses the user enrolled in, with payment status and reviews.
- * `reviews` maps courseId → the user's own review.
+ * Student view: the course editions the user enrolled in ("Curso · Septiembre 2026"), with
+ * payment status and one review per edition. `editions` comes from listMyEditions;
+ * `reviews` maps editionId → the user's own review.
  */
-const StudentCoursesView = ({ courses, reviews }) => {
+const StudentCoursesView = ({ editions, reviews }) => {
   const router = useRouter();
-  const [reviewing, setReviewing] = useState(null); // course being reviewed
-  const table = useTableControls(courses, { fields: searchFields });
+  const [reviewing, setReviewing] = useState(null); // edition being reviewed
+  const table = useTableControls(editions, { fields: searchFields });
 
-  const handleUnenroll = async (course) => {
+  const handleUnenroll = async (edition) => {
     const confirmed = await confirmUnenroll(
       "¿Cancelar inscripción?",
-      "Se eliminará tu inscripción a este curso",
+      "Se eliminará tu inscripción a esta edición del curso",
     );
     if (!confirmed.isConfirmed) return;
     await runApiAction({
       loading: ["Procesando tu solicitud", "Cancelando inscripción..."],
-      request: () => cancelCourseEnrollmentAction(course._id),
+      request: () => cancelEditionEnrollmentAction(edition._id),
       success: ["Operación exitosa", "Tu inscripción ha sido cancelada"],
       failure: "No se pudo cancelar la inscripción",
     });
@@ -47,11 +47,11 @@ const StudentCoursesView = ({ courses, reviews }) => {
     <>
       <div className={styles.container}>
         <h1>Mis Cursos</h1>
-        <PaymentInstructions courses={courses.filter((c) => c.userPaymentStatus === "pending")} />
+        <PaymentInstructions courses={editions.filter((e) => e.paymentStatus === "pending")} />
         <div className={styles.listSection}>
           <div className={styles.headerActions}>
             <h2>Cursos Inscritos</h2>
-            {courses.length > 0 && (
+            {editions.length > 0 && (
               <TableSearch
                 filteredCount={table.filteredCount}
                 label="Buscar cursos"
@@ -61,7 +61,7 @@ const StudentCoursesView = ({ courses, reviews }) => {
               />
             )}
           </div>
-          {courses.length === 0 ? (
+          {editions.length === 0 ? (
             <div className={styles.noInscriptions}>
               <p>No estás inscrito en ningún curso</p>
               <PrimaryLink dark href="/content" text="Ver próximas actividades" />
@@ -71,7 +71,7 @@ const StudentCoursesView = ({ courses, reviews }) => {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Título</th>
+                    <th>Curso</th>
                     <th>Inicio</th>
                     <th>Fin</th>
                     <th>Clases</th>
@@ -87,20 +87,18 @@ const StudentCoursesView = ({ courses, reviews }) => {
                       <td colSpan={8}>Ningún curso coincide con la búsqueda</td>
                     </tr>
                   )}
-                  {table.pageItems.map((course) => {
-                    const timeStatus = getCourseTimeStatus(course.start_date, course.end_date, course.status);
-                    const paid = course.userPaymentStatus === "paid";
-                    const review = reviews[course._id];
+                  {table.pageItems.map((edition) => {
+                    const { timeStatus } = edition;
+                    const paid = edition.paymentStatus === "paid";
+                    const review = reviews[edition._id];
                     return (
-                      <tr key={course._id}>
-                        <td>{course.title}</td>
-                        <td>{course.start_date ? formatDate(course.start_date) : "—"}</td>
-                        <td>{course.end_date ? formatDate(course.end_date) : "—"}</td>
-                        <td>{course.amount_of_classes ?? 0}</td>
-                        <td>${course.price}</td>
-                        <td>
-                          {course.start_date ? <ClassStatusBadge gender="m" status={timeStatus} /> : "—"}
-                        </td>
+                      <tr key={edition._id}>
+                        <td>{edition.title}</td>
+                        <td>{edition.start_date ? formatDate(edition.start_date) : "—"}</td>
+                        <td>{edition.end_date ? formatDate(edition.end_date) : "—"}</td>
+                        <td>{edition.amount_of_classes ?? 0}</td>
+                        <td>${edition.price}</td>
+                        <td>{timeStatus ? <ClassStatusBadge gender="f" status={timeStatus} /> : "—"}</td>
                         <td>
                           <StatusBadge status={paid ? "published" : "pending"}>
                             {paid ? "Pagado" : "Pendiente"}
@@ -114,10 +112,10 @@ const StudentCoursesView = ({ courses, reviews }) => {
                                 disabled={timeStatus !== "completed"}
                                 fill={review ? "var(--warning)" : "var(--color-4)"}
                                 icon="Star"
-                                onClick={() => setReviewing(course)}
+                                onClick={() => setReviewing(edition)}
                                 title={
                                   timeStatus !== "completed"
-                                    ? "Disponible al finalizar el curso"
+                                    ? "Disponible al finalizar la edición"
                                     : review
                                       ? "Editar tu reseña"
                                       : "Dejar una reseña"
@@ -128,7 +126,7 @@ const StudentCoursesView = ({ courses, reviews }) => {
                                 asButton
                                 danger
                                 icon="UserMinus"
-                                onClick={() => handleUnenroll(course)}
+                                onClick={() => handleUnenroll(edition)}
                                 title="Cancelar inscripción"
                               />
                             )}
@@ -150,7 +148,7 @@ const StudentCoursesView = ({ courses, reviews }) => {
           isOpen
           entityId={reviewing._id}
           entityTitle={reviewing.title}
-          entityType="course"
+          entityType="edition"
           existingReview={reviews[reviewing._id] ?? null}
           onClose={() => setReviewing(null)}
           onSuccess={() => router.refresh()}

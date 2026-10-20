@@ -1,14 +1,15 @@
 // 3.1: participant lists in one request (replaces one /api/users/[id] call per participant).
+// The edition enrollee list (listEditionEnrollments) is covered in edition-enrollments.test.mjs.
 import { beforeEach, describe, expect, it } from "vitest";
 import * as classParticipantsRoute from "@/app/api/classes/[id]/participants/route";
-import * as courseEnrollmentsRoute from "@/app/api/courses/[id]/enrollments/route";
 import {
   callRoute,
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
-  enroll,
+  enrollInEditionDoc,
   ObjectId,
   resetDb,
   setSession,
@@ -25,7 +26,6 @@ beforeEach(async () => {
 });
 
 const listClass = (cls) => callRoute(classParticipantsRoute.GET, { params: { id: cls._id.toString() } });
-const listCourse = (course) => callRoute(courseEnrollmentsRoute.GET, { params: { id: course._id.toString() } });
 
 describe("GET /api/classes/[id]/participants", () => {
   it("standalone class: stored participants with contact fields only", async () => {
@@ -37,11 +37,15 @@ describe("GET /api/classes/[id]/participants", () => {
     expect(Object.keys(res.json.data[0]).sort()).toEqual(["_id", "email", "first_name", "last_name"]);
   });
 
-  it("course class: the course enrollees with their payment status", async () => {
-    const course = await createCourse(db);
-    const cls = await createClass(db, { status: "enrolled", courseId: course._id });
-    await enroll(db, ana, course, "paid");
-    await enroll(db, bruno, course, "pending");
+  it("edition class: the enrollees of its edition with their payment status", async () => {
+    const course = await createCourseDoc(db);
+    const other = await createEdition(db, course);
+    const edition = await createEdition(db, course);
+    const cls = await createClass(db, { status: "enrolled", editionId: edition._id });
+    await enrollInEditionDoc(db, ana, edition, "paid");
+    await enrollInEditionDoc(db, bruno, edition, "pending");
+    // Enrolled in another edition of the same course: not a participant of this class
+    await enrollInEditionDoc(db, admin, other, "paid");
     const { data } = (await listClass(cls)).json;
     expect(data.map((p) => [p.first_name, p.paymentStatus])).toEqual([
       ["Ana", "paid"],
@@ -55,31 +59,5 @@ describe("GET /api/classes/[id]/participants", () => {
     expect((await listClass(cls)).status).toBe(403);
     setSession(admin);
     expect((await listClass({ _id: new ObjectId() })).status).toBe(404);
-  });
-});
-
-describe("GET /api/courses/[id]/enrollments", () => {
-  it("enrollees in order with payment data", async () => {
-    const course = await createCourse(db);
-    await enroll(db, bruno, course, "pending");
-    await enroll(db, ana, course, "paid");
-    const res = await listCourse(course);
-    expect(res.status).toBe(200);
-    expect(res.json.data.map((e) => [e.first_name, e.paymentStatus])).toEqual([
-      ["Bruno", "pending"],
-      ["Ana", "paid"],
-    ]);
-    expect(res.json.data[1]).not.toHaveProperty("password");
-    expect(res.json.data[1]._id).toBe(ana._id.toString());
-  });
-
-  it("admin only; 404 for a missing course", async () => {
-    const course = await createCourse(db);
-    setSession(ana);
-    expect((await listCourse(course)).status).toBe(403);
-    setSession(null);
-    expect((await listCourse(course)).status).toBe(401);
-    setSession(admin);
-    expect((await listCourse({ _id: new ObjectId() })).status).toBe(404);
   });
 });

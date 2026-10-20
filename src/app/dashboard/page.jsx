@@ -1,4 +1,5 @@
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
+import { editionName } from "@/utils/courseEditions";
 import { es } from "date-fns/locale";
 import { formatDistanceToNow } from "date-fns";
 import { formatWeekdayDateTime } from "@/utils/dates";
@@ -33,7 +34,7 @@ function NextClassCard({ cls }) {
       <div className={styles.upcomingInfo}>
         {cls.courseTitle ? (
           <span>
-            <Courses {...iconProps} /> {cls.courseTitle}
+            <Courses {...iconProps} /> {editionName(cls.courseTitle, cls.editionLabel)}
           </span>
         ) : (
           <span>
@@ -48,11 +49,12 @@ function NextClassCard({ cls }) {
   );
 }
 
+// `course` is the next edition: the course title plus its date label
 function NextCourseCard({ course }) {
   return (
     <div className={styles.upcomingCard}>
       <div className={styles.upcomingBadge}>Próximo Curso ({fromNow(course.start_date)})</div>
-      <h3>{course.title}</h3>
+      <h3>{editionName(course.title, course.label)}</h3>
       <p className={styles.upcomingDate}>Inicia: {formatWeekdayDateTime(course.start_date)}</p>
       <p className={styles.upcomingDescription}>{course.short_description}</p>
       <div className={styles.upcomingInfo}>
@@ -92,15 +94,22 @@ export default async function DashboardPage() {
               <span className={styles.statsGroupLabel}>Clases</span>
               <div className={styles.statsGrid}>
                 <StatCard title="En borrador" value={stats.draftClasses} label="No visibles aún" />
-                <StatCard title="Asociadas" value={stats.enrolledClasses} label="Asignadas a un curso" />
+                <StatCard title="Asociadas" value={stats.enrolledClasses} label="Asignadas a una edición" />
                 <StatCard title="Publicadas" value={stats.publishedClasses} label="Visibles en el sitio" />
               </div>
             </div>
             <div className={styles.statsGroup}>
               <span className={styles.statsGroupLabel}>Cursos</span>
               <div className={styles.statsGrid}>
-                <StatCard title="En borrador" value={stats.draftCourses} label="No visibles aún" />
-                <StatCard title="Publicados" value={stats.publishedCourses} label="Visibles en el sitio" />
+                <StatCard title="Activos" value={stats.activeCourses} label="Se pueden dictar" />
+                <StatCard title="Archivados" value={stats.archivedCourses} label="Fuera del catálogo" />
+              </div>
+            </div>
+            <div className={styles.statsGroup}>
+              <span className={styles.statsGroupLabel}>Ediciones</span>
+              <div className={styles.statsGrid}>
+                <StatCard title="En borrador" value={stats.draftEditions} label="No visibles aún" />
+                <StatCard title="Publicadas" value={stats.publishedEditions} label="Visibles en el sitio" />
               </div>
             </div>
           </>

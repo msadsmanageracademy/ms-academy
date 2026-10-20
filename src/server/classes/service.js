@@ -2,27 +2,27 @@
 // its own authorization, so REST routes and Server Actions can share them.
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
-import { getCourseTimeStatusFromClasses } from "@/server/courses/queries";
+import { getEditionLabels, getEditionTimeStatusFromClasses } from "@/server/courses/queries";
 import { getReviewStats } from "@/server/reviews/queries";
 import { getClassStatus } from "@/utils/classStatus";
 import { withTransaction } from "@/server/transactions";
 import {
   ClassFormSchema,
   ClassResourcesUpdateSchema,
-  CourseLinkSchema,
+  EditionLinkSchema,
   PublishedClassEditSchema,
   RecordingUpdateSchema,
   StatusUpdateSchema,
 } from "@/utils/validation";
 import { HttpError, assertAdmin, assertUser, isAdminActor, parseOrThrow, toObjectId } from "@/server/errors";
 import { addTimestampToUpdate, prepareClassForDB } from "@/models/schemas";
-import { assignClassToCourse, unassignClassFromCourse } from "./courseLink";
-import { classObjectId, courseObjectId } from "@/server/ids";
+import { assignClassToEdition, unassignClassFromEdition } from "./editionLink";
+import { classObjectId, editionObjectId } from "@/server/ids";
 import { deleteClassCalendarEvent, syncClassCalendarEvent } from "./calendar";
 import { getClassParticipantIds, withParticipantsCount } from "./audience";
 import { notify, notifyMany } from "@/server/notifications";
 
-/** Fields only visible to participants with access (paid, for course classes). */
+/** Fields only visible to participants with access (paid edition, for edition classes). */
 export const RESTRICTED_CLASS_FIELDS = [
   "googleEventId",
   "googleEventUrl",
@@ -35,16 +35,53 @@ export const RESTRICTED_CLASS_FIELDS = [
 /** Fields that have their own endpoint and are rejected by the generic edit. */
 const DEDICATED_FIELDS = {
   status: "status",
-  courseId: "course",
+  editionId: "edition",
   recording_url: "recording",
   resources: "resources",
 };
 
-const courseTitleLookup = [
-  { $lookup: { from: "courses", localField: "courseId", foreignField: "_id", as: "courseData" } },
-  { $addFields: { courseTitle: { $arrayElemAt: ["$courseData.title", 0] } } },
-  { $unset: "courseData" },
+// Edition classes get their course id and title (standalone classes have none of them);
+// their edition label is added afterwards by withClassEditionLabels
+const editionLookup = [
+  {
+    $lookup: {
+      from: "courseEditions",
+      localField: "editionId",
+      foreignField: "_id",
+      pipeline: [{ $project: { courseId: 1 } }],
+      as: "editionData",
+    },
+  },
+  {
+    $lookup: {
+      from: "courses",
+      localField: "editionData.courseId",
+      foreignField: "_id",
+      pipeline: [{ $project: { title: 1 } }],
+      as: "courseData",
+    },
+  },
+  {
+    $addFields: {
+      courseId: { $arrayElemAt: ["$editionData.courseId", 0] },
+      courseTitle: { $arrayElemAt: ["$courseData.title", 0] },
+    },
+  },
+  { $unset: ["editionData", "courseData"] },
 ];
+
+/** Sets the date label of its edition ("Septiembre 2026") on every edition class. */
+async function withClassEditionLabels(db, classes) {
+  const courseIds = [
+    ...new Map(classes.filter((c) => c.courseId).map((c) => [c.courseId.toString(), c.courseId])).values(),
+  ];
+  const labels = await getEditionLabels(db, courseIds);
+  return classes.map((cls) =>
+    cls.editionId && labels.has(cls.editionId.toString())
+      ? { ...cls, editionLabel: labels.get(cls.editionId.toString()).label }
+      : cls,
+  );
+}
 
 const stripRestricted = (cls) => {
   const copy = { ...cls };
@@ -52,9 +89,14 @@ const stripRestricted = (cls) => {
   return copy;
 };
 
-const toPublicClass = (cls) => {
+// `isParticipant` only tells the viewer about themselves; participant ids never leave the server.
+const toPublicClass = (cls, viewerId = null) => {
   const { participants, createdBy: _createdBy, ...rest } = stripRestricted(cls);
-  return { ...rest, participantsCount: participants?.length ?? 0 };
+  return {
+    ...rest,
+    participantsCount: participants?.length ?? 0,
+    isParticipant: !!viewerId && (participants ?? []).some((p) => p.toString() === viewerId),
+  };
 };
 
 async function findClassOrThrow(db, classId, options) {
@@ -67,65 +109,67 @@ async function findClassOrThrow(db, classId, options) {
 
 /**
  * Class listings:
- * - `courseId`: classes of a course (admin)
- * - `showAll`: every class with its course title (admin)
- * - `myClasses`: classes the user takes part in; course links only if paid
- * - default: public catalog of upcoming published classes
+ * - `editionId`: classes of an edition (admin)
+ * - `showAll`: every class; edition classes with courseId, courseTitle and editionLabel (admin)
+ * - `myClasses`: classes the user takes part in; edition links only if that edition is paid
+ *   (`userEditionPaymentStatus`)
+ * - default: public catalog of upcoming published classes, flagging the viewer's own
+ *   participation as `isParticipant`
  */
-export async function listClasses(actor, { courseId, showAll, myClasses } = {}) {
-  if (courseId || showAll) assertAdmin(actor);
+export async function listClasses(actor, { editionId, showAll, myClasses } = {}) {
+  if (editionId || showAll) assertAdmin(actor);
   else if (myClasses) assertUser(actor);
 
   const db = await getDb();
   const classes = db.collection("classes");
 
-  if (courseId) {
-    const courseClasses = await classes
-      .find({ courseId: courseObjectId(courseId) })
+  if (editionId) {
+    const editionClasses = await classes
+      .find({ editionId: editionObjectId(editionId) })
       .sort({ start_date: 1 })
       .toArray();
-    return withParticipantsCount(db, courseClasses);
+    return withParticipantsCount(db, editionClasses);
   }
 
   if (showAll) {
-    const all = await classes.aggregate([...courseTitleLookup, { $sort: { start_date: 1 } }]).toArray();
-    return withParticipantsCount(db, all);
+    const all = await classes.aggregate([...editionLookup, { $sort: { start_date: 1 } }]).toArray();
+    return withParticipantsCount(db, await withClassEditionLabels(db, all));
   }
 
   if (myClasses) {
-    // Standalone classes the user joined + every class of the courses they enrolled in
+    // Standalone classes the user joined + every class of the editions they enrolled in
     const userId = toObjectId(actor.id);
     const enrollments = await db
       .collection("courseEnrollments")
-      .find({ userId }, { projection: { courseId: 1, paymentStatus: 1 } })
+      .find({ userId }, { projection: { editionId: 1, paymentStatus: 1 } })
       .toArray();
     const mine = await classes
       .aggregate([
         {
           $match: {
             $or: [
-              { participants: userId, courseId: { $exists: false } },
-              { courseId: { $in: enrollments.map((e) => e.courseId) } },
+              { participants: userId, editionId: { $exists: false } },
+              { editionId: { $in: enrollments.map((e) => e.editionId) } },
             ],
           },
         },
-        ...courseTitleLookup,
+        ...editionLookup,
         { $sort: { start_date: 1 } },
       ])
       .toArray();
-    const counted = await withParticipantsCount(db, mine);
+    const counted = await withParticipantsCount(db, await withClassEditionLabels(db, mine));
     if (isAdminActor(actor)) return counted;
 
-    const paymentByCourse = Object.fromEntries(
-      enrollments.map((e) => [e.courseId.toString(), e.paymentStatus]),
+    const paymentByEdition = Object.fromEntries(
+      enrollments.map((e) => [e.editionId.toString(), e.paymentStatus]),
     );
     return counted.map((cls) => {
       // Other students' ids are never exposed
       const { participants: _p, createdBy: _c, ...own } = cls;
-      if (!own.courseId) return own;
-      const paymentStatus = paymentByCourse[own.courseId.toString()] ?? null;
+      if (!own.editionId) return own;
+      const paymentStatus = paymentByEdition[own.editionId.toString()] ?? null;
       const visible = paymentStatus === "paid" ? own : stripRestricted(own);
-      return { ...visible, userCoursePaymentStatus: paymentStatus };
+      return { ...visible, userEditionPaymentStatus: paymentStatus };
     });
   }
 
@@ -133,17 +177,23 @@ export async function listClasses(actor, { courseId, showAll, myClasses } = {}) 
     .find({ start_date: { $gt: new Date() }, status: "published" })
     .sort({ start_date: 1 })
     .toArray();
-  return upcoming.map(toPublicClass);
+  return upcoming.map((cls) => toPublicClass(cls, actor?.id ?? null));
 }
 
 /**
- * Class detail with review stats. Non-admins get no participant list and only see
- * links/materials if they take part (standalone) or paid the course (course class).
+ * Class detail with review stats (edition classes also get courseId, courseTitle and
+ * editionLabel). Non-admins get no participant list and only see links/materials if
+ * they take part (standalone) or paid the edition of the class (`userEditionPaymentStatus`).
  */
 export async function getClassDetail(actor, id) {
   const classId = classObjectId(id);
   const db = await getDb();
-  let classItem = await findClassOrThrow(db, classId);
+  let [classItem] = await db
+    .collection("classes")
+    .aggregate([{ $match: { _id: classId } }, ...editionLookup])
+    .toArray();
+  if (!classItem) throw new HttpError(404, "Clase no encontrada");
+  [classItem] = await withClassEditionLabels(db, [classItem]);
   const participantIds = await getClassParticipantIds(db, classItem);
 
   if (isAdminActor(actor)) {
@@ -153,18 +203,18 @@ export async function getClassDetail(actor, id) {
     const isParticipant = !!userId && participantIds.some((p) => p.toString() === userId);
     let canSeeRestricted = isParticipant;
 
-    if (classItem.courseId) {
+    if (classItem.editionId) {
       let paymentStatus = null;
       if (userId) {
         const enrollment = await db
           .collection("courseEnrollments")
           .findOne(
-            { userId: toObjectId(userId), courseId: classItem.courseId },
+            { userId: toObjectId(userId), editionId: classItem.editionId },
             { projection: { paymentStatus: 1 } },
           );
         paymentStatus = enrollment?.paymentStatus ?? null;
       }
-      classItem.userCoursePaymentStatus = paymentStatus;
+      classItem.userEditionPaymentStatus = paymentStatus;
       canSeeRestricted = paymentStatus === "paid";
     }
 
@@ -185,12 +235,12 @@ export async function getClassDetail(actor, id) {
 
 // ---------- Writes (admin) ----------
 
-/** Creates a draft class, optionally linked to a course. Returns its id. */
+/** Creates a draft class, optionally linked to an edition (`editionId`). Returns its id. */
 export async function createClass(actor, input) {
   assertAdmin(actor);
   const body = { ...input };
   if (body.start_date) body.start_date = new Date(body.start_date);
-  const { courseId, googleEventId: _g1, googleEventUrl: _g2, ...fields } = parseOrThrow(ClassFormSchema, body);
+  const { editionId, googleEventId: _g1, googleEventUrl: _g2, ...fields } = parseOrThrow(ClassFormSchema, body);
 
   if (fields.start_date && fields.start_date <= new Date()) {
     throw new HttpError(
@@ -198,14 +248,14 @@ export async function createClass(actor, input) {
       "No se pueden crear clases con fechas pasadas. Solo se permiten eventos futuros.",
     );
   }
-  if (courseId) courseObjectId(courseId);
+  if (editionId) editionObjectId(editionId);
 
   const adminId = toObjectId(actor.id);
   // Creating and linking is one unit: if the link fails, the class is not created
   return withTransaction(async (tx) => {
     const classData = { ...prepareClassForDB(fields, adminId), _id: new ObjectId() };
     await tx.db.collection("classes").insertOne(classData, { session: tx.session });
-    if (courseId) await assignClassToCourse(tx, classData, courseId);
+    if (editionId) await assignClassToEdition(tx, classData, editionId);
 
     tx.afterCommit(() =>
       notify(tx.db, "class.created", {
@@ -220,8 +270,8 @@ export async function createClass(actor, input) {
 }
 
 /**
- * Edits the class content. Published classes (and classes of a course in progress)
- * only accept title and short description. Status, course, recording and materials
+ * Edits the class content. Published classes (and classes of an edition in progress)
+ * only accept title and short description. Status, edition, recording and materials
  * have their own endpoints.
  */
 export async function updateClass(actor, id, input) {
@@ -240,13 +290,13 @@ export async function updateClass(actor, id, input) {
   const existing = await findClassOrThrow(db, classId);
 
   let restricted = existing.status === "published" || existing.status === "enrolled";
-  // Enrolled classes stay fully editable unless their course is in progress
-  if (existing.status === "enrolled" && existing.courseId) {
-    const course = await db
-      .collection("courses")
-      .findOne({ _id: existing.courseId }, { projection: { status: 1 } });
-    if (course) {
-      const timeStatus = await getCourseTimeStatusFromClasses(db, existing.courseId, course.status);
+  // Enrolled classes stay fully editable unless their edition is in progress
+  if (existing.status === "enrolled" && existing.editionId) {
+    const edition = await db
+      .collection("courseEditions")
+      .findOne({ _id: existing.editionId }, { projection: { status: 1 } });
+    if (edition) {
+      const timeStatus = await getEditionTimeStatusFromClasses(db, existing.editionId, edition.status);
       if (timeStatus !== "in-progress") restricted = false;
     }
   }
@@ -257,7 +307,7 @@ export async function updateClass(actor, id, input) {
   } else {
     const body = { ...input };
     if (body.start_date) body.start_date = new Date(body.start_date);
-    const { courseId: _c, googleEventId: _g1, googleEventUrl: _g2, ...fields } = parseOrThrow(ClassFormSchema, body);
+    const { editionId: _e, googleEventId: _g1, googleEventUrl: _g2, ...fields } = parseOrThrow(ClassFormSchema, body);
     changes = { ...fields, max_participants: fields.max_participants === 0 ? null : fields.max_participants };
   }
 
@@ -339,43 +389,43 @@ export async function setClassStatus(actor, id, input) {
 
 async function findLinkState(db, classId) {
   const classItem = await findClassOrThrow(db, classId, {
-    projection: { courseId: 1, status: 1, participants: 1, max_participants: 1 },
+    projection: { editionId: 1, status: 1, participants: 1, max_participants: 1 },
   });
   const [withCount] = await withParticipantsCount(db, [classItem]);
   delete withCount.participants;
   return withCount;
 }
 
-/** Links the class to a course. Returns { _id, courseId, status, max_participants, participantsCount }. */
-export async function linkClassToCourse(actor, id, input) {
+/** Links the class to an edition. Returns { _id, editionId, status, max_participants, participantsCount }. */
+export async function linkClassToEdition(actor, id, input) {
   assertAdmin(actor);
   const classId = classObjectId(id);
-  const { courseId } = parseOrThrow(CourseLinkSchema, input, { useIssueMessage: true });
+  const { editionId } = parseOrThrow(EditionLinkSchema, input, { useIssueMessage: true });
   await withTransaction(async (tx) => {
     const classItem = await findClassOrThrow(tx.db, classId, { session: tx.session });
-    await assignClassToCourse(tx, classItem, courseId);
+    await assignClassToEdition(tx, classItem, editionId);
   });
   return findLinkState(await getDb(), classId);
 }
 
-/** Unlinks the class from its course. Returns the same shape as linkClassToCourse. */
-export async function unlinkClassFromCourse(actor, id) {
+/** Unlinks the class from its edition. Returns the same shape as linkClassToEdition. */
+export async function unlinkClassFromEdition(actor, id) {
   assertAdmin(actor);
   const classId = classObjectId(id);
   await withTransaction(async (tx) => {
     const classItem = await findClassOrThrow(tx.db, classId, { session: tx.session });
-    await unassignClassFromCourse(tx, classItem);
+    await unassignClassFromEdition(tx, classItem);
   });
   return findLinkState(await getDb(), classId);
 }
 
-async function findCourseClassOrThrow(db, classId, message) {
+async function findEditionClassOrThrow(db, classId, message) {
   const classItem = await findClassOrThrow(db, classId);
-  if (!classItem.courseId) throw new HttpError(400, message);
+  if (!classItem.editionId) throw new HttpError(400, message);
   return classItem;
 }
 
-/** Notifies the participants who paid the course (pending ones have no access). */
+/** Notifies the participants who paid the edition (pending ones have no access). */
 async function notifyPaidParticipants(db, key, classItem) {
   await notify(db, key, {
     to: await getClassParticipantIds(db, classItem, { paidOnly: true }),
@@ -385,13 +435,13 @@ async function notifyPaidParticipants(db, key, classItem) {
   });
 }
 
-/** Sets the recording link of a course class and notifies the paid participants. */
+/** Sets the recording link of an edition class and notifies the paid participants. */
 export async function setClassRecording(actor, id, input) {
   assertAdmin(actor);
   const classId = classObjectId(id);
   const { url } = parseOrThrow(RecordingUpdateSchema, input, { useIssueMessage: true });
   const db = await getDb();
-  const classItem = await findCourseClassOrThrow(
+  const classItem = await findEditionClassOrThrow(
     db,
     classId,
     "Solo se pueden agregar grabaciones a clases de un curso",
@@ -413,13 +463,13 @@ export async function removeClassRecording(actor, id) {
   if (result.matchedCount === 0) throw new HttpError(404, "Clase no encontrada");
 }
 
-/** Replaces the materials of a course class and notifies the paid participants. */
+/** Replaces the materials of an edition class and notifies the paid participants. */
 export async function setClassResources(actor, id, input) {
   assertAdmin(actor);
   const classId = classObjectId(id);
   const { resources } = parseOrThrow(ClassResourcesUpdateSchema, input, { useIssueMessage: true });
   const db = await getDb();
-  const classItem = await findCourseClassOrThrow(
+  const classItem = await findEditionClassOrThrow(
     db,
     classId,
     "Solo se pueden agregar materiales a clases de un curso",

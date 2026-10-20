@@ -300,6 +300,39 @@
   filter: brightness(1.15);
 }
 
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.modalField label {
+  color: #ddd;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.modalField select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.courseCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.courseCell a {
+  color: var(--color-4);
+  text-decoration: underline;
+}
+
+.courseCellEdition {
+  color: var(--color-5);
+  font-size: 0.8rem;
+}
+
 .tableTools {
   align-items: center;
   display: flex;

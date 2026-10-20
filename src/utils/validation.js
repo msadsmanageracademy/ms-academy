@@ -78,7 +78,7 @@ export const ClassFormSchema = z.object({
   price: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" }),
-  courseId: z.string().optional(),
+  editionId: z.string().optional(),
   googleEventId: z.string().optional(),
   googleEventUrl: z.string().optional(),
 });
@@ -91,15 +91,36 @@ export const CourseFormSchema = z.object({
   full_description: z
     .string()
     .min(10, { message: "Debe contener al menos 10 caracteres" }),
+});
+
+export const EditionFormSchema = z.object({
+  price: z
+    .number({ message: "Debe ingresar un número" })
+    .nonnegative({ message: "Debe ingresar 0 o mayor" }),
   max_participants: z
     .number({ message: "Debe ingresar un número" })
     .nonnegative({ message: "Debe ingresar 0 o mayor" })
     .nullable()
     .default(null),
-  price: z
-    .number({ message: "Debe ingresar un número" })
-    .nonnegative({ message: "Debe ingresar 0 o mayor" }),
-  status: z.enum(["draft", "published"]).optional(),
+});
+
+export const CourseCreateSchema = CourseFormSchema.merge(EditionFormSchema);
+
+export const CourseStatusSchema = z.object({
+  status: z.enum(["active", "archived"], { message: "Estado inválido" }),
+});
+
+export const EditionLinkSchema = z.object({
+  editionId: z.string({ message: "editionId inválido" }).min(1, "editionId inválido"),
+});
+
+export const ReviewPageQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).catch(1),
+  edition: z
+    .string()
+    .regex(/^[a-f\d]{24}$/i)
+    .optional()
+    .catch(undefined),
 });
 
 export const AddGoogleInformationToEvent = z.object({
@@ -108,12 +129,6 @@ export const AddGoogleInformationToEvent = z.object({
 });
 
 // Schemas for editing published items (restricted fields only)
-export const PublishedCourseEditSchema = CourseFormSchema.pick({
-  title: true,
-  short_description: true,
-  full_description: true,
-});
-
 export const PublishedClassEditSchema = ClassFormSchema.pick({
   title: true,
   short_description: true,
@@ -131,10 +146,6 @@ export const ClassResourcesUpdateSchema = z.object({
 // Bodies of the dedicated sub-resource endpoints
 export const StatusUpdateSchema = z.object({
   status: z.enum(["draft", "published"], { message: "Estado inválido" }),
-});
-
-export const CourseLinkSchema = z.object({
-  courseId: z.string({ message: "courseId inválido" }).min(1, "courseId inválido"),
 });
 
 export const RecordingUpdateSchema = z.object({

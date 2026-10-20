@@ -5,33 +5,34 @@ import Pagination from "@/views/components/ui/Pagination";
 import TableSearch from "@/views/components/ui/TableSearch";
 import ClassForm from "@/views/sections/pages/dashboard/classes/ClassForm";
 import CourseFilter from "./CourseFilter";
-import LinkCourseModal from "./LinkCourseModal";
+import LinkEditionModal from "./LinkEditionModal";
 import PrimaryLink from "@/views/components/ui/PrimaryLink";
 import styles from "../styles.module.css";
-import { filterByCourse } from "./classList";
 import { runApiAction } from "@/utils/api";
 import { useCalendarConnection } from "@/hooks/useCalendarConnection";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTableControls } from "@/hooks/useTableControls";
+import { classEditionTitle, filterByCourse } from "./classList";
 import { confirmAddToCalendar, confirmDeleteItem, confirmToggleStatus, confirmUnlink } from "@/utils/alerts";
 import {
   createClassCalendarEventAction,
   deleteClassAction,
-  linkClassToCourseAction,
+  linkClassToEditionAction,
   setClassStatusAction,
-  unlinkClassFromCourseAction,
+  unlinkClassFromEditionAction,
 } from "@/server/actions/classes";
 
 // Searchable text of each row (module level: stable across renders)
 const searchFields = (c) => [c.title, c.courseTitle, c.short_description];
 
 /**
- * Admin view: every class, with Calendar, course link, publish and delete actions.
+ * Admin view: every class, with Calendar, edition link, publish and delete actions.
+ * `editions` (listAdminEditions) feeds "Vincular clase" (course first, then edition).
  * The data comes from the server; each Server Action re-renders the page with fresh data.
  */
-const AdminClassesView = ({ classes, courses }) => {
+const AdminClassesView = ({ classes, editions }) => {
   const router = useRouter();
   const { incrementCount } = useNotifications();
   const { hasCalendarAccess, connect, handleReauth } = useCalendarConnection("/dashboard/classes");
@@ -40,24 +41,23 @@ const AdminClassesView = ({ classes, courses }) => {
   const [addingToCalendar, setAddingToCalendar] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const handleLinkCourse = async (courseId) => {
+  const handleLinkEdition = async (edition) => {
     const classItem = linkingClass;
     setLinkingClass(null);
-    const course = courses.find((c) => c._id === courseId);
     await runApiAction({
-      loading: ["Procesando tu solicitud", "Vinculando clase al curso..."],
-      request: () => linkClassToCourseAction(classItem._id, courseId),
-      success: ["Operación exitosa", `Clase vinculada al curso "${course?.title}"`],
+      loading: ["Procesando tu solicitud", "Vinculando clase a la edición..."],
+      request: () => linkClassToEditionAction(classItem._id, String(edition._id)),
+      success: ["Operación exitosa", `Clase vinculada a "${edition.title}"`],
       failure: "No se pudo vincular la clase",
     });
   };
 
-  const handleUnlinkCourse = async (classItem) => {
-    if (!(await confirmUnlink(classItem.title, classItem.courseTitle)).isConfirmed) return;
+  const handleUnlinkEdition = async (classItem) => {
+    if (!(await confirmUnlink(classItem.title, classEditionTitle(classItem))).isConfirmed) return;
     await runApiAction({
-      loading: ["Procesando tu solicitud", "Desvinculando clase del curso..."],
-      request: () => unlinkClassFromCourseAction(classItem._id),
-      success: ["Operación exitosa", "Clase desvinculada del curso"],
+      loading: ["Procesando tu solicitud", "Desvinculando clase de la edición..."],
+      request: () => unlinkClassFromEditionAction(classItem._id),
+      success: ["Operación exitosa", "Clase desvinculada de la edición"],
       failure: "No se pudo desvincular la clase",
     });
   };
@@ -168,7 +168,7 @@ const AdminClassesView = ({ classes, courses }) => {
                       onConnectCalendar={connect}
                       onAddToCalendar={handleAddToCalendar}
                       onLink={setLinkingClass}
-                      onUnlink={handleUnlinkCourse}
+                      onUnlink={handleUnlinkEdition}
                       onToggleStatus={handleToggleStatus}
                       onDelete={handleDeleteClass}
                     />
@@ -200,11 +200,11 @@ const AdminClassesView = ({ classes, courses }) => {
       </div>
 
       {linkingClass && (
-        <LinkCourseModal
+        <LinkEditionModal
           classTitle={linkingClass.title}
-          courses={courses}
+          editions={editions}
           onCancel={() => setLinkingClass(null)}
-          onConfirm={handleLinkCourse}
+          onConfirm={handleLinkEdition}
         />
       )}
     </>

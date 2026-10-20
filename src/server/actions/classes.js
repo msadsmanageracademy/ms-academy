@@ -12,12 +12,12 @@ import { createClassCalendarEvent } from "@/server/classes/calendar";
 import { sendClassReminders } from "@/server/classes/reminders";
 import {
   deleteClass,
-  linkClassToCourse,
+  linkClassToEdition,
   removeClassRecording,
   setClassRecording,
   setClassResources,
   setClassStatus,
-  unlinkClassFromCourse,
+  unlinkClassFromEdition,
 } from "@/server/classes/service";
 import { enrollInClass, removeClassParticipant } from "@/server/classes/participants";
 
@@ -61,17 +61,17 @@ export async function setClassStatusAction(classId, status) {
   }));
 }
 
-export async function linkClassToCourseAction(classId, courseId) {
-  return run("Error linking class to course", async (actor) => ({
-    message: "Clase vinculada al curso",
-    data: await linkClassToCourse(actor, classId, { courseId }),
+export async function linkClassToEditionAction(classId, editionId) {
+  return run("Error linking class to edition", async (actor) => ({
+    message: "Clase vinculada a la edición",
+    data: await linkClassToEdition(actor, classId, { editionId }),
   }));
 }
 
-export async function unlinkClassFromCourseAction(classId) {
-  return run("Error unlinking class from course", async (actor) => ({
-    message: "Clase desvinculada del curso",
-    data: await unlinkClassFromCourse(actor, classId),
+export async function unlinkClassFromEditionAction(classId) {
+  return run("Error unlinking class from edition", async (actor) => ({
+    message: "Clase desvinculada de la edición",
+    data: await unlinkClassFromEdition(actor, classId),
   }));
 }
 

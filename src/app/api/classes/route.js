@@ -1,13 +1,13 @@
 import { createClass, listClasses } from "@/server/classes/service";
 import { getActor, handleApiError, ok, readJson } from "@/lib/api/guards";
 
-// GET /api/classes — public catalog; ?myClasses=true (user), ?showAll=true or ?courseId= (admin)
+// GET /api/classes — public catalog; ?myClasses=true (user), ?showAll=true or ?editionId= (admin)
 export async function GET(req) {
   try {
     const actor = await getActor();
     const { searchParams } = new URL(req.url);
     const data = await listClasses(actor, {
-      courseId: searchParams.get("courseId"),
+      editionId: searchParams.get("editionId"),
       showAll: searchParams.get("showAll") === "true",
       myClasses: searchParams.get("myClasses") === "true",
     });
@@ -17,7 +17,7 @@ export async function GET(req) {
   }
 }
 
-// POST /api/classes — admin: creates a draft class (optionally linked to a course)
+// POST /api/classes — admin: creates a draft class (optionally linked to an edition)
 export async function POST(req) {
   try {
     const actor = await getActor();

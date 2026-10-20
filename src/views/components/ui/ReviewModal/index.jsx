@@ -32,8 +32,8 @@ const ReviewModal = ({
   if (!isOpen) return null;
 
   const apiPath =
-    entityType === "course"
-      ? `/api/courses/${entityId}/reviews`
+    entityType === "edition"
+      ? `/api/editions/${entityId}/reviews`
       : `/api/classes/${entityId}/reviews`;
 
   const handleSubmit = async () => {

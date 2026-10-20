@@ -8,17 +8,21 @@ export const normalize = (value) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+/** True when every term of `query` appears in `values` (accent/case-insensitive); empty query matches. */
+export function matchesQuery(values, query) {
+  const terms = normalize(query).split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return true;
+  const haystack = normalize(values.join(" "));
+  return terms.every((term) => haystack.includes(term));
+}
+
 export function useTableControls(items, { fields, pageSize = 10 }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
-    const terms = normalize(query).split(/\s+/).filter(Boolean);
-    if (terms.length === 0) return items;
-    return items.filter((item) => {
-      const haystack = normalize(fields(item).join(" "));
-      return terms.every((term) => haystack.includes(term));
-    });
+    if (!normalize(query).trim()) return items;
+    return items.filter((item) => matchesQuery(fields(item), query));
   }, [items, query, fields]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));

@@ -1,7 +1,7 @@
 import IconLink from "@/views/components/ui/IconLink";
 import styles from "./styles.module.css";
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const Pagination = ({ currentPage, totalPages, onPageChange, label = "Paginación" }) => {
   if (!totalPages || totalPages <= 1) return null;
 
   const getPageNumbers = () => {
@@ -57,7 +57,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const pageNumbers = getPageNumbers();
 
   return (
-    <nav aria-label="Paginación" className={styles.pagination}>
+    <nav aria-label={label} className={styles.pagination}>
       <IconLink
         asButton
         icon="Back"

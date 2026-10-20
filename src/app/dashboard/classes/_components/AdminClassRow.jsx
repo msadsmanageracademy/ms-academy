@@ -1,10 +1,26 @@
 import ClassStatusBadge from "@/views/components/ui/ClassStatusBadge";
 import IconLink from "@/views/components/ui/IconLink";
+import Link from "next/link";
 import StatusBadge from "@/views/components/ui/StatusBadge";
-import styles from "../styles.module.css";
-import { formatDate, formatTime } from "@/utils/dates";
 import { getClassStatus } from "@/utils/classStatus";
-import { priceLabel } from "./classList";
+import styles from "../styles.module.css";
+import { classEditionHref, classEditionTitle, priceLabel } from "./classList";
+import { formatDate, formatTime } from "@/utils/dates";
+
+/** Course and edition of a class (linked to the edition page), or "—" for standalone classes. */
+const CourseCell = ({ classItem }) => {
+  if (!classItem.courseId) return "—";
+  const href = classEditionHref(classItem);
+  const title = classItem.courseTitle || "Curso";
+  return (
+    <div className={styles.courseCell}>
+      {href ? <Link href={href}>{title}</Link> : <span>{title}</span>}
+      {classItem.editionLabel && (
+        <span className={styles.courseCellEdition}>{classItem.editionLabel}</span>
+      )}
+    </div>
+  );
+};
 
 const STATUS_LABELS = { published: "Publicada", enrolled: "Asociada", draft: "Borrador" };
 
@@ -67,7 +83,9 @@ const AdminClassRow = ({
   return (
     <tr>
       <td>{classItem.title}</td>
-      <td>{classItem.courseTitle || "—"}</td>
+      <td>
+        <CourseCell classItem={classItem} />
+      </td>
       <td>{classItem.start_date ? formatDate(classItem.start_date) : "—"}</td>
       <td>{classItem.start_date ? formatTime(classItem.start_date) : "—"}</td>
       <td>{classItem.duration} min</td>
@@ -105,7 +123,7 @@ const AdminClassRow = ({
               asButton
               icon="MinusSign"
               onClick={() => onUnlink(classItem)}
-              title={`Desvincular de "${classItem.courseTitle}"`}
+              title={`Desvincular de "${classEditionTitle(classItem)}"`}
               warning
             />
           ) : (
@@ -117,7 +135,7 @@ const AdminClassRow = ({
               title={
                 status === "published"
                   ? "No se puede vincular una clase publicada"
-                  : "Vincular a curso"
+                  : "Vincular a una edición"
               }
               warning
             />

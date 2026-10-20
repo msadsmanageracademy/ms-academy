@@ -8,18 +8,19 @@ import ReviewModal from "@/views/components/ui/ReviewModal";
 import StudentClassRow from "./StudentClassRow";
 import styles from "../styles.module.css";
 import { confirmUnenroll } from "@/utils/alerts";
-import { filterByCourse } from "./classList";
 import { leaveClassAction } from "@/server/actions/classes";
 import { runApiAction } from "@/utils/api";
 import { useNotifications } from "@/providers/NotificationProvider";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTableControls } from "@/hooks/useTableControls";
+import { classEditionTitle, filterByCourse } from "./classList";
 
-const searchFields = (c) => [c.title, c.courseTitle];
+const searchFields = (c) => [c.title, classEditionTitle(c)];
 
 /**
- * Student view: the classes the user takes part in (standalone and of their courses).
+ * Student view: the classes the user takes part in (standalone and of the editions they
+ * enrolled in, shown as "Curso · Septiembre 2026" with the payment status of that edition).
  * `reviews` maps classId → the user's own review.
  */
 const StudentClassesView = ({ classes, reviews }) => {

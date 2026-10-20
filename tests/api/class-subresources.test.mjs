@@ -1,18 +1,20 @@
-// Dedicated class sub-resources: status, course link, recording and materials.
+// Dedicated class sub-resources: status, edition link, recording and materials.
 import { beforeEach, describe, expect, it } from "vitest";
 import * as classRoute from "@/app/api/classes/[id]/route";
 import * as statusRoute from "@/app/api/classes/[id]/status/route";
-import * as courseRoute from "@/app/api/classes/[id]/course/route";
 import * as recordingRoute from "@/app/api/classes/[id]/recording/route";
 import * as resourcesRoute from "@/app/api/classes/[id]/resources/route";
+import * as editionRoute from "@/app/api/classes/[id]/edition/route";
 import {
+  ObjectId,
   callRoute,
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
   daysFromNow,
-  enroll,
+  enrollInEditionDoc,
   resetDb,
   setSession,
 } from "../helpers.mjs";
@@ -58,63 +60,113 @@ describe("PUT /api/classes/[id]/status", () => {
   it("does not archive a class in progress or change a course class", async () => {
     const ongoing = await createClass(db, { start_date: new Date(Date.now() - 10 * 60000), duration: 60 });
     expect((await setStatus(ongoing, "draft")).status).toBe(400);
-    const course = await createCourse(db);
-    const courseClass = await createClass(db, { status: "enrolled", courseId: course._id });
-    expect((await setStatus(courseClass, "published")).status).toBe(400);
+    const edition = await createEdition(db, await createCourseDoc(db));
+    const editionClass = await createClass(db, { status: "enrolled", editionId: edition._id });
+    expect((await setStatus(editionClass, "published")).status).toBe(400);
   });
 });
 
-describe("/api/classes/[id]/course", () => {
-  it("links a draft class (enrollees become its participants, nothing copied) and unlinks it", async () => {
-    const course = await createCourse(db, { status: "draft" });
-    await enroll(db, user, course, "pending");
-    const cls = await createClass(db, { status: "draft", max_participants: 10, createdBy: admin._id });
+describe("PUT/DELETE /api/classes/[id]/edition", () => {
+  const link = (cls, editionId) =>
+    callRoute(editionRoute.PUT, { method: "PUT", body: editionId === undefined ? {} : { editionId }, params: params(cls) });
+  const unlink = (cls) => callRoute(editionRoute.DELETE, { method: "DELETE", params: params(cls) });
+  const editionStatus = async (edition) =>
+    (await db.collection("courseEditions").findOne({ _id: edition._id })).status;
 
-    let res = await callRoute(courseRoute.PUT, { method: "PUT", body: { courseId: course._id.toString() }, params: params(cls) });
-    expect(res.status).toBe(200);
-    expect(res.json.data).toMatchObject({
+  it("links a draft class (enrollees become its participants, nothing copied) and unlinks it", async () => {
+    const course = await createCourseDoc(db, { title: "Meta Ads" });
+    const edition = await createEdition(db, course, { status: "draft" });
+    await enrollInEditionDoc(db, user, edition, "pending");
+    const cls = await createClass(db, {
+      status: "draft",
+      max_participants: 10,
+      createdBy: admin._id,
+      start_date: new Date("2030-09-10T22:00:00Z"),
+    });
+
+    const linked = await link(cls, edition._id.toString());
+    expect(linked.status).toBe(200);
+    expect(linked.json.data).toMatchObject({
+      editionId: edition._id.toString(),
       status: "enrolled",
       max_participants: null,
-      courseId: course._id.toString(),
       participantsCount: 1,
     });
     expect((await findClass(cls)).participants).toBeUndefined();
     expect(await notificationTypes(user._id)).toEqual(["class.added_to_course"]);
+    const [adminNotice] = await db.collection("notifications").find({ userId: admin._id }).toArray();
+    // Named after the link: the class gives the edition its first date
+    expect(adminNotice.message).toContain("Meta Ads · Septiembre 2030");
 
     // Already linked
-    res = await callRoute(courseRoute.PUT, { method: "PUT", body: { courseId: course._id.toString() }, params: params(cls) });
-    expect(res.status).toBe(400);
+    expect((await link(cls, edition._id.toString())).status).toBe(400);
 
-    res = await callRoute(courseRoute.DELETE, { method: "DELETE", params: params(cls) });
-    expect(res.status).toBe(200);
+    const unlinked = await unlink(cls);
+    expect(unlinked.status).toBe(200);
+    expect(unlinked.json.data).toMatchObject({ status: "draft", participantsCount: 0 });
     const saved = await findClass(cls);
-    expect(saved.courseId).toBeUndefined();
+    expect(saved.editionId).toBeUndefined();
     expect(saved.status).toBe("draft");
     expect(saved.participants).toEqual([]);
+    expect((await notificationTypes(user._id)).sort()).toEqual(["class.added_to_course", "class.removed_from_course"]);
+    // Named before the unlink: the name the students know the edition by
+    const removed = await db.collection("notifications").findOne({ userId: user._id, type: "class.removed_from_course" });
+    expect(removed.message).toContain("Meta Ads · Septiembre 2030");
   });
 
-  it("validates the course id and rejects published classes", async () => {
+  it("validates the edition id and rejects published classes and missing editions", async () => {
     const cls = await createClass(db, { status: "draft" });
-    expect((await callRoute(courseRoute.PUT, { method: "PUT", body: {}, params: params(cls) })).status).toBe(400);
-    expect((await callRoute(courseRoute.PUT, { method: "PUT", body: { courseId: "nope" }, params: params(cls) })).status).toBe(400);
-    const course = await createCourse(db);
+    expect((await link(cls)).status).toBe(400);
+    expect((await link(cls, "nope")).status).toBe(400);
+    expect((await link(cls, new ObjectId().toString())).status).toBe(404);
+    const edition = await createEdition(db, await createCourseDoc(db));
     const published = await createClass(db);
-    const res = await callRoute(courseRoute.PUT, { method: "PUT", body: { courseId: course._id.toString() }, params: params(published) });
-    expect(res.status).toBe(400);
-    expect((await callRoute(courseRoute.DELETE, { method: "DELETE", params: params(published) })).status).toBe(400);
+    expect((await link(published, edition._id.toString())).status).toBe(400);
+    expect((await unlink(published)).status).toBe(400);
+    setSession(user);
+    expect((await link(cls, edition._id.toString())).status).toBe(403);
+    expect((await findClass(cls)).editionId).toBeUndefined();
+  });
+
+  it("linking a class to a published edition that had finished takes it back to draft", async () => {
+    const edition = await createEdition(db, await createCourseDoc(db));
+    await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(-20) });
+    const cls = await createClass(db, { status: "draft", start_date: daysFromNow(5) });
+    await link(cls, edition._id.toString());
+    expect(await editionStatus(edition)).toBe("draft");
+
+    // An upcoming published edition stays published
+    const upcoming = await createEdition(db, await createCourseDoc(db));
+    await createClass(db, { editionId: upcoming._id, status: "enrolled", start_date: daysFromNow(3) });
+    await link(await createClass(db, { status: "draft", start_date: daysFromNow(6) }), upcoming._id.toString());
+    expect(await editionStatus(upcoming)).toBe("published");
+  });
+
+  it("unlinking the last class of a published edition takes it back to draft", async () => {
+    const edition = await createEdition(db, await createCourseDoc(db));
+    const first = await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(3) });
+    const second = await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(4) });
+    await unlink(first);
+    expect(await editionStatus(edition)).toBe("published");
+    await unlink(second);
+    expect(await editionStatus(edition)).toBe("draft");
   });
 });
 
 describe("recording and materials", () => {
-  let course, cls;
+  let cls;
 
   beforeEach(async () => {
-    course = await createCourse(db);
-    await enroll(db, user, course, "paid");
-    await enroll(db, other, course, "pending");
+    const course = await createCourseDoc(db);
+    const edition = await createEdition(db, course);
+    // Paid in another edition of the same course: no access to this class
+    const otherEdition = await createEdition(db, course);
+    await enrollInEditionDoc(db, user, edition, "paid");
+    await enrollInEditionDoc(db, other, edition, "pending");
+    await enrollInEditionDoc(db, other, otherEdition, "paid");
     cls = await createClass(db, {
       status: "enrolled",
-      courseId: course._id,
+      editionId: edition._id,
       createdBy: admin._id,
     });
   });
@@ -139,7 +191,7 @@ describe("recording and materials", () => {
     expect(await notificationTypes(user._id)).toEqual(["class.resources_updated"]);
   });
 
-  it("only course classes accept a recording or materials; users get 403", async () => {
+  it("only edition classes accept a recording or materials; users get 403", async () => {
     const standalone = await createClass(db);
     expect(
       (await callRoute(recordingRoute.PUT, { method: "PUT", body: { url: "https://example.test/rec" }, params: params(standalone) })).status,

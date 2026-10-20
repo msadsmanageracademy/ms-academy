@@ -1,7 +1,7 @@
 import ClassDetailView from "./_components/ClassDetailView";
 import { getActor } from "@/lib/api/guards";
 import { getClassDetail } from "@/server/classes/service";
-import { getCourseDetail } from "@/server/courses/service";
+import { getEditionDetail } from "@/server/courses/editions";
 import { listClassParticipants } from "@/server/classes/participants";
 import { listClassReviews } from "@/server/reviews/service";
 import { toPlain } from "@/server/serialize";
@@ -24,25 +24,27 @@ export default async function ClassDetailPage({ params }) {
     throw error;
   }
 
-  const isCourseClass = !!classData.courseId;
-  const [course, participants, reviews] = await Promise.all([
-    // A course that can't be read only hides its title (the class still shows)
-    isCourseClass ? getCourseDetail(actor, classData.courseId.toString()).catch(() => null) : null,
-    // Course classes manage their people from the course
-    !isCourseClass && classData.participants?.length > 0 ? listClassParticipants(actor, id) : [],
+  const isEditionClass = !!classData.editionId;
+  const [edition, participants, reviews] = await Promise.all([
+    // An edition that can't be read only hides its link (the class still shows)
+    isEditionClass ? getEditionDetail(actor, classData.editionId.toString()).catch(() => null) : null,
+    // Edition classes manage their people from the edition
+    !isEditionClass && classData.participants?.length > 0 ? listClassParticipants(actor, id) : [],
     listClassReviews(id),
   ]);
 
   return (
     <ClassDetailView
       classData={toPlain(classData)}
-      course={
-        course &&
+      edition={
+        edition &&
         toPlain({
-          title: course.title,
-          status: course.status,
-          start_date: course.start_date,
-          end_date: course.end_date,
+          courseId: edition.courseId,
+          courseTitle: edition.course?.title ?? classData.courseTitle ?? "",
+          _id: edition._id,
+          label: edition.label,
+          status: edition.status,
+          timeStatus: edition.timeStatus,
         })
       }
       participants={toPlain(participants)}

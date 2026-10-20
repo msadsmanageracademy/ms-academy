@@ -6,14 +6,17 @@ import IconLink from "@/views/components/ui/IconLink";
 import ParticipantsSection from "./ParticipantsSection";
 import RecordingSection from "./RecordingSection";
 import ResourcesSection from "./ResourcesSection";
+import { getClassStatus } from "@/utils/classStatus";
 import styles from "../styles.module.css";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ReviewList, { ReviewSummary } from "@/views/components/ui/ReviewList";
-import { getClassStatus, getCourseTimeStatus } from "@/utils/classStatus";
 
-/** Admin class detail. Data comes from the server; actions re-render it. */
-const ClassDetailView = ({ classData, course, participants, reviews, hasCalendarAccess }) => {
+/**
+ * Admin class detail. `edition` ({ courseId, courseTitle, _id, label, status, timeStatus })
+ * is the edition of an edition class, or null. Data comes from the server; actions re-render it.
+ */
+const ClassDetailView = ({ classData, edition, participants, reviews, hasCalendarAccess }) => {
   const router = useRouter();
   const [editMode, setEditMode] = useState(false);
   const completed =
@@ -44,23 +47,15 @@ const ClassDetailView = ({ classData, course, participants, reviews, hasCalendar
               setEditMode(false);
               router.refresh();
             }}
-            // Classes of a course in progress only accept title and description
-            allowFullEdit={
-              classData.status === "enrolled" &&
-              getCourseTimeStatus(course?.start_date, course?.end_date, course?.status) !==
-                "in-progress"
-            }
+            // Classes of an edition in progress only accept title and description
+            allowFullEdit={classData.status === "enrolled" && edition?.timeStatus !== "in-progress"}
           />
         </section>
       ) : (
         <>
-          <ClassInfoSection
-            classData={classData}
-            courseTitle={course?.title ?? null}
-            onEdit={() => setEditMode(true)}
-          />
+          <ClassInfoSection classData={classData} edition={edition} onEdit={() => setEditMode(true)} />
 
-          {classData.courseId && (
+          {classData.editionId && (
             <>
               <ResourcesSection classId={classData._id} initialResources={classData.resources || []} />
               <RecordingSection classId={classData._id} currentUrl={classData.recording_url} />

@@ -1,18 +1,14 @@
-// Shared course queries and notifications created by real API flows.
+// Shared edition queries used by the classes service and notifications created by real API flows.
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  courseAggregationPipeline,
-  getCourseDateRange,
-  getCourseTimeStatusFromClasses,
-} from "@/server/courses/queries";
-import * as courseStatusRoute from "@/app/api/courses/[id]/status/route";
+import { getEditionTimeStatusFromClasses } from "@/server/courses/queries";
 import * as classParticipantsRoute from "@/app/api/classes/[id]/participants/route";
 import * as classRoute from "@/app/api/classes/[id]/route";
 import {
   callRoute,
   createAdmin,
   createClass,
-  createCourse,
+  createCourseDoc,
+  createEdition,
   createUser,
   daysFromNow,
   resetDb,
@@ -28,48 +24,47 @@ beforeEach(async () => {
   setSession(null);
 });
 
-describe("course queries", () => {
-  it("computes schedule fields from the linked classes", async () => {
-    const course = await createCourse(db);
-    await createClass(db, { courseId: course._id, status: "enrolled", start_date: daysFromNow(3), duration: 60 });
-    const last = await createClass(db, { courseId: course._id, status: "enrolled", start_date: daysFromNow(10), duration: 90 });
+// Schedule fields, date ranges and time status of editions: edition-queries.test.mjs
+describe("edition time status in class edits", () => {
+  const edit = (cls, body) =>
+    callRoute(classRoute.PATCH, { method: "PATCH", body, params: { id: cls._id.toString() } });
+  const fullEdit = {
+    title: "Edited class",
+    short_description: "Edited description",
+    start_date: daysFromNow(20).toISOString(),
+    duration: 90,
+    price: 0,
+  };
 
-    const [row] = await db.collection("courses").aggregate(courseAggregationPipeline({ _id: course._id })).toArray();
-    expect(row.amount_of_classes).toBe(2);
-    expect(row.total_duration).toBe(150);
-    expect(row.end_date.getTime()).toBe(last.start_date.getTime() + 90 * 60000);
+  it("a class of an edition in progress only accepts title and description", async () => {
+    const course = await createCourseDoc(db);
+    const edition = await createEdition(db, course);
+    const cls = await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(-2) });
+    await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(5) });
+    expect(await getEditionTimeStatusFromClasses(db, edition._id, "published")).toBe("in-progress");
 
-    const range = await getCourseDateRange(db, course._id);
-    expect(range.start_date.getTime()).toBe(row.start_date.getTime());
-    expect(range.end_date.getTime()).toBe(row.end_date.getTime());
-  });
-
-  it("can exclude a class and returns {} for courses without classes", async () => {
-    const course = await createCourse(db);
-    const only = await createClass(db, { courseId: course._id, status: "enrolled" });
-    expect(await getCourseDateRange(db, course._id, { excludeClassId: only._id })).toEqual({});
-    expect(await getCourseTimeStatusFromClasses(db, course._id, "published", { excludeClassId: only._id })).toBeNull();
-  });
-
-  it("detects a course in progress", async () => {
-    const course = await createCourse(db);
-    await createClass(db, { courseId: course._id, status: "enrolled", start_date: daysFromNow(-2) });
-    await createClass(db, { courseId: course._id, status: "enrolled", start_date: daysFromNow(5) });
-    expect(await getCourseTimeStatusFromClasses(db, course._id, "published")).toBe("in-progress");
-  });
-
-  it("the API refuses to archive a course in progress", async () => {
-    const course = await createCourse(db);
-    await createClass(db, { courseId: course._id, status: "enrolled", start_date: daysFromNow(-2) });
-    await createClass(db, { courseId: course._id, status: "enrolled", start_date: daysFromNow(5) });
     setSession(admin);
-    const res = await callRoute(courseStatusRoute.PUT, {
-      method: "PUT",
-      body: { status: "draft" },
-      params: { id: course._id.toString() },
-    });
-    expect(res.status).toBe(400);
-    expect((await db.collection("courses").findOne({ _id: course._id })).status).toBe("published");
+    expect((await edit(cls, fullEdit)).status).toBe(200);
+    const saved = await db.collection("classes").findOne({ _id: cls._id });
+    expect(saved).toMatchObject({ title: "Edited class", duration: 60 });
+    expect(saved.start_date.getTime()).toBe(cls.start_date.getTime());
+  });
+
+  it("classes of an upcoming or draft edition stay fully editable", async () => {
+    const course = await createCourseDoc(db);
+    const upcoming = await createEdition(db, course);
+    const draft = await createEdition(db, course, { status: "draft" });
+    // The other edition of the same course is in progress: it does not matter
+    const running = await createEdition(db, course);
+    await createClass(db, { editionId: running._id, status: "enrolled", start_date: daysFromNow(-2) });
+    await createClass(db, { editionId: running._id, status: "enrolled", start_date: daysFromNow(5) });
+
+    setSession(admin);
+    for (const edition of [upcoming, draft]) {
+      const cls = await createClass(db, { editionId: edition._id, status: "enrolled", start_date: daysFromNow(3) });
+      expect((await edit(cls, fullEdit)).status).toBe(200);
+      expect(await db.collection("classes").findOne({ _id: cls._id })).toMatchObject({ duration: 90 });
+    }
   });
 });
 

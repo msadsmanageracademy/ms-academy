@@ -27,7 +27,7 @@ export const ClassDBSchema = z.object({
   max_participants: z.number().nonnegative().nullable(),
   price: z.number().nonnegative(),
   status: z.enum(["draft", "published", "enrolled"]).default("draft"),
-  courseId: z.instanceof(Object).optional(),
+  editionId: z.instanceof(Object).optional(), // course classes only; standalone classes have none
   createdBy: z.instanceof(Object).optional(),
   googleEventId: z.string().optional(),
   googleEventUrl: z.string().optional(),
@@ -47,11 +47,17 @@ export const CourseDBSchema = z.object({
   title: z.string(),
   short_description: z.string(),
   full_description: z.string(),
-  max_participants: z.number().nonnegative().nullable(),
+  status: z.enum(["active", "archived"]).default("active"),
+  createdBy: z.instanceof(Object).optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const CourseEditionDBSchema = z.object({
+  courseId: z.instanceof(Object),
   price: z.number().nonnegative(),
+  max_participants: z.number().positive().nullable(), // null = no limit (0 in the form)
   status: z.enum(["draft", "published"]).default("draft"),
-  type: z.literal("course"),
-  courseSeriesId: z.instanceof(Object).optional(),
   createdBy: z.instanceof(Object).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -61,18 +67,18 @@ export const CourseDBSchema = z.object({
 
 export const CourseEnrollmentDBSchema = z.object({
   userId: z.instanceof(Object),
-  courseId: z.instanceof(Object),
+  editionId: z.instanceof(Object),
   paymentStatus: z.enum(["pending", "paid"]).default("pending"),
   paidAt: z.date().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
 
-export function prepareCourseEnrollmentForDB(userId, courseId) {
+export function prepareCourseEnrollmentForDB(userId, editionId) {
   const now = new Date();
   return {
     userId,
-    courseId,
+    editionId,
     paymentStatus: "pending",
     createdAt: now,
     updatedAt: now,
@@ -117,13 +123,14 @@ export const NotificationDBSchema = z.object({
     "course.participant_removed",
     "course.payment_received",
     "course.status_changed",
+    "course.cancelled",
     // Contact
     "contact.message",
   ]),
   title: z.string(),
   message: z.string(),
-  relatedId: z.instanceof(Object).optional(), // ObjectId - Reference to class/course/user
-  relatedType: z.enum(["class", "course", "user", "contact"]).optional(),
+  relatedId: z.instanceof(Object).optional(), // ObjectId - Reference to class/course/edition/user
+  relatedType: z.enum(["class", "course", "edition", "user", "contact"]).optional(),
   actorId: z.instanceof(Object).optional(), // ObjectId - Who performed the action
   read: z.boolean().default(false),
   createdAt: z.date(),
@@ -132,8 +139,11 @@ export const NotificationDBSchema = z.object({
 
 // ==================== REVIEW SCHEMAS ====================
 
+// Course reviews: editionId + the edition's courseId (denormalized). Class reviews: classId.
 export const ReviewDBSchema = z.object({
-  courseId: z.instanceof(Object), // ObjectId
+  courseId: z.instanceof(Object).optional(), // ObjectId
+  editionId: z.instanceof(Object).optional(), // ObjectId
+  classId: z.instanceof(Object).optional(), // ObjectId
   userId: z.instanceof(Object), // ObjectId
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(500).optional(),
@@ -159,15 +169,28 @@ export function prepareClassForDB(formData, userId) {
   };
 }
 
-export function prepareCourseForDB(formData, userId) {
+// The course only holds its content: price and capacity belong to each edition
+export function prepareCourseForDB({ title, short_description, full_description }, userId) {
   const now = new Date();
   return {
-    ...formData,
-    type: "course",
+    title,
+    short_description,
+    full_description,
+    status: "active",
+    createdBy: userId,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function prepareEditionForDB({ courseId, price, max_participants }, userId) {
+  const now = new Date();
+  return {
+    courseId,
+    price,
+    max_participants: max_participants ? max_participants : null,
     status: "draft",
     createdBy: userId,
-    max_participants:
-      formData.max_participants === 0 ? null : formData.max_participants,
     createdAt: now,
     updatedAt: now,
   };

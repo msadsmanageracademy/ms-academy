@@ -33,12 +33,6 @@ export const NOTIFICATION_TEMPLATES = {
     message: ({ classTitle }) =>
       `Has sido dado de baja de la clase "${classTitle}" porque fue archivada por un administrador`,
   },
-  "class.removed_by_admin.course_deleted": {
-    type: "class.removed_by_admin",
-    title: "Suscripción anulada",
-    message: ({ classTitle }) =>
-      `Has sido dado de baja de la clase "${classTitle}" porque el curso al que pertenecía fue eliminado`,
-  },
   "class.updated": {
     type: "class.updated",
     title: "Clase actualizada",
@@ -152,6 +146,13 @@ export const NOTIFICATION_TEMPLATES = {
     title: "Removido del curso",
     message: ({ courseTitle }) =>
       `Fuiste removido del curso "${courseTitle}" por el administrador.`,
+  },
+  // courseTitle: "Curso · Septiembre 2026" (editionName)
+  "course.edition_deleted": {
+    type: "course.cancelled",
+    title: "Edición cancelada",
+    message: ({ courseTitle }) =>
+      `La edición "${courseTitle}" fue eliminada y se canceló tu inscripción`,
   },
 
   // ---------- Courses: admin ----------

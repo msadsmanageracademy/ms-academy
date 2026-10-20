@@ -21,7 +21,7 @@ vi.mock("next/image", () => ({
   default: ({ priority: _priority, ...props }) => <img {...props} />,
 }));
 
-export const router = { push: vi.fn(), refresh: vi.fn() };
+export const router = { push: vi.fn(), refresh: vi.fn(), replace: vi.fn() };
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
   usePathname: () => globalThis.__testPathname ?? "/",

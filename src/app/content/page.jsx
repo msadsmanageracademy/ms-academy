@@ -1,7 +1,5 @@
-import ContentBoards from "./_components/ContentBoards";
-import PageWrapper from "@/views/components/layout/PageWrapper";
+import ContentView from "./_components/ContentView";
 import { getActor } from "@/lib/api/guards";
-import { getCourseTimeStatus } from "@/utils/classStatus";
 import { listClasses } from "@/server/classes/service";
 import { listCourses } from "@/server/courses/service";
 import { toPlain } from "@/server/serialize";
@@ -11,22 +9,21 @@ export const metadata = {
   description: "Clases gratuitas y cursos de MS Academy con inscripción abierta.",
 };
 
+// Courses without a start date (never the case for a published edition) go last
+const startTime = (course) => new Date(course.openEdition.start_date ?? 8.64e15).getTime();
+
 export default async function ContentPage() {
   const actor = await getActor();
+  // listCourses only returns active courses with an edition open to enrollment
   const [classes, courses] = await Promise.all([listClasses(actor), listCourses(actor)]);
-  const openCourses = courses.filter((c) => {
-    const status = getCourseTimeStatus(c.start_date, c.end_date, c.status);
-    return status === "upcoming" || status === "in-progress";
-  });
+  // By the start of their open edition: in-progress ones first, then the upcoming ones
+  const openCourses = [...courses].sort((a, b) => startTime(a) - startTime(b));
 
   return (
-    <PageWrapper>
-      <h1 className="visually-hidden">Próximas actividades</h1>
-      <ContentBoards
-        classes={toPlain(classes)}
-        courses={toPlain(openCourses)}
-        viewerRole={actor?.role ?? null}
-      />
-    </PageWrapper>
+    <ContentView
+      classes={toPlain(classes)}
+      courses={toPlain(openCourses)}
+      viewerRole={actor?.role ?? null}
+    />
   );
 }
