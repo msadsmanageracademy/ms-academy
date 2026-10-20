@@ -1,11 +1,12 @@
 // Users API, registration, Calendar OAuth start, notifications and rate limiting.
-import { beforeEach, describe, expect, it } from "vitest";
 import * as userRoute from "@/app/api/users/[id]/route";
 import * as registerRoute from "@/app/api/auth/register/route";
 import * as googleCalendarRoute from "@/app/api/google-calendar/route";
 import * as unreadCountRoute from "@/app/api/notifications/unread-count/route";
-import { hitRateLimit, peekRateLimit, resetRateLimit } from "@/lib/rateLimit";
+import { config } from "@/config";
 import { encryptJSON } from "@/lib/crypto";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { hitRateLimit, peekRateLimit, resetRateLimit } from "@/lib/rateLimit";
 import { callRoute, createAdmin, createUser, resetDb, setSession } from "../helpers.mjs";
 
 let db, admin, user, other;
@@ -60,23 +61,66 @@ describe("/api/users/[id]", () => {
   });
 });
 
+// Registration is a deployment setting (`allowRegistration` in src/config/custom.js), so each
+// group pins it explicitly: the tests must not depend on what the project ships with.
 describe("registration", () => {
-  const register = () =>
-    callRoute(registerRoute.POST, {
-      method: "POST",
-      body: { email: "new@example.test", password: "Segura#123", role: "admin" },
-    });
-
-  it("returns 403 and creates no users when registration is disabled", async () => {
-    expect((await register()).status).toBe(403);
-    expect(await db.collection("users").countDocuments({ email: "new@example.test" })).toBe(0);
+  const originalAllowRegistration = config.allowRegistration;
+  afterEach(() => {
+    config.allowRegistration = originalAllowRegistration;
   });
 
-  it("rate limits by IP (6th attempt within an hour → 429)", async () => {
-    const statuses = [];
-    for (let i = 0; i < 6; i++) statuses.push((await register()).status);
-    expect(statuses.slice(0, 5).every((s) => s === 403)).toBe(true);
-    expect(statuses[5]).toBe(429);
+  const register = (body = { email: "new@example.test", password: "Segura#123", role: "admin" }) =>
+    callRoute(registerRoute.POST, { method: "POST", body });
+
+  describe("when it is disabled", () => {
+    beforeEach(() => {
+      config.allowRegistration = false;
+    });
+
+    it("returns 403 and creates no users", async () => {
+      expect((await register()).status).toBe(403);
+      expect(await db.collection("users").countDocuments({ email: "new@example.test" })).toBe(0);
+    });
+
+    it("rate limits by IP (6th attempt within an hour → 429)", async () => {
+      const statuses = [];
+      for (let i = 0; i < 6; i++) statuses.push((await register()).status);
+      expect(statuses.slice(0, 5).every((s) => s === 403)).toBe(true);
+      expect(statuses[5]).toBe(429);
+    });
+  });
+
+  describe("when it is enabled", () => {
+    beforeEach(() => {
+      config.allowRegistration = true;
+    });
+
+    it("creates the account with the 'user' role, a hashed password and a lowercase email", async () => {
+      const res = await register({ email: "New@Example.test", password: "Segura#123", first_name: "Nueva" });
+      expect(res.status).toBe(201);
+      const created = await db.collection("users").findOne({ email: "new@example.test" });
+      expect(created).toMatchObject({ role: "user", first_name: "Nueva" });
+      expect(created.password).not.toBe("Segura#123");
+      expect(created.password.startsWith("$2")).toBe(true);
+    });
+
+    it("rejects a body that tries to choose the role (400) and creates no user", async () => {
+      expect((await register()).status).toBe(400);
+      expect(await db.collection("users").countDocuments({ email: "new@example.test" })).toBe(0);
+    });
+
+    it("rejects a duplicate email (400) and a weak password (400)", async () => {
+      const body = { email: "dup@example.test", password: "Segura#123" };
+      expect((await register(body)).status).toBe(201);
+      expect((await register(body)).status).toBe(400);
+      expect((await register({ email: "weak@example.test", password: "short" })).status).toBe(400);
+    });
+
+    it("rate limits by IP (6th attempt within an hour → 429)", async () => {
+      const statuses = [];
+      for (let i = 0; i < 6; i++) statuses.push((await register()).status);
+      expect(statuses[5]).toBe(429);
+    });
   });
 });
 
